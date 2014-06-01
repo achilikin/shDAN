@@ -95,6 +95,7 @@ uint8_t  debug_flags = 0;
 // http://www.wormfood.net/avrbaudcalc.php
 // At 8MHz and 3.3V we could get a lot of errors with baudrate > 38400
 // using calibrate() might help a bit, but better stick to 38400
+
 #define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
 // #define UART_BAUD_RATE 115200UL // at 8MHz errors up to 7.8%
 
