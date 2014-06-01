@@ -29,28 +29,27 @@ Make it: `make`, burn ATmega fuses to 8MHz: `make fuses`, upload firmware: `make
 Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://ttssh2.sourceforge.jp/index.html.en)).
 
 **Following general commands are available:**
-* status - get some basic status info
-* reset  - reset ATmega32
-* calibrate - in case if serial communication is not stable, try to run calibration and check if OSCCAL value is too close to upper or lower boundary
+* _status_ - get some basic status info
+* _reset_  - reset ATmega32
+* _calibrate_ - in case if serial communication is not stable, try to run calibration and check if OSCCAL value is too close to upper or lower boundary
 
 **Digital/analogue inputs:**
-* poll - read RHT03 sensor connected to TP5
-* adc chan - read ADC channel, for example `adc 7`
+* _poll_ - read RHT03 sensor connected to TP5
+* _adc chan_ - read ADC channel, for example `adc 7`
 
 **Debugging:**
-* debug rht|adc|rds|off - enable/disable debug output to serial port
+* _debug rht|adc|rds|off_ - enable/disable debug output to serial port
 
 **Radio specific commands:**
-* rdsid id - set RDS ID, stored in EEPROM
-* rdstext text - manually set RDS text instead of RHT03 readings
-* freq nnnn - set FM frequency, for example `freq 9700` for 97.00 MHz
-* txpwr 0-3 - set NS741 transmitting power, store in EEPROM
-* volume 0-6 - set volume, stored in EEPROM
-* mute on|off
-* stereo on|off - better to keep it on as some RDS receivers  do not work without pilot signal
-* radio on|off
-* gain low|off - set input signal gain low to -9dB
-
+* _rdsid id_ - set RDS ID, stored in EEPROM
+* _rdstext text_ - manually set RDS text instead of RHT03 readings
+* _freq nnnn_ - set FM frequency, for example `freq 9700` for 97.00 MHz
+* _txpwr 0-3_ - set NS741 transmitting power, store in EEPROM
+* _volume 0-6_ - set volume, stored in EEPROM
+* _mute on|off_ - turns off RDS signal as well
+* _stereo on|off_ - better to keep it on as some RDS receivers do not work without pilot signal
+* _radio on|off_
+* _gain low|off_ - set input signal gain low to -9dB
 
 Code Customization
 ------------------
