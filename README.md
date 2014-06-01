@@ -4,6 +4,7 @@ mmr70mod
 Modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
 Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on ATmega32 of MMR-70 itself instead of Raspberry Pi
 and broadcasting RDS signal with temperature and humidity readings from RHT03 sensor connected to TP5:
+
 ![RDS](http://3.bp.blogspot.com/-cB2P4Qp3eOI/U4kIqX7pSPI/AAAAAAAAASs/hKfAir5Qco4/s1600/screenshot.png)
 
 [Blog](http://achilikin.blogspot.ie/2014/06/sony-ericsson-mmr-70-modding-extreme.html) with some extra pictures.
