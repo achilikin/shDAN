@@ -40,11 +40,18 @@
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
 #endif
 
+// Escape sequence states
+#define ESC_CHAR    0
+#define ESC_BRACKET 1
+#define ESC_ARROW   2
+#define ESC_CRLF    5
+
 // support for arrow keys for very simple one command deep history
-#define ARROW_UP    0x0100
-#define ARROW_DOWN  0x0200
-#define ARROW_RIGHT 0x0300
-#define ARROW_LEFT  0x0400
+#define ARROW_KEY   0x0100
+#define ARROW_UP    0x0141
+#define ARROW_DOWN  0x0142
+#define ARROW_RIGHT 0x0143
+#define ARROW_LEFT  0x0144
 
 unsigned int get_char(void);
 int8_t process(char *cmd, rht03_t *rht);
@@ -313,19 +320,24 @@ int main(void)
 		if (!led)
 			led = 1;
 
-		if (ch == ARROW_UP) {
-			// execute last successful command
-			for(cursor = 0; ; cursor++) {
-				cmd[cursor] = hist[cursor];
-				if (cmd[cursor] == '\0')
-					break;
+		if (ch & ARROW_KEY) {
+			if (ch == ARROW_UP) {
+				// execute last successful command
+				for(cursor = 0; ; cursor++) {
+					cmd[cursor] = hist[cursor];
+					if (cmd[cursor] == '\0')
+						break;
+				}
+				uart_puts(cmd);
 			}
-			uart_puts(cmd);
 			continue;
 		}
 
-		if (ch == '\n' && *cmd) {
-			if (process(cmd, &rht) == 0)
+		// echo
+		uart_putc((uint8_t)ch);
+
+		if (ch == '\n') {
+			if (*cmd && process(cmd, &rht) == 0)
 				memcpy(hist, cmd, sizeof(cmd));
 			for(uint8_t i = 0; i < cursor; i++)
 				cmd[i] = '\0';
@@ -340,6 +352,7 @@ int main(void)
 				uart_putc('\b');
 			}
 		}
+
 		// skip control or damaged bytes
 		if (ch < ' ')
 			continue;
@@ -502,6 +515,7 @@ int8_t process(char *buf, rht03_t *rht)
 			ns741_name,	ns741_freq/100, ns741_freq%100,  
 			is_on(rt_flags & NS741_RADIO), is_on(rt_flags & NS741_STEREO),
 			rt_flags & NS741_TXPWR, (rt_flags & NS741_VOLUME) >> 8, (rt_flags & NS741_GAIN) ? -9 : 0);
+		puts(rds_data);
 		return 0;
 	}
 
@@ -606,7 +620,7 @@ int8_t process(char *buf, rht03_t *rht)
 
 unsigned int get_char(void)
 {
-	static uint8_t esc = 0;
+	static uint8_t esc = ESC_CHAR;
 	unsigned int ch;
 
 	/*
@@ -642,30 +656,34 @@ unsigned int get_char(void)
 	
 	// ESC sequence state machine
 	if (ch == 27) {
-		esc = 1;
+		esc = ESC_BRACKET;
 		return 0;
 	}
-	if (esc == 1) {
+	if (esc == ESC_BRACKET) {
 		if (ch == '[') {
-			esc = 2;
+			esc = ESC_ARROW;
 			return 0;
 		}
 	}
-	if (esc == 2) {
-		esc = 0;
-		if (ch == 'A')
-			ch = ARROW_UP;
-		if (ch == 'B')
-			ch = ARROW_DOWN;
-		if (ch == 'C')
-			ch = ARROW_RIGHT;
-		if (ch == 'D')
-			ch = ARROW_LEFT;
+	if (esc == ESC_ARROW) {
+		esc = ESC_CHAR;
+		if (ch >= 'A' && ch <= 'D')
+			ch |= ARROW_KEY;
 		return ch;
 	}
 
-	esc = 0;
-	/* echo */
-	uart_putc((uint8_t)ch);
+	// convert CR to LF 
+	if (ch == '\r') {
+		esc = ESC_CRLF;
+		return '\n';
+	}
+	// do not return LF if it is part of CR+LF combination
+	if (ch == '\n') {
+		if (esc == ESC_CRLF) {
+			esc = ESC_CHAR;
+			return 0;
+		}
+	}
+	esc = ESC_CHAR;
 	return ch;
 }
