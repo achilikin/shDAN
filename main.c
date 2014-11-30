@@ -35,6 +35,7 @@
 #include "mmr70pin.h"
 #include "rht03.h"
 #include "timer.h"
+#include "ossd_i2c.h"
 
 #ifndef F_CPU
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
@@ -43,17 +44,27 @@
 // Escape sequence states
 #define ESC_CHAR    0
 #define ESC_BRACKET 1
-#define ESC_ARROW   2
+#define ESC_BRCHAR  2
+#define ESC_TILDA   3
 #define ESC_CRLF    5
 
+// non-character flag
+#define EXTRA_KEY   0x0100
+
 // support for arrow keys for very simple one command deep history
-#define ARROW_KEY   0x0100
 #define ARROW_UP    0x0141
 #define ARROW_DOWN  0x0142
 #define ARROW_RIGHT 0x0143
 #define ARROW_LEFT  0x0144
 
-unsigned int get_char(void);
+#define KEY_HOME	0x0101
+#define KEY_INS		0x0102
+#define KEY_DEL		0x0103
+#define KEY_END		0x0104
+#define KEY_PGUP	0x0105
+#define KEY_PGDN	0x0106
+
+uint16_t get_char(void);
 int8_t process(char *cmd, rht03_t *rht);
 
 // runtime flags
@@ -92,6 +103,7 @@ uint16_t EEMEM em_ns741_flags = (NS741_STEREO | NS741_RDS | NS741_TXPWR0);
 
 char ns741_name[9]; // RDS PS name
 char rds_data[61];  // RDS RT string
+char fm_freq[17];   // FM frequency
 
 uint16_t ns741_freq;
 uint16_t rt_flags = 0;
@@ -217,6 +229,8 @@ int main(void)
 	// setup out ~millisecond timer for mill*() and tenth_clock counter
 	init_millis();
 	i2c_init(); // needed for ns741_*()
+	ossd_init(OSSD_UPDOWN);
+	ossd_select_font(OSSD_FONT_8x16);
 
 	// initialize NS741 chip	
 	eeprom_read_block((void *)ns741_name, (const void *)em_ns741_name, 8);
@@ -240,7 +254,6 @@ int main(void)
 	// turn ON
 	rt_flags |= NS741_RADIO;
 	ns741_radio(1);
-
 	sei();
 
 #if _DEBUG
@@ -255,9 +268,9 @@ int main(void)
 #endif
 	}
 #endif
-
-	printf_P(PSTR("ID %s, FM %u.%02uMHz\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
-		ns741_name,	ns741_freq/100, ns741_freq%100,
+	sprintf(fm_freq, "FM %u.%02uMHz", ns741_freq/100, ns741_freq%100);
+	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
+		ns741_name,	fm_freq,
 		is_on(rt_flags & NS741_RADIO), is_on(rt_flags & NS741_STEREO),
 		rt_flags & NS741_TXPWR, (rt_flags & NS741_VOLUME) >> 8, (rt_flags & NS741_GAIN) ? -9 : 0);
 
@@ -265,6 +278,9 @@ int main(void)
 	mmr_led_off();
 	mmr_tp4_mode(OUTPUT_LOW); // RHT03 poll LED
 	mmr_rdsint_mode(INPUT_HIGHZ);
+
+	ossd_putlx(0, -1, ns741_name, 0);
+	ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 
 	// turn on RDS
 	ns741_rds(1);
@@ -280,11 +296,13 @@ int main(void)
 		if (tenth_clock >= 30) {
 			tenth_clock = 0;
 			rht_read(&rht, debug_flags & RHT03_ECHO);
+			ossd_putlx(4, -1, rds_data, 0);
 
 			if (rt_flags & RDS_RESET) {
 				ns741_rds_reset_radiotext();
 				rt_flags &= ~RDS_RESET;
 			}
+
 			if (!(rt_flags & RDS_RT_SET))
 				ns741_rds_set_radiotext(rds_data);
 #if ADC_MASK
@@ -320,7 +338,7 @@ int main(void)
 		if (!led)
 			led = 1;
 
-		if (ch & ARROW_KEY) {
+		if (ch & EXTRA_KEY) {
 			if (ch == ARROW_UP) {
 				// execute last successful command
 				for(cursor = 0; ; cursor++) {
@@ -333,21 +351,24 @@ int main(void)
 			continue;
 		}
 
-		// echo
-		uart_putc((uint8_t)ch);
-
 		if (ch == '\n') {
+			uart_putc((uint8_t)ch);
 			if (*cmd && process(cmd, &rht) == 0)
 				memcpy(hist, cmd, sizeof(cmd));
 			for(uint8_t i = 0; i < cursor; i++)
 				cmd[i] = '\0';
 			cursor = 0;
+			uart_putc('>');
+			uart_putc(' ');
+			continue;
 		}
+
 		// backspace processing
 		if (ch == '\b') {
 			if (cursor) {
 				cursor--;
 				cmd[cursor] = '\0';
+				uart_putc('\b');
 				uart_putc(' ');
 				uart_putc('\b');
 			}
@@ -356,6 +377,10 @@ int main(void)
 		// skip control or damaged bytes
 		if (ch < ' ')
 			continue;
+
+		// echo
+		uart_putc((uint8_t)ch);
+
 		cmd[cursor++] = (uint8_t)ch;
 		cursor &= CMD_LEN;
 		// clean up in case of overflow (command too long)
@@ -405,7 +430,7 @@ int8_t process(char *buf, rht03_t *rht)
 
 	if (str_is(cmd, "help")) {
 		for(uint8_t i = 0; i < sizeof(cmd_list)/sizeof(cmd_list[0]); i++)
-			printf("\t%s\n", cmd_list[i]);
+			printf("  %s\n", cmd_list[i]);
 		return 0;
 	}
 
@@ -492,6 +517,7 @@ int8_t process(char *buf, rht03_t *rht)
 			eeprom_update_block((const void *)ns741_name, (void *)em_ns741_name, 8);
 		}
 		printf_P(PSTR("%s %s\n"), cmd, ns741_name);
+		ossd_putlx(0, -1, ns741_name, 0);
 		return 0;
 	}
 
@@ -511,8 +537,8 @@ int8_t process(char *buf, rht03_t *rht)
 	}
 
 	if (str_is(cmd, "status")) {
-		printf_P(PSTR("RDSID %s, FM %u.%02uMHz\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
-			ns741_name,	ns741_freq/100, ns741_freq%100,  
+		printf_P(PSTR("RDSID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
+			ns741_name,	fm_freq,
 			is_on(rt_flags & NS741_RADIO), is_on(rt_flags & NS741_STEREO),
 			rt_flags & NS741_TXPWR, (rt_flags & NS741_VOLUME) >> 8, (rt_flags & NS741_GAIN) ? -9 : 0);
 		puts(rds_data);
@@ -532,6 +558,8 @@ int8_t process(char *buf, rht03_t *rht)
 			eeprom_update_word(&em_ns741_freq, ns741_freq);
 		}
 		printf_P(PSTR("%s set to %u\n"), cmd, ns741_freq);
+		sprintf(fm_freq, "FM %u.%02uMHz", ns741_freq/100, ns741_freq%100);
+		ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 		return 0;
 	}
 
@@ -618,10 +646,11 @@ int8_t process(char *buf, rht03_t *rht)
 	return -1;
 }
 
-unsigned int get_char(void)
+uint16_t get_char(void)
 {
 	static uint8_t esc = ESC_CHAR;
-	unsigned int ch;
+	static uint8_t idx = 0;
+	uint16_t ch;
 
 	/*
      * Get received character from ringbuffer
@@ -661,15 +690,30 @@ unsigned int get_char(void)
 	}
 	if (esc == ESC_BRACKET) {
 		if (ch == '[') {
-			esc = ESC_ARROW;
+			esc = ESC_BRCHAR;
 			return 0;
 		}
 	}
-	if (esc == ESC_ARROW) {
+	if (esc == ESC_BRCHAR) {
 		esc = ESC_CHAR;
-		if (ch >= 'A' && ch <= 'D')
-			ch |= ARROW_KEY;
+		if (ch >= 'A' && ch <= 'D') {
+			ch |= EXTRA_KEY;
+			return ch;
+		}
+		if ((ch >= '1') && (ch <= '6')) {
+			esc = ESC_TILDA;
+			idx = ch - '0';
+			return 0;
+		}
 		return ch;
+	}
+	if (esc == ESC_TILDA) {
+		esc = ESC_CHAR;
+		if (ch == '~') {
+			ch = EXTRA_KEY | idx;
+			return ch;
+		}
+		return 0;
 	}
 
 	// convert CR to LF 
