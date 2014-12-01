@@ -32,14 +32,8 @@ extern "C" {
 #endif
 #endif
 
-#define RHTDATA 46     // start bit, 40 bits raw data, 5 decoded data
+#define RHTDATA     46 // start bit, 40 bits raw data, 5 decoded data
 #define RHT_ERROR -120 // valid readings for humidity 0:100, temperature -40:+80
-
-#ifndef bool
-typedef unsigned char bool;
-#define true 1
-#define false 0
-#endif
 
 typedef struct rht03
 {
@@ -50,7 +44,7 @@ typedef struct rht03
 }rht03_t;
 
 void rht_init(rht03_t *prht);
-bool rht_poll(rht03_t *prht, const uint8_t **buf);
+int8_t rht_poll(rht03_t *prht);
 int8_t rht_getTemperature(rht03_t *prht, uint8_t *decimal);
 int8_t rht_getHumidity(rht03_t *prht, uint8_t *decimal);
 

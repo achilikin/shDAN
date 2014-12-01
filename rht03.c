@@ -33,13 +33,13 @@ static const uint8_t MAX_COUNTER = 0xFF;
 
 void rht_init(rht03_t *prht)
 {
-	prht->valid = false;
+	prht->valid = 0;
 	prht->errors = eeprom_read_word(&em_rht_errors);
 	memset(prht->data, 0, 5);
 	mmr_tp5_mode(INPUT_HIGHZ);
 }
 
-bool rht_poll(rht03_t *prht, const uint8_t **buf)
+int8_t rht_poll(rht03_t *prht)
 {
 	uint8_t *bits = prht->bits;
     uint8_t nbit = 0;
@@ -86,20 +86,17 @@ bool rht_poll(rht03_t *prht, const uint8_t **buf)
 		}
     }
 
-    if (buf != NULL)
-        *buf = bits;
-
     // if the checksum matches mark data valid and return true
     if ((uint8_t)(pdata[0] + pdata[1] + pdata[2] + pdata[3]) == pdata[4]) {
 		memcpy(prht->data, pdata, 5);
-		prht->valid = true;
-        return true;
+		prht->valid = 1;
+        return 0;
     }
 	
 	prht->errors ++;
 	eeprom_update_word(&em_rht_errors, prht->errors);
     
-	return false;
+	return -1;
 }
 
 // parse data bits and return temperature in centigrades
