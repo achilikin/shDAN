@@ -130,7 +130,7 @@ int uart_tx(char data, FILE *stream __attribute__((unused)))
 }
 // ---------------------- UART related end ----------------------------
 
-inline const char *is_on(bool val)
+inline const char *is_on(uint8_t val)
 {
 	if (val) return "ON";
 	return "OFF";
@@ -170,31 +170,32 @@ void calibrate(uint8_t osccal)
 }
 
 // poll RHT03 and update RDS radio text
-bool rht_read(rht03_t *rht, bool echo)
+int8_t rht_read(rht03_t *rht, int8_t echo)
 {
-	mmr_tp4_set(HIGH);
-	const uint8_t *buf;
-	bool ok = rht_poll(rht, &buf);
-	if (ok) {
+	int8_t ret = rht_poll(rht);
+
+	if (ret == 0) {
 		uint8_t tdecimal, hdecimal;
 		int8_t tval = rht_getTemperature(rht, &tdecimal);
 		int8_t hval = rht_getHumidity(rht, &hdecimal);
 		sprintf(rds_data, "T %d.%d H %d.%d", tval, tdecimal, hval, hdecimal);
 	}
+
 	if (echo) {
-		printf("%u %lu rht %s: ", rht->errors, millis(), ok ? "ok" : "error");
+		const uint8_t *buf = rht->bits;
+		printf("%u %lu rht %s: ", rht->errors, millis(), ret ? "error" : "ok");
 		for(uint8_t i = 0; i < 41; i++)
 			printf("%u ", buf[i]);
 		printf("| ");
 		for(uint8_t i = 0; i < 5; i++)
 			printf("%02x ", buf[i+41]);
 		printf("| ");
-		if (ok)
+		if (ret == 0)
 			printf("%s", rds_data);
 		printf("\n");
 	}
-	mmr_tp4_set(LOW);
-	return ok;
+
+	return ret;
 }
 
 #define CMD_LEN 0x07F // big enough to accommodate RDS text
@@ -276,7 +277,6 @@ int main(void)
 
 	rht_read(&rht, debug_flags & RHT03_ECHO);
 	mmr_led_off();
-	mmr_tp4_mode(OUTPUT_LOW); // RHT03 poll LED
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
 	ossd_putlx(0, -1, ns741_name, 0);
@@ -295,6 +295,7 @@ int main(void)
 		// poll RHT every 3 seconds (or 30 tenth_clock)
 		if (tenth_clock >= 30) {
 			tenth_clock = 0;
+			ossd_putlx(4, 0, "*", 0);
 			rht_read(&rht, debug_flags & RHT03_ECHO);
 			ossd_putlx(4, -1, rds_data, 0);
 
@@ -391,7 +392,7 @@ int main(void)
     }
 }
 
-inline bool str_is(const char *cmd, const char *str)
+inline int8_t str_is(const char *cmd, const char *str)
 {
 	return strcmp((const char *)cmd, str) == 0;
 }
