@@ -16,9 +16,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 #ifndef _TIMER_MILLIS_H_
 #define _TIMER_MILLIS_H_
+
+#include <avr/interrupt.h>
 
 #ifdef __cplusplus
 extern "C" {
