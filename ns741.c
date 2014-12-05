@@ -1,8 +1,8 @@
 /*
-	FMBerry - an cheap and easy way of transmitting music with your Pi.
-	https://github.com/Manawyrm/FMBerry
+    FMBerry - an cheap and easy way of transmitting music with your Pi.
+    https://github.com/Manawyrm/FMBerry
 	
-	Adapted for MMR-70 AVR Atmega32 by Andrey Chilikin https://github.com/achilikin
+    Adapted for MMR-70 AVR Atmega32 by Andrey Chilikin https://github.com/achilikin
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <avr/io.h>
 #include <util/atomic.h>
+#include <avr/pgmspace.h>
 
 #include "rds.h"
 #include "ns741.h"
@@ -38,7 +39,7 @@ char ps_name[8];
 // Radiotext message
 static uint8_t text_len = 64;
 //                          "----------------------------64----------------------------------"
-static char radiotext[64] = "                                                                ";
+static char radiotext[64] = "MMR-70 as Temperature and Humidity sensor station               ";
 
 uint8_t rds_register[4] = {0x03, 0x05, 0x05, 0x05};
 
@@ -383,9 +384,9 @@ uint8_t ns741_rds_isr(void)
 	if (rds_debug < rds_debug_max) {
 		data = (uint8_t *)&block[block_index];
 		if (block_index == 0)
-			printf("%2d %02X%02X", group_index, data[1], data[0]);
+			printf_P(PSTR("%2d %02X%02X"), group_index, data[1], data[0]);
 		else 
-			printf(" %02X%02X", data[1], data[0]);
+			printf_P(PSTR(" %02X%02X"), data[1], data[0]);
 		if (block_index == 3)
 			printf("\n");
 		rds_debug++;

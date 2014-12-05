@@ -1,8 +1,8 @@
 /*
     FMBerry - an cheap and easy way of transmitting music with your Pi.
-	https://github.com/Manawyrm/FMBerry
+    https://github.com/Manawyrm/FMBerry
 
-	Adapted for MMR-70 AVR Atmega32 by Andrey Chilikin https://github.com/achilikin
+    Adapted for MMR-70 AVR Atmega32 by Andrey Chilikin https://github.com/achilikin
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
