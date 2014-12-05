@@ -1,7 +1,8 @@
-/*	Simple wrappers for accesing ATmega32 registers populated on MMR-70
-	Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+/*  Simple wrappers for accesing ATmega32 registers populated on MMR-70
+
+    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
     
-	This program is free software: you can redistribute it and/or modify
+    This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -14,8 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 #include <avr/io.h>
+#include <util/delay.h>
 
 #define INPUT 	    0
 #define INPUT_HIGHZ 0
@@ -158,6 +159,17 @@ static inline uint16_t analogRead(uint8_t channel)
 	val = ADCW;
 	ADCSRA &= ~_BV(ADEN);
 	return val;
+}
+
+// pretty accurate conversion to 3.3V without using floats 
+inline uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
+{
+	uint32_t v = adc * 323LL + 500LL;
+	uint32_t dec = (v % 100000LL) / 1000LL;
+	v = v / 100000LL;
+
+	*decimal = (uint8_t)dec;
+	return (uint8_t)v;
 }
 
 #ifdef __cplusplus
