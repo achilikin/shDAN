@@ -68,7 +68,7 @@ FORMAT = ihex
 TARGET = main
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c lib/uart.c rht03.c timer.c ns741.c ossd_i2c.c lib/twimaster.c
+SRC = $(TARGET).c cli.c serial.c timer.c rht03.c sht1x.c rht.c ossd_i2c.c ns741.c lib/twimaster.c lib/uart.c
 SRCPP = 
 
 # List Assembler source files here.
