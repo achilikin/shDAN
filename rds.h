@@ -1,8 +1,8 @@
-/*	Some RBDS standard defines used for NS741 chip on MMR-70
+/*  Some RBDS standard defines used for NS741 chip on MMR-70
 
-	Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
     
-	This program is free software: you can redistribute it and/or modify
+    This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
