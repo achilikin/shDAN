@@ -263,7 +263,7 @@ static int8_t process(char *buf, void *rht)
 		else if (str_is(arg, PSTR("off")))
 			gain = 0;
 
-		ns741_input_low(gain);
+		ns741_gain(gain);
 		printf_P(PSTR("%s is %ddB\n"), cmd, gain);
 		rt_flags &= ~NS741_GAIN;
 		if (gain)

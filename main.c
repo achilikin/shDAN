@@ -80,7 +80,8 @@ int main(void)
 	rt_flags = ns741_word;
 	debug_flags = 0;
 
-	serial_init();
+	sei();
+	serial_init(LOAD_OSCCAL);
 	rht_init();
 	cli_init();
 	i2c_init(); // needed for ns741_* and ossd_*
@@ -99,14 +100,13 @@ int main(void)
 	ns741_set_frequency(ns741_freq);
 	ns741_txpwr(ns741_word & NS741_TXPWR);
 	ns741_stereo(ns741_word & NS741_STEREO);
-	ns741_input_low(ns741_word & NS741_GAIN);
+	ns741_gain(ns741_word & NS741_GAIN);
 	ns741_volume((ns741_word & NS741_VOLUME) >> 8);
 	// turn ON
 	rt_flags |= NS741_RADIO;
 	ns741_radio(1);
 	// setup our ~millisecond timer for mill*() and tenth_clock counter
 	init_millis();
-	sei();
 
 #if _DEBUG
 	{
@@ -115,9 +115,6 @@ int main(void)
 		ms = mill16() - ms;
 		printf_P(PSTR("delay(1000) = %u\n"), ms);
 		// calibrate(osccal_def);
-#if LOAD_OSCCAL
-		printf_P(PSTR("Loading new OSCCAL %d instead of %d\n"), new_osccal, osccal_def);
-#endif
 	}
 #endif
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), ns741_freq/100, ns741_freq%100);
