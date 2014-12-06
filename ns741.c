@@ -35,7 +35,7 @@
 #define NS741_FREQ(F) ((uint16_t)((uint32_t)F*10000ULL/8192ULL))
 
 // Program Service name
-char ps_name[8];
+static char ps_name[8];
 // Radiotext message
 static uint8_t text_len = 64;
 //                          "----------------------------64----------------------------------"
@@ -47,6 +47,8 @@ static uint8_t group_index = 0; // group to be transmitted
 static uint8_t block_index = 0; // block index within the group
 
 // RDS 2A Group containing Radiotext chars
+// It is better not to use CC of your country
+// to avoid collision with any local radio stations
 static uint16_t rds_text[4] =
 {
 	RDS_PI(RDS_RUSSIA,CAC_LOCAL,0),
@@ -55,6 +57,8 @@ static uint16_t rds_text[4] =
 };
 
 // RDS 0B Group containing Program Service name
+// It is better not to use CC of your country
+// to avoid collision with any local radio stations
 static uint16_t rds_ps[4] =
 {
 	RDS_PI(RDS_RUSSIA,CAC_LOCAL,0),
@@ -105,22 +109,9 @@ static void ns741_send_data(uint8_t addr, const void *data, uint8_t len)
 
 // NS741 functions
 
-// register 0x00 controls power and oscillator:
-//	bit 0 - power
-//	bit 1 - oscillator
-void ns741_radio(uint8_t on)
-{
-	uint8_t reg = 0x02; // oscillator is active
-	if (on)
-		reg |= 0x01; // power is active
-
-	ns741_send_byte(0x00, reg);
-	return;
-}
-
-// Initial register state, some change applied to 
+// NS741 registers map, some change applied to 
 // recommended values from TSMZ1-603 spec
-static uint8_t init_data[] =
+static uint8_t ns741_reg[] =
 {
 	// default map for all 22 RW registers
 	0x02, // 00h: Power OFF, Crystal ON
@@ -134,7 +125,7 @@ static uint8_t init_data[] =
 	0x0C, // 0Ch: recommended default
 	0xE0, // 0Dh: ALC (Auto Level Control) OFF, AG (Audio Gain) -9dB
 	0x30, // 0Eh: recommended default
-	0x40, // 0Fh: Input Audio Gain -9dB
+	0x40, // 0Fh: input Audio Gain -9dB
 	0xA0, // 10h: RDS with checkword, RDS disabled
 	0xE4, // 11h: recommended default
 	0x00, // 12h: recommended default
@@ -148,9 +139,23 @@ int ns741_init(void)
 {
 	// make sure that I2C is initialized before calling ns741_init()
 	// reset registers to default values
-	ns741_send_data(0x00, init_data, sizeof(init_data));
+	ns741_send_data(0x00, ns741_reg, sizeof(ns741_reg));
 
 	return 0;
+}
+
+// register 0x00 controls power and oscillator:
+//	bit 0 - power
+//	bit 1 - oscillator
+void ns741_radio(uint8_t on)
+{
+	uint8_t reg = 0x02; // oscillator is active
+	if (on)
+		reg |= 0x01; // power is active
+
+	ns741_send_byte(0x00, reg);
+	ns741_reg[0] = reg;
+	return;
 }
 
 // register 0x01 controls stereo subcarrier and pilot: 
@@ -161,7 +166,7 @@ int ns741_init(void)
 // default: 0x81
 void ns741_stereo(uint8_t on)
 {
-	uint8_t reg = init_data[1];
+	uint8_t reg = ns741_reg[1];
 	if (on) {
 		reg &= ~0x10; // enable subcarrier
 		reg |= 0xE0;  // enable pilot tone at 1.6 level
@@ -171,7 +176,7 @@ void ns741_stereo(uint8_t on)
 		reg &= ~0xE0; // disable pilot tone
 	}
 	
-	init_data[1] = reg;
+	ns741_reg[1] = reg;
 	ns741_send_byte(0x01, reg);
 	return;
 }
@@ -184,27 +189,27 @@ void ns741_stereo(uint8_t on)
 // default: 0x0A - 0.5mW + Mute ON
 void ns741_mute(uint8_t on)
 {
-	uint8_t reg = init_data[2];
+	uint8_t reg = ns741_reg[2];
 	if (on)
 		reg |= 1;
 	else
 		reg &= ~1;
 
 	ns741_send_byte(0x02, reg);
-	init_data[2] = reg;
+	ns741_reg[2] = reg;
 	return;
 }
 
 void ns741_txpwr(uint8_t strength)
 {
-	uint8_t reg = init_data[2];
+	uint8_t reg = ns741_reg[2];
 	// clear RF power bits: set power level 0 - 0.5mW
 	reg &= ~0xC0;
 	strength &= 0x03; // just in case normalize strength
 	reg |= (strength << 6);
 
 	ns741_send_byte(0x02, reg);
-	init_data[2] = reg;
+	ns741_reg[2] = reg;
 	return;
 }
 
@@ -215,7 +220,7 @@ void ns741_set_frequency(uint16_t f_khz)
 	uint16_t val = NS741_FREQ(f_khz);
 
 	// it is recommended to mute transmitter before changing frequency
-	uint8_t reg = init_data[2];
+	uint8_t reg = ns741_reg[2];
 	ns741_send_byte(0x02, reg | 0x01);
 
 	ns741_send_byte(0x0A, val);
@@ -226,46 +231,46 @@ void ns741_set_frequency(uint16_t f_khz)
 	return;
 }
 
-// Output gain 0-6, or -9dB to +9db, 3dB step
+// output gain 0-6, or -9dB to +9db, 3dB step
 void ns741_volume(uint8_t gain)
 {
-	uint8_t reg = init_data[0x0D];
+	uint8_t reg = ns741_reg[0x0D];
 	if (gain > 6)
 		gain = 6;
 	reg &= ~0x0E;
 	reg |= gain << 1;
-	init_data[0x0D] = reg;
+	ns741_reg[0x0D] = reg;
 
 	ns741_send_byte(0x0D, reg);
 }
 
-// Muffle input gain -9dB on/off
+// set input gain -9dB on/off
 void ns741_gain(uint8_t on)
 {
-	uint8_t reg = init_data[0x0F];
+	uint8_t reg = ns741_reg[0x0F];
 
 	if (on)
 		reg |= 0x40;
 	else
 		reg &= ~0x40;
-	init_data[0x0F] = reg;
+	ns741_reg[0x0F] = reg;
 	ns741_send_byte(0x0F, reg);
 }
 
-// register 0x10 controls RDS: 
+// register 0x10 controls RDS:
 //	  reserved bits 0-5, with bit 5 set
 //	  bit 6: 0 - RDS off, 1 - RDS on
 //    bit 7: RDS data format, 1 - with checkword
 // default: 0xA0
 void ns741_rds(uint8_t on)
 {
-	uint8_t reg = init_data[0x10];
+	uint8_t reg = ns741_reg[0x10];
 	if (on)
 		reg |= 0x40;
 	else
 		reg &= ~0x40;
 
-	init_data[0x10] = reg;
+	ns741_reg[0x10] = reg;
 	ns741_send_byte(0x10, reg);
 	return;
 }
@@ -273,12 +278,12 @@ void ns741_rds(uint8_t on)
 // RDS_CP flag, third block type: C (cp=0) or C' (cp=1)
 void ns741_rds_cp(uint8_t cp)
 {		
-	uint8_t reg = init_data[0x0F];
+	uint8_t reg = ns741_reg[0x0F];
 	if (cp)
 		reg |=0x80;
 	else
 		reg &= 0x7F;
-	init_data[0x0F] = reg;
+	ns741_reg[0x0F] = reg;
 	ns741_send_byte(0x0F, reg);
 	return;
 }
@@ -292,6 +297,7 @@ void ns741_rds_set_radiotext(const char *text)
 		radiotext[i] = *text;
 	text_len = i;
 	if (i < 64) {
+		text_len++;
 		radiotext[i++] = '\r';
 		// pad buffer with spaces
 		for (; i < 64; i++)
@@ -314,8 +320,8 @@ void ns741_rds_set_rds_pi(uint16_t rdspi)
 void ns741_rds_set_rds_pty(uint8_t rdspty)
 {
 	uint16_t pty = RDS_PTY(rdspty);
-	rds_ps[1] &= ~RDS_PTYM;
-	rds_ps[1] |= pty;
+	rds_ps[1]   &= ~RDS_PTYM;
+	rds_ps[1]   |= pty;
 	rds_text[1] &= ~RDS_PTYM;
 	rds_text[1] |= pty;
 }
