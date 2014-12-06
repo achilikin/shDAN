@@ -25,7 +25,6 @@
 
 // average value from calibrate() below
 // for my copy of MMR70 it is 168 for 115200, 181 for 38400
-#define LOAD_OSCCAL 0
 uint8_t EEMEM em_osccal = 181;
 uint8_t osccal_def;
 
@@ -79,19 +78,21 @@ void serial_calibrate(uint8_t osccal)
 	puts_P(PSTR("\nDone"));
 }
 
-void serial_init(void)
+void serial_init(uint8_t load_osccal)
 {
 	// all necessary initializations
 	uart_init(UART_BAUD_SELECT(UART_BAUD_RATE,F_CPU));
 	// enable printf, puts...
 	stdout = &uart_stdout;
-
-	// load new OSCCAL if needed
+	
+	// save current OSCCAL just in case
 	osccal_def = OSCCAL;
-#if LOAD_OSCCAL
-	uint8_t new_osccal = eeprom_read_byte(&em_osccal);
-	OSCCAL = new_osccal;
-#endif	
+	// load new OSCCAL if needed
+	if (load_osccal) {
+		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
+		OSCCAL = new_osccal;
+		printf_P(PSTR("Loaded new OSCCAL %d instead of %d\n"), new_osccal, osccal_def);
+	}
 }
 
 uint16_t serial_getc(void)

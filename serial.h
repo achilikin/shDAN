@@ -45,7 +45,9 @@ extern "C" {
 #define KEY_PGUP    0x0105
 #define KEY_PGDN    0x0106
 
-void     serial_init(void);
+#define LOAD_OSCCAL 0
+
+void     serial_init(uint8_t load_osccal);
 uint16_t serial_getc(void);
 
 #define serial_putc(x) uart_putc((uint8_t)x)
