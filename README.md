@@ -90,6 +90,7 @@ If you experience unstable communication try to calibrate **OSCCAL** value and t
 ```
 
 Using different clock speed for ATmega32:
+
 1. Change fuses line in Makefile. [AVR Fuses calculator](http://www.engbedded.com/fusecalc)
 2. Change init_millis(), as now it is hardcoded to for F_CPU = 8MHz
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
