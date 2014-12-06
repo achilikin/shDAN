@@ -41,7 +41,7 @@ void ns741_mute(uint8_t on); // Mute on/off
 // strength 0 to 3, corresponding output: 0.5mW, 0.8mW, 1.0mW, 2.0mW
 void ns741_txpwr(uint8_t strength);
 void ns741_volume(uint8_t gain); // Output gain 0-6, or -9dB to +9db, 3dB step
-void ns741_input_low(uint8_t on); // Input gain -9dB on/off
+void ns741_gain(uint8_t on); // Iput signal gain -9dB on/off
 void ns741_stereo(uint8_t on); // Stereo on/off
 
 void ns741_rds(uint8_t on); // RDS on/off

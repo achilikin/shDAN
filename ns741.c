@@ -119,7 +119,7 @@ void ns741_radio(uint8_t on)
 }
 
 // Initial register state, some change applied to 
-// recommended values from TSMZ1-603 a spec
+// recommended values from TSMZ1-603 spec
 static uint8_t init_data[] =
 {
 	// default map for all 22 RW registers
@@ -239,8 +239,8 @@ void ns741_volume(uint8_t gain)
 	ns741_send_byte(0x0D, reg);
 }
 
-// Input gain -9dB on/off
-void ns741_input_low(uint8_t on)
+// Muffle input gain -9dB on/off
+void ns741_gain(uint8_t on)
 {
 	uint8_t reg = init_data[0x0F];
 
@@ -257,7 +257,6 @@ void ns741_input_low(uint8_t on)
 //	  bit 6: 0 - RDS off, 1 - RDS on
 //    bit 7: RDS data format, 1 - with checkword
 // default: 0xA0
-
 void ns741_rds(uint8_t on)
 {
 	uint8_t reg = init_data[0x10];
