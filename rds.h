@@ -26,7 +26,7 @@
 	((((uint16_t)CC) & 0x0F) << 12))
 
 // Some European Broadcasting Area Country Codes
-// It is better to use CC not for your country
+// It is better not to use CC of your country
 // to avoid collision with any local radio stations
 #define RDS_GERMANY 0x0D
 #define RDS_IRELAND 0x02
@@ -53,10 +53,17 @@
 #define RDS_PTYM (0x1F<<5)
 
 // Some of PTY codes, for full list see RBDS Standard, Annex F
+// ftp://ftp.rds.org.uk/pub/acrobat/rbds1998.pdf
 // DO NOT USE 30 or 31!!!
-#define PTY_NONE	0
-#define PTY_NEWS	1
-#define PTY_INFORM	2
-#define PTY_WEATHER	16
+#define PTY_NONE    0
+#define PTY_NEWS    1
+#define PTY_INFORM  2
+#define PTY_SPORT   3
+#define PTY_TALK    4
+#define PTY_ROCK    5
+#define PTY_COUNTRY 10
+#define PTY_JAZZ    14
+#define PTY_CLASSIC 15
+#define PTY_WEATHER 29
 
 #endif
