@@ -2,8 +2,13 @@ mmr70mod
 ========
 
 Modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
-Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on ATmega32 of MMR-70 itself instead of Raspberry Pi
-and broadcasting RDS signal with temperature and humidity readings from RHT03 sensor connected to TP5:
+Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
+
+Reads temperature and humidity data from T/H sensor (RHT03 or SHT1x), displays data on attached OLED SSD1306 display:
+
+![mmr70 screen](http://achilikin.com/github/mmr-mod-03.png)
+
+and broadcasts RDS signal with sensor's readings:
 
 ![RDS](http://3.bp.blogspot.com/-cB2P4Qp3eOI/U4kIqX7pSPI/AAAAAAAAASs/hKfAir5Qco4/s1600/screenshot.png)
 
@@ -29,16 +34,19 @@ Make it: `make`, burn ATmega fuses to 8MHz: `make fuses`, upload firmware: `make
 Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://ttssh2.sourceforge.jp/index.html.en)).
 
 **Following general commands are available:**
+* _help_ - show all supported commands
 * _status_ - get some basic status info
 * _reset_  - reset ATmega32
-* _calibrate_ - in case if serial communication is not stable, try to run calibration and check if OSCCAL value is too close to upper or lower boundary
+* _calibrate_ - in case if serial communication is not stable, try to run calibration and check if OSCCAL value is too close to upper or lower boundary.
 
 **Digital/analogue inputs:**
-* _poll_ - read RHT03 sensor connected to TP5
+* _poll_ - read T/H sensor connected to MMR-70
 * _adc chan_ - read ADC channel, for example `adc 7`
 
 **Debugging:**
+* _mem_ - show available memory
 * _debug rht|adc|rds|off_ - enable/disable debug output to serial port
+
 
 **Radio specific commands:**
 * _rdsid id_ - set RDS ID, stored in EEPROM
@@ -54,10 +62,21 @@ Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://tt
 Code Customization
 ------------------
 
-First get familiar with the code. 
+First get familiar with the code.
 
-For new versions of UART/I2C libraries check
-[Peter Fleury's page](http://homepage.hispeed.ch/peterfleury/avr-software.html)
+Select T/H sensor by editing rht.h. For RHT03:
+```
+#define RHT_TYPE RHT_TYPE_RHT03
+```
+and connect RHT03 Data to tp5.
+
+For SHT1x:
+```
+#define RHT_TYPE RHT_TYPE_SHT10
+```
+and connect SCK to tp4 and Data to tp5. 
+
+For new versions of UART/I2C libraries check [Peter Fleury's page](http://homepage.hispeed.ch/peterfleury/avr-software.html)
 
 If you managed to solder some wires to Analogue Inputs then define populated ADCs using **ADC_MASK**.
 For example, if ADC 4 to 7 populated, then define:
@@ -65,18 +84,19 @@ For example, if ADC 4 to 7 populated, then define:
 #define ADC_MASK 0xF0
 ```
 
-If you experience unstable communication try to calibrate **OSCCAL** value and then set LOAD_OSCCAL to 1
+If you experience unstable communication try to calibrate **OSCCAL** value and then set LOAD_OSCCAL to 1 in serial.h
 ```
 #define LOAD_OSCCAL 0
 ```
 
 Using different clock speed for ATmega32:
 1. Change fuses line in Makefile. [AVR Fuses calculator](http://www.engbedded.com/fusecalc)
-2. Change init_millis(), as not it is hardcoded to for F_CPU = 8MHz
+2. Change init_millis(), as now it is hardcoded to for F_CPU = 8MHz
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 Useful links not listed above
 -----------------------------
 
-* Discussion at [www.mikrocontroller.net](http://www.mikrocontroller.net/topic/252124)
-* MMR-70 Hack: [ISP-Programmmer](http://www.elektronik-labor.de/AVR/MMR70_2.html)
+* MMR-70 discussion at [www.mikrocontroller.net](http://www.mikrocontroller.net/topic/252124)
+* MMR-70 hack: [ISP-Programmmer](http://www.elektronik-labor.de/AVR/MMR70_2.html)
+* How to protect Raspberry Pi GPIOs with a [74LVC244](http://blog.stevemarple.co.uk/2012/07/avrarduino-isp-programmer-using.html) buffer
