@@ -232,7 +232,7 @@ static int8_t process(char *buf, void *rht)
 		eeprom_update_word(&em_ns741_flags, rt_flags);
 
 		get_tx_pwr(status);
-		uint8_t font = ossd_select_font(OSSD_FONT_8x8);
+		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 		ossd_putlx(7, -1, status, 0);
 		ossd_select_font(font);
 		return 0;
@@ -301,7 +301,7 @@ static int8_t process(char *buf, void *rht)
 		ns741_radio(rt_flags & NS741_RADIO);
 		printf_P(PSTR("radio %s\n"), is_on(rt_flags & NS741_RADIO));
 		get_tx_pwr(status);
-		uint8_t font = ossd_select_font(OSSD_FONT_8x8);
+		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 		ossd_putlx(7, -1, status, 0);
 		ossd_select_font(font);
 		return 0;

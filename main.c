@@ -86,7 +86,7 @@ int main(void)
 	cli_init();
 	i2c_init(); // needed for ns741_* and ossd_*
 	ossd_init(OSSD_UPDOWN);
-	ossd_select_font(OSSD_FONT_8x8);
+	ossd_select_font(OSSD_FONT_6x8);
 
 	// initialize NS741 chip	
 	eeprom_read_block((void *)ns741_name, (const void *)em_ns741_name, 8);
