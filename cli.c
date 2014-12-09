@@ -28,6 +28,7 @@
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
+#include "pcf2127.h"
 #include "ossd_i2c.h"
 #include "mmr70pin.h"
 
@@ -57,6 +58,7 @@ const char cmd_list[] PROGMEM =
 	"  mem\n"
 	"  poll\n"
 	"  debug rht|adc|rds|off\n"
+	"  rtc init|time|date|dump|dump mem|init mem\n"
 	"  adc chan\n"
 	"  rdsid id\n"
 	"  rdstext text\n"
@@ -85,6 +87,64 @@ static int8_t process(char *buf, void *rht)
 	if (str_is(cmd, PSTR("help"))) {
 		uart_puts_p(cmd_list);
 		return 0;
+	}
+
+	if (str_is(cmd, PSTR("rtc"))) {
+		if (str_is(arg, PSTR("init"))) {
+			pcf2127_init();
+			return 0;
+		}
+
+		if (str_is(arg, PSTR("dump mem"))) {
+			for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++) {
+				pcf2127_ram_read(i*16, (uint8_t *)cmd, 16);
+				printf_P(PSTR("%3u | "), i*16);
+				for(int8_t n = 0; n < 16; n++)
+					printf("%02X ", cmd[n]);
+				printf("\n");
+			}
+			return 0;
+		}
+
+		if (str_is(arg, PSTR("init mem"))) {
+			for(uint8_t i = 0; i < 16; i++)
+				cmd[i] = 0;
+			for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++)
+				pcf2127_ram_write(i*16, (uint8_t *)cmd, 16);
+			return 0;
+		}
+
+		if (str_is(arg, PSTR("dump"))) {
+			if (pcf2127_read(0x00, (uint8_t *)cmd, PCF_MAX_REG) == 0) {
+				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
+					printf("%02X ", i);
+				}
+				printf("\n");
+				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
+					printf("%02X ", cmd[i]);
+				}
+				printf("\n");
+			}
+			return 0;
+		}
+
+		if (str_is(arg, PSTR("time"))) {
+			uint8_t ts[3];
+			if (pcf2127_get_time((pcf_td_t *)ts) == 0) {
+				printf_P(PSTR("%02d:%02d:%02d\n"), ts[0], ts[1], ts[2]);
+			}
+			return 0;
+		}
+
+		if (str_is(arg, PSTR("date"))) {
+			pcf_td_t td;
+			if (pcf2127_get_date(&td) == 0) {
+				printf_P(PSTR("20%02d/%02d/%02d %02d:%02d:%02d\n"),
+					td.year, td.month, td.day, td.hour, td.min, td.sec);
+			}
+			return 0;
+		}
+		return -1;
 	}
 
 	if (str_is(cmd, PSTR("reset"))) {
