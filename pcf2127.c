@@ -64,8 +64,8 @@ int8_t pcf2127_init(void)
 	for(uint8_t i = 0; i < 5; i++) buf[i] = 0x80;
 	pcf2127_write(PCF_REG_ASEC, buf, 5);
 
-	// 1 minute temperature compensation, 1 Hz clockout
-	buf[0] = 0x86;
+	// 1 minute temperature compensation, disable clock out
+	buf[0] = 0x87;
 	pcf2127_write(PCF_REG_CLKOUT, buf, 1);
 	buf[0] = 0xA6; // refresh OTP
 	pcf2127_write(PCF_REG_CLKOUT, buf, 1);
