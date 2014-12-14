@@ -14,6 +14,8 @@ and broadcasts RDS signal with sensor's readings:
 
 [Blog](http://achilikin.blogspot.ie/2014/06/sony-ericsson-mmr-70-modding-extreme.html) with some extra pictures.
 
+If RTC ([NXP PCF2127](http://www.nxp.com/documents/data_sheet/PCF2127.pdf), for example, [RasClock](http://afterthoughtsoftware.com/products/rasclock)) is detected then it will be used to timestamp data for *log* output
+
 Avrdude on Raspberry Pi
 -----------------------
 
@@ -46,6 +48,7 @@ Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://tt
 **Debugging:**
 * _mem_ - show available memory
 * _debug rht|adc|rds|off_ - enable/disable debug output to serial port
+* _log on|off_ - enable/disable timestamped output of T/H readings
 
 
 **Radio specific commands:**
@@ -84,10 +87,7 @@ For example, if ADC 4 to 7 populated, then define:
 #define ADC_MASK 0xF0
 ```
 
-If you experience unstable communication try to calibrate **OSCCAL** value and then set LOAD_OSCCAL to 1 in serial.h
-```
-#define LOAD_OSCCAL 0
-```
+If you experience unstable communication try to calibrate **OSCCAL** value and then change ```uint8_t EEMEM em_osccal``` in the *main.c*
 
 Using different clock speed for ATmega32:
 
