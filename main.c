@@ -40,26 +40,28 @@
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
 #endif
 
-// some NS741 default variables we want to store in EEPROM
-uint8_t  EEMEM em_ns741_name[8] = "MMR70mod"; // NS471 "station" name
-uint16_t EEMEM em_ns741_freq  = 9700; // 97.00 MHz
-uint16_t EEMEM em_ns741_flags = (RADIO_STEREO | RADIO_RDS | RADIO_TXPWR0 | LOAD_OSCCAL);
+// some default variables we want to store in EEPROM
+uint8_t  EEMEM em_rds_name[8] = "MMR70mod"; // NS471 "station" name
+uint16_t EEMEM em_radio_freq  = 9700; // 97.00 MHz
 
-char ns741_name[9]; // RDS PS name
+// average value from serial_calibrate()
+// for MMR70 I'm running this code on it is 168 for 115200, 181 for 38400
+uint8_t EEMEM em_osccal = 181;
+
+// runtime flags
+uint16_t EEMEM em_rt_flags = (RADIO_STEREO | RADIO_RDS | RADIO_TXPWR0 | LOAD_OSCCAL);
+
+char rds_name[9]; // RDS PS name
 char rds_data[61];  // RDS RT string
 char fm_freq[17];   // FM frequency
 char status[17];
 
-uint16_t ns741_freq;
+uint16_t radio_freq;
 uint16_t rt_flags;
 uint8_t  debug_flags;
 
 uint32_t uptime;
 uint32_t sw_clock;
-
-// average value from serial_calibrate()
-// for MMR70 I'm running this code on it is 168 for 115200, 181 for 38400
-uint8_t EEMEM em_osccal = 181;
 
 inline const char *is_on(uint8_t val)
 {
@@ -87,7 +89,7 @@ int main(void)
 
 	// initialise all components
 	// read settings from EEPROM
-	uint16_t ns741_word = eeprom_read_word(&em_ns741_flags);
+	uint16_t ns741_word = eeprom_read_word(&em_rt_flags);
 	rt_flags = ns741_word;
 	debug_flags = 0;
 
@@ -103,15 +105,15 @@ int main(void)
 	ossd_select_font(OSSD_FONT_6x8);
 
 	// initialize NS741 chip	
-	eeprom_read_block((void *)ns741_name, (const void *)em_ns741_name, 8);
-	ns741_rds_set_progname(ns741_name);
+	eeprom_read_block((void *)rds_name, (const void *)em_rds_name, 8);
+	ns741_rds_set_progname(rds_name);
 	// initialize ns741 with default parameters
 	ns741_init();
 	// read radio frequency from EEPROM
-	ns741_freq = eeprom_read_word(&em_ns741_freq);
-	if (ns741_freq < NS741_MIN_FREQ) ns741_freq = NS741_MIN_FREQ;
-	if (ns741_freq > NS741_MAX_FREQ) ns741_freq = NS741_MAX_FREQ;
-	ns741_set_frequency(ns741_freq);
+	radio_freq = eeprom_read_word(&em_radio_freq);
+	if (radio_freq < NS741_MIN_FREQ) radio_freq = NS741_MIN_FREQ;
+	if (radio_freq > NS741_MAX_FREQ) radio_freq = NS741_MAX_FREQ;
+	ns741_set_frequency(radio_freq);
 	ns741_txpwr(ns741_word & RADIO_TXPWR);
 	ns741_stereo(ns741_word & RADIO_STEREO);
 	ns741_gain(ns741_word & RADIO_GAIN);
@@ -131,9 +133,9 @@ int main(void)
 		// calibrate(osccal_def);
 	}
 #endif
-	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), ns741_freq/100, ns741_freq%100);
+	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
-		ns741_name,	fm_freq,
+		rds_name,	fm_freq,
 		is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 		rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
 
@@ -144,7 +146,7 @@ int main(void)
 	ossd_putlx(7, -1, status, 0);
 
 	ossd_select_font(OSSD_FONT_8x16);
-	ossd_putlx(0, -1, ns741_name, 0);
+	ossd_putlx(0, -1, rds_name, 0);
 	ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 
 	// turn on RDS

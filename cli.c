@@ -240,14 +240,14 @@ static int8_t process(char *buf, void *rht)
 
 	if (str_is(cmd, PSTR("rdsid"))) {
 		if (*arg != '\0') {
-			memset(ns741_name, 0, 8);
+			memset(rds_name, 0, 8);
 			for(int8_t i = 0; (i < 8) && arg[i]; i++)
-				ns741_name[i] = arg[i];
-			ns741_rds_set_progname(ns741_name);
-			eeprom_update_block((const void *)ns741_name, (void *)em_ns741_name, 8);
+				rds_name[i] = arg[i];
+			ns741_rds_set_progname(rds_name);
+			eeprom_update_block((const void *)rds_name, (void *)em_rds_name, 8);
 		}
-		printf_P(PSTR("%s %s\n"), cmd, ns741_name);
-		ossd_putlx(0, -1, ns741_name, 0);
+		printf_P(PSTR("%s %s\n"), cmd, rds_name);
+		ossd_putlx(0, -1, rds_name, 0);
 		return 0;
 	}
 
@@ -269,7 +269,7 @@ static int8_t process(char *buf, void *rht)
 	if (str_is(cmd, PSTR("status"))) {
 		printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
 		printf_P(PSTR("RDSID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
-			ns741_name,	fm_freq,
+			rds_name,	fm_freq,
 			is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 			rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
 		puts(rds_data);
@@ -283,13 +283,13 @@ static int8_t process(char *buf, void *rht)
 			return -1;
 		}
 		freq = NS741_FREQ_STEP*(freq / NS741_FREQ_STEP);
-		if (freq != ns741_freq) {
-			ns741_freq = freq;
-			ns741_set_frequency(ns741_freq);
-			eeprom_update_word(&em_ns741_freq, ns741_freq);
+		if (freq != radio_freq) {
+			radio_freq = freq;
+			ns741_set_frequency(radio_freq);
+			eeprom_update_word(&em_radio_freq, radio_freq);
 		}
-		printf_P(PSTR("%s set to %u\n"), cmd, ns741_freq);
-		sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), ns741_freq/100, ns741_freq%100);
+		printf_P(PSTR("%s set to %u\n"), cmd, radio_freq);
+		sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 		ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 		return 0;
 	}
@@ -304,7 +304,7 @@ static int8_t process(char *buf, void *rht)
 		rt_flags |= pwr;
 		ns741_txpwr(pwr);
 		printf_P(PSTR("%s set to %d\n"), cmd, pwr);
-		eeprom_update_word(&em_ns741_flags, rt_flags);
+		eeprom_update_word(&em_rt_flags, rt_flags);
 
 		get_tx_pwr(status);
 		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
@@ -326,7 +326,7 @@ static int8_t process(char *buf, void *rht)
 		printf_P(PSTR("%s set to %d\n"), cmd, gain);
 		rt_flags &= ~RADIO_VOLUME;
 		rt_flags |= gain << 8;
-		eeprom_update_word(&em_ns741_flags, rt_flags);
+		eeprom_update_word(&em_rt_flags, rt_flags);
 		return 0;
 	}
 
@@ -343,7 +343,7 @@ static int8_t process(char *buf, void *rht)
 		rt_flags &= ~RADIO_GAIN;
 		if (gain)
 			rt_flags |= RADIO_GAIN;
-		eeprom_update_word(&em_ns741_flags, rt_flags);
+		eeprom_update_word(&em_rt_flags, rt_flags);
 		return 0;
 	}
 
@@ -364,7 +364,7 @@ static int8_t process(char *buf, void *rht)
 			rt_flags &= ~RADIO_STEREO;
 		ns741_stereo(rt_flags & RADIO_STEREO);
 		printf_P(PSTR("stereo %s\n"), is_on(rt_flags & RADIO_STEREO));
-		eeprom_update_word(&em_ns741_flags, rt_flags);
+		eeprom_update_word(&em_rt_flags, rt_flags);
 		return 0;
 	}
 

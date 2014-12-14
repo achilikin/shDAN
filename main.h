@@ -36,7 +36,7 @@ extern "C" {
 #define RHT_ECHO 0x02
 #define RHT_LOG  0x04
 
-extern char ns741_name[9]; // RDS PS name
+extern char rds_name[9]; // RDS PS name
 extern char rds_data[61];  // RDS RT string
 extern char fm_freq[17];   // FM frequency
 extern char status[17];
@@ -59,11 +59,11 @@ extern char status[17];
 #define RDS_RESET    0x4000
 #define RDS_RT_SET   0x8000
 
-extern uint8_t  EEMEM em_ns741_name[8];
-extern uint16_t EEMEM em_ns741_freq;
-extern uint16_t EEMEM em_ns741_flags;
+extern uint8_t  EEMEM em_rds_name[8];
+extern uint16_t EEMEM em_radio_freq;
+extern uint16_t EEMEM em_rt_flags;
 
-extern uint16_t ns741_freq;
+extern uint16_t radio_freq;
 extern uint16_t rt_flags;
 extern uint8_t  debug_flags;
 
