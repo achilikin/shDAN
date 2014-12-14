@@ -28,6 +28,8 @@
 # make fuses = Set device fuses, using avrdude.
 #              Please customize the avrdude FUSES settings below first!
 #
+# make device = Get device signature and fuses, using avrdude.
+#
 # make program = Download the hex file to the device, using avrdude.
 #                Please customize the avrdude settings below first!
 #
@@ -356,6 +358,9 @@ program: $(TARGET).hex $(TARGET).eep
 	
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
+
+device:
+	$(AVRDUDE) $(AVRDUDE_FLAGS)
 
 reset:
 	$(AVRDUDE) $(AVRDUDE_FLAGS)

@@ -23,9 +23,6 @@
 
 #include "serial.h"
 
-// average value from calibrate() below
-// for my copy of MMR70 it is 168 for 115200, 181 for 38400
-uint8_t EEMEM em_osccal = 181;
 uint8_t osccal_def;
 
 // Escape sequence states
@@ -89,9 +86,8 @@ void serial_init(uint8_t load_osccal)
 	osccal_def = OSCCAL;
 	// load new OSCCAL if needed
 	if (load_osccal) {
-		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
-		OSCCAL = new_osccal;
-		printf_P(PSTR("Loaded new OSCCAL %d instead of %d\n"), new_osccal, osccal_def);
+		OSCCAL = load_osccal;
+		printf_P(PSTR("Loaded new OSCCAL %d instead of %d\n"), load_osccal, osccal_def);
 	}
 }
 

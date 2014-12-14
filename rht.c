@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 #include "rht.h"
-#include "cli.h"
+#include "main.h"
 #include "timer.h"
 
 // poll t/rh sensor and update RDS radio text

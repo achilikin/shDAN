@@ -28,9 +28,11 @@
 
 #include "cli.h"
 #include "rht.h"
+#include "main.h"
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
+#include "pcf2127.h"
 #include "mmr70pin.h"
 #include "ossd_i2c.h"
 
@@ -41,7 +43,7 @@
 // some NS741 default variables we want to store in EEPROM
 uint8_t  EEMEM em_ns741_name[8] = "MMR70mod"; // NS471 "station" name
 uint16_t EEMEM em_ns741_freq  = 9700; // 97.00 MHz
-uint16_t EEMEM em_ns741_flags = (NS741_STEREO | NS741_RDS | NS741_TXPWR0);
+uint16_t EEMEM em_ns741_flags = (RADIO_STEREO | RADIO_RDS | RADIO_TXPWR0 | LOAD_OSCCAL);
 
 char ns741_name[9]; // RDS PS name
 char rds_data[61];  // RDS RT string
@@ -52,6 +54,13 @@ uint16_t ns741_freq;
 uint16_t rt_flags;
 uint8_t  debug_flags;
 
+uint32_t uptime;
+uint32_t sw_clock;
+
+// average value from serial_calibrate()
+// for MMR70 I'm running this code on it is 168 for 115200, 181 for 38400
+uint8_t EEMEM em_osccal = 181;
+
 inline const char *is_on(uint8_t val)
 {
 	if (val) return "ON";
@@ -59,17 +68,19 @@ inline const char *is_on(uint8_t val)
 }
 
 static const char *s_pwr[4] = {
-		"0.5", "0.8", "1.0", "2.0"
+	"0.5", "0.8", "1.0", "2.0"
 };
 
 void get_tx_pwr(char *buf)
 {
-	sprintf_P(buf, PSTR("TxPwr %smW %s"), s_pwr[rt_flags & NS741_TXPWR], 
-		rt_flags & NS741_RADIO ? "on" : "off");
+	sprintf_P(buf, PSTR("TxPwr %smW %s"), s_pwr[rt_flags & RADIO_TXPWR], 
+		rt_flags & RADIO_POWER ? "on" : "off");
 }
 
 int main(void)
 {
+	uint8_t poll_clock = 0;
+
 	rht_t rht;
 	rht.valid = 0;
 	rht.errors = 0;
@@ -81,7 +92,10 @@ int main(void)
 	debug_flags = 0;
 
 	sei();
-	serial_init(LOAD_OSCCAL);
+	uint8_t new_osccal = 0;
+	if (rt_flags & LOAD_OSCCAL)
+		new_osccal = eeprom_read_byte(&em_osccal);
+	serial_init(new_osccal);
 	rht_init();
 	cli_init();
 	i2c_init(); // needed for ns741_* and ossd_*
@@ -98,13 +112,13 @@ int main(void)
 	if (ns741_freq < NS741_MIN_FREQ) ns741_freq = NS741_MIN_FREQ;
 	if (ns741_freq > NS741_MAX_FREQ) ns741_freq = NS741_MAX_FREQ;
 	ns741_set_frequency(ns741_freq);
-	ns741_txpwr(ns741_word & NS741_TXPWR);
-	ns741_stereo(ns741_word & NS741_STEREO);
-	ns741_gain(ns741_word & NS741_GAIN);
-	ns741_volume((ns741_word & NS741_VOLUME) >> 8);
+	ns741_txpwr(ns741_word & RADIO_TXPWR);
+	ns741_stereo(ns741_word & RADIO_STEREO);
+	ns741_gain(ns741_word & RADIO_GAIN);
+	ns741_volume((ns741_word & RADIO_VOLUME) >> 8);
 	// turn ON
-	rt_flags |= NS741_RADIO;
-	ns741_radio(1);
+	if (rt_flags & RADIO_POWER)
+		ns741_radio(1);
 	// setup our ~millisecond timer for mill*() and tenth_clock counter
 	init_millis();
 
@@ -120,10 +134,10 @@ int main(void)
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), ns741_freq/100, ns741_freq%100);
 	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
 		ns741_name,	fm_freq,
-		is_on(rt_flags & NS741_RADIO), is_on(rt_flags & NS741_STEREO),
-		rt_flags & NS741_TXPWR, (rt_flags & NS741_VOLUME) >> 8, (rt_flags & NS741_GAIN) ? -9 : 0);
+		is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
+		rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
 
-	rht_read(&rht, debug_flags & RHT03_ECHO);
+	rht_read(&rht, debug_flags & RHT_ECHO);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
 	get_tx_pwr(status);
@@ -135,10 +149,14 @@ int main(void)
 
 	// turn on RDS
 	ns741_rds(1);
-	rt_flags |= NS741_RDS;
+	rt_flags |= RADIO_RDS;
 	rt_flags |= RDS_RESET; // set reset flag so next poll of RHT will start new text
 
-    for(;;) {
+	// reset our soft clock
+	uptime   = 0;
+	sw_clock = 0;
+
+	for(;;) {
 		// RDSPIN is low when NS741 is ready to transmit next RDS frame
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
@@ -146,12 +164,12 @@ int main(void)
 		// process serial port commands
 		cli_interact(&rht);
 
-		// poll RHT every 5 seconds (or 50 tenth_clock)
-		if (tenth_clock >= 50) {
+		// once-a-second checks
+		if (tenth_clock >= 10) {
 			tenth_clock = 0;
-			ossd_putlx(4, 0, "*", 0);
-			rht_read(&rht, debug_flags & RHT03_ECHO);
-			ossd_putlx(4, -1, rds_data, 0);
+			uptime++;
+			sw_clock++; 
+			poll_clock ++;
 
 			if (rt_flags & RDS_RESET) {
 				ns741_rds_reset_radiotext();
@@ -174,6 +192,26 @@ int main(void)
 				}
 			}
 #endif
+		}
+
+		// poll RHT every 5 seconds
+		if (poll_clock >= 5) {
+			poll_clock = 0;
+			ossd_putlx(4, 0, "*", 0);
+			rht_read(&rht, debug_flags & RHT_ECHO);
+			ossd_putlx(4, -1, rds_data, 0);
+			if (debug_flags & RHT_LOG) {
+				uint8_t ts[3];
+				if (pcf2127_get_time((pcf_td_t *)ts) != 0) {
+					ts[0] = (sw_clock / 3600) % 24;
+					ts[1] = (sw_clock / 60) % 60;
+					ts[2] = sw_clock % 60;
+				}
+				printf_P(PSTR("\n%02d:%02d:%02d %d.%02d %d.%02d"), 
+					ts[0], ts[1], ts[2],
+					rht.temperature.val, rht.temperature.dec,
+					rht.humidity.val, rht.humidity.dec);
+			}
 		}
     }
 }

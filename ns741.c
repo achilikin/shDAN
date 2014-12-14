@@ -76,7 +76,7 @@ static uint8_t rds_debug_max = RDS_MAX_BLOCKS;
 
 // I2C wrappers
 // Send 8 bit
-static void ns741_send_byte(uint8_t addr, uint8_t data)
+static void i2c_send_byte(uint8_t addr, uint8_t data)
 {		
 	i2c_start(I2C_MMR70);
 	i2c_write(addr);
@@ -85,7 +85,7 @@ static void ns741_send_byte(uint8_t addr, uint8_t data)
 }
 
 // Send 16 bit, MSB first
-static void ns741_send_word(uint8_t addr, uint8_t *data)
+static void i2c_send_word(uint8_t addr, uint8_t *data)
 {
 	i2c_start(I2C_MMR70);
 	i2c_write(addr);
@@ -95,7 +95,7 @@ static void ns741_send_word(uint8_t addr, uint8_t *data)
 }
 
 // Send stream of bytes
-static void ns741_send_data(uint8_t addr, const void *data, uint8_t len)
+static void i2c_send_data(uint8_t addr, const void *data, uint8_t len)
 {
 	const uint8_t *str = data;
 	i2c_start(I2C_MMR70);
@@ -139,7 +139,7 @@ int ns741_init(void)
 {
 	// make sure that I2C is initialized before calling ns741_init()
 	// reset registers to default values
-	ns741_send_data(0x00, ns741_reg, sizeof(ns741_reg));
+	i2c_send_data(0x00, ns741_reg, sizeof(ns741_reg));
 
 	return 0;
 }
@@ -153,7 +153,7 @@ void ns741_radio(uint8_t on)
 	if (on)
 		reg |= 0x01; // power is active
 
-	ns741_send_byte(0x00, reg);
+	i2c_send_byte(0x00, reg);
 	ns741_reg[0] = reg;
 	return;
 }
@@ -177,7 +177,7 @@ void ns741_stereo(uint8_t on)
 	}
 	
 	ns741_reg[1] = reg;
-	ns741_send_byte(0x01, reg);
+	i2c_send_byte(0x01, reg);
 	return;
 }
 
@@ -195,7 +195,7 @@ void ns741_mute(uint8_t on)
 	else
 		reg &= ~1;
 
-	ns741_send_byte(0x02, reg);
+	i2c_send_byte(0x02, reg);
 	ns741_reg[2] = reg;
 	return;
 }
@@ -208,7 +208,7 @@ void ns741_txpwr(uint8_t strength)
 	strength &= 0x03; // just in case normalize strength
 	reg |= (strength << 6);
 
-	ns741_send_byte(0x02, reg);
+	i2c_send_byte(0x02, reg);
 	ns741_reg[2] = reg;
 	return;
 }
@@ -221,13 +221,13 @@ void ns741_set_frequency(uint16_t f_khz)
 
 	// it is recommended to mute transmitter before changing frequency
 	uint8_t reg = ns741_reg[2];
-	ns741_send_byte(0x02, reg | 0x01);
+	i2c_send_byte(0x02, reg | 0x01);
 
-	ns741_send_byte(0x0A, val);
-	ns741_send_byte(0x0B, val >> 8);
+	i2c_send_byte(0x0A, val);
+	i2c_send_byte(0x0B, val >> 8);
 
 	// restore previous mute state
-	ns741_send_byte(0x02, reg);
+	i2c_send_byte(0x02, reg);
 	return;
 }
 
@@ -241,7 +241,7 @@ void ns741_volume(uint8_t gain)
 	reg |= gain << 1;
 	ns741_reg[0x0D] = reg;
 
-	ns741_send_byte(0x0D, reg);
+	i2c_send_byte(0x0D, reg);
 }
 
 // set input gain -9dB on/off
@@ -254,7 +254,7 @@ void ns741_gain(uint8_t on)
 	else
 		reg &= ~0x40;
 	ns741_reg[0x0F] = reg;
-	ns741_send_byte(0x0F, reg);
+	i2c_send_byte(0x0F, reg);
 }
 
 // register 0x10 controls RDS:
@@ -271,7 +271,7 @@ void ns741_rds(uint8_t on)
 		reg &= ~0x40;
 
 	ns741_reg[0x10] = reg;
-	ns741_send_byte(0x10, reg);
+	i2c_send_byte(0x10, reg);
 	return;
 }
 
@@ -284,7 +284,7 @@ void ns741_rds_cp(uint8_t cp)
 	else
 		reg &= 0x7F;
 	ns741_reg[0x0F] = reg;
-	ns741_send_byte(0x0F, reg);
+	i2c_send_byte(0x0F, reg);
 	return;
 }
 
@@ -397,7 +397,7 @@ uint8_t ns741_rds_isr(void)
 		rds_debug++;
 	}
 
-	ns741_send_word(rds_register[block_index], (uint8_t *)&block[block_index]);
+	i2c_send_word(rds_register[block_index], (uint8_t *)&block[block_index]);
 	block_index = (block_index + 1) & 0x03;
 	if (!block_index)
 		group_index = (group_index + 1) % RDS_MAX_GROUPS;
