@@ -114,7 +114,7 @@ static void i2c_send_data(uint8_t addr, const void *data, uint8_t len)
 static uint8_t ns741_reg[] =
 {
 	// default map for all 22 RW registers
-	0x02, // 00h: Power OFF, Crystal ON
+	0x00, // 00h: Power OFF, Crystal OFF
 	0xE1, // 01h: PE switch ON, PE selection 50us (Europe), Subcarrier ON, Pilot Level 1.6
 	0x0A, // 02h: RFG 0.5 mW, Mute ON
 	0x00, 0x00, 0x00, 0x00, // 03h-06h: RDS registers
@@ -147,7 +147,7 @@ int ns741_init(void)
 // register 0x00 controls power and oscillator:
 //	bit 0 - power
 //	bit 1 - oscillator
-void ns741_radio(uint8_t on)
+void ns741_radio_power(uint8_t on)
 {
 	uint8_t reg = 0x02; // oscillator is active
 	if (on)
@@ -240,7 +240,20 @@ void ns741_volume(uint8_t gain)
 	reg &= ~0x0E;
 	reg |= gain << 1;
 	ns741_reg[0x0D] = reg;
+	i2c_send_byte(0x0D, reg);
+}
 
+// Auto Level Control on/off
+void ns741_alc(uint8_t on)
+{
+	uint8_t reg = ns741_reg[0x0D];
+
+	if (on)
+		reg |= 0x01;
+	else
+		reg &= ~0x01;
+
+	ns741_reg[0x0D] = reg;
 	i2c_send_byte(0x0D, reg);
 }
 

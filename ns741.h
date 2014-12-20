@@ -36,10 +36,11 @@ extern "C" {
 
 int  ns741_init(void); // set all registers to default values
 void ns741_set_frequency(uint16_t f_khz); // f_khz 9500 for 95.00MHz
-void ns741_radio(uint8_t on); // radio on/off
+void ns741_radio_power(uint8_t on); // radio on/off
 void ns741_mute(uint8_t on); // mute on/off
 // strength 0 to 3, corresponding output: 0.5mW, 0.8mW, 1.0mW, 2.0mW
 void ns741_txpwr(uint8_t strength);
+void ns741_alc(uint8_t on); // Auto Level Control on/off
 void ns741_volume(uint8_t gain); // output gain 0-6, or -9dB to +9db, 3dB step
 void ns741_gain(uint8_t on); // input audio gain -9dB on/off
 void ns741_stereo(uint8_t on); // stereo on/off
