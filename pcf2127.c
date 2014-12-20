@@ -21,7 +21,6 @@
 
 #define I2C_RTC (0x51 << 1)
 
-
 int8_t pcf2127_write(uint8_t addr, uint8_t *buf, uint8_t len)
 {
 	if (i2c_start(I2C_RTC | I2C_WRITE) != 0)
@@ -34,7 +33,6 @@ int8_t pcf2127_write(uint8_t addr, uint8_t *buf, uint8_t len)
 	i2c_stop();
 	return 0;
 }
-
 
 int8_t pcf2127_read(uint8_t addr, uint8_t *buf, uint8_t len)
 {

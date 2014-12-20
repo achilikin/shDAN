@@ -28,17 +28,14 @@ extern "C" {
 #endif
 #endif
 
-// define mask of populated ADC inputs here, 0 if not populated
-#define ADC_MASK 0xF0
-
 // debug flags
 #define ADC_ECHO 0x01
 #define RHT_ECHO 0x02
 #define RHT_LOG  0x04
 
-extern char rds_name[9]; // RDS PS name
-extern char rds_data[61];  // RDS RT string
-extern char fm_freq[17];   // FM frequency
+extern char rds_name[9];  // RDS PS name
+extern char rds_data[61]; // RDS RT string
+extern char fm_freq[17];  // FM frequency
 extern char status[17];
 
 // runtime radio flags

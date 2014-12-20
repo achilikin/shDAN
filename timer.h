@@ -28,7 +28,7 @@ extern "C" {
 extern volatile uint8_t tenth_clock;
 extern volatile uint32_t ms_clock;
 
-void init_millis(void);
+void init_time_clock(void);
 
 static inline uint32_t millis(void)
 {

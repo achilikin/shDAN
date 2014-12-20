@@ -117,7 +117,7 @@ static int8_t sht1x_send(uint8_t cmd)
 			break;
 	}
 	if (i == SHT1X_TIMEOUT) {
-		printf_P(PSTR("SHT1x: No ACK on send\n"));
+//		printf_P(PSTR("SHT1x: No ACK on send\n"));
 		sht.errors++;
 		return -1;
 	}
@@ -303,7 +303,7 @@ int8_t sht1x_poll(rht_t *psht)
 	return 0;
 }
 
-int8_t sht1x_getTemperature(rht_t *prht)
+int8_t sht1x_get_temperature(rht_t *prht)
 {
 	if (sht.valid & RHT_TVALID) {
 		prht->valid |= RHT_TVALID;
@@ -314,7 +314,7 @@ int8_t sht1x_getTemperature(rht_t *prht)
 	return -1;
 }
 
-int8_t sht1x_getHumidity(rht_t *prht)
+int8_t sht1x_get_humidity(rht_t *prht)
 {
 	if (sht.valid & RHT_HVALID) {
 		prht->valid |= RHT_HVALID;

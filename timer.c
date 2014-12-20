@@ -21,6 +21,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include "mmr70pin.h"
+
 #if (F_CPU != 8000000)
 #error Change init_millis() for F_CPU != 8MHz
 #endif
@@ -42,12 +44,24 @@ ISR(TIMER1_COMPA_vect)
    }
 }
 
+// RTC sync vector
+ISR(INT1_vect)
+{
+}
+
 // initialize 1ms timer
-void init_millis(void)
+void init_time_clock(void)
 {
 	// for 8MHz: divide by 64 and then increment clock every millisecond
 	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10);
 	OCR1A = 125;
 	// enable compare interrupt
 	TIMSK |= _BV(OCIE1A);
+	
+	// set PD3 (INT1) as input and enable pull-up resistor 
+	_pin_mode(&DDRD, _BV(PD3), INPUT_UP);
+	// enable INT1
+	GICR = _BV(INT1);
+	// trigger INT1 on falling edge
+	MCUCR = _BV(ISC11);
 }

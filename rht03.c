@@ -113,7 +113,7 @@ int8_t rht03_poll(rht_t *prht)
 }
 
 // parse data bits and return temperature in centigrades
-int8_t rht03_getTemperature(rht_t *prht)
+int8_t rht03_get_temperature(rht_t *prht)
 {
     int16_t temperature; 
 	
@@ -134,7 +134,7 @@ int8_t rht03_getTemperature(rht_t *prht)
 }
 
 // parse data bits and return relative humidity in %
-int8_t rht03_getHumidity(rht_t *prht)
+int8_t rht03_get_humidity(rht_t *prht)
 { 
     uint16_t humidity;
 

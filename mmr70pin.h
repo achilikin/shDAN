@@ -52,7 +52,7 @@
 #define PND0	8  // RXD
 #define PND1	9  // TXD
 #define PND2	10 // RDSINT
-#define PND3	11 // NC
+#define PND3	11 // NC, INT1
 #define PND4	12 // NC
 #define PND5	13 // NC
 #define PND6	14 // NC
@@ -68,7 +68,7 @@ extern "C" {
 // General Port access functions
 
 // manipulates DDRx only
-inline void _pin_dir(volatile uint8_t *port, uint8_t mask, uint8_t dir)
+static inline void _pin_dir(volatile uint8_t *port, uint8_t mask, uint8_t dir)
 {
 	if (dir)
 		*port |= mask;
@@ -77,7 +77,7 @@ inline void _pin_dir(volatile uint8_t *port, uint8_t mask, uint8_t dir)
 }
 
 // manipulates PORTx register
-inline void _pin_set(volatile uint8_t *port, uint8_t mask, uint8_t val)
+static inline void _pin_set(volatile uint8_t *port, uint8_t mask, uint8_t val)
 {
 	if (val)
 		*port |= mask;
@@ -86,7 +86,7 @@ inline void _pin_set(volatile uint8_t *port, uint8_t mask, uint8_t val)
 }
 
 // manipulates DDRx and PORTx register
-inline void _pin_mode(volatile uint8_t *port, uint8_t mask, uint8_t mode)
+static inline void _pin_mode(volatile uint8_t *port, uint8_t mask, uint8_t mode)
 {
 	if (mode & 0x01)
 		*port |= mask;
@@ -96,49 +96,61 @@ inline void _pin_mode(volatile uint8_t *port, uint8_t mask, uint8_t mode)
 }
 
 // reads PINx register
-inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
+static inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
 {
 	return (*port & mask);
 }
 
 // Port B pins access
-inline void mmr_tp3_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP3), mode); }
-inline void mmr_tp3_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP3), dir);   }
-inline void mmr_tp3_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP3), val);  }
-inline uint8_t mmr_tp3_get(void)       { return _pin_get(&PINB, _BV(TP3)); }
+static inline void mmr_tp3_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP3), mode); }
+static inline void mmr_tp3_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP3), dir);   }
+static inline void mmr_tp3_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP3), val);  }
+static inline uint8_t mmr_tp3_get(void)       { return _pin_get(&PINB, _BV(TP3)); }
 
-inline void mmr_tp4_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP4), mode); }
-inline void mmr_tp4_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP4), dir);   }
-inline void mmr_tp4_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP4), val);  }
-inline uint8_t mmr_tp4_get(void)       { return _pin_get(&PINB, _BV(TP4)); }
+static inline void mmr_tp4_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP4), mode); }
+static inline void mmr_tp4_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP4), dir);   }
+static inline void mmr_tp4_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP4), val);  }
+static inline uint8_t mmr_tp4_get(void)       { return _pin_get(&PINB, _BV(TP4)); }
 
-inline void mmr_tp5_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP5), mode); }
-inline void mmr_tp5_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP5), dir);   }
-inline void mmr_tp5_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP5), val);  }
-inline uint8_t mmr_tp5_get(void)       { return _pin_get(&PINB, _BV(TP5)); }
+static inline void mmr_tp5_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP5), mode); }
+static inline void mmr_tp5_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP5), dir);   }
+static inline void mmr_tp5_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP5), val);  }
+static inline uint8_t mmr_tp5_get(void)       { return _pin_get(&PINB, _BV(TP5)); }
 
-inline void mmr_tp7_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP7), mode); }
-inline void mmr_tp7_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP7), dir);   }
-inline void mmr_tp7_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP7), val);  }
-inline uint8_t mmr_tp7_get(void)       { return _pin_get(&PINB, _BV(TP7)); }
+static inline void mmr_tp7_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP7), mode); }
+static inline void mmr_tp7_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP7), dir);   }
+static inline void mmr_tp7_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP7), val);  }
+static inline uint8_t mmr_tp7_get(void)       { return _pin_get(&PINB, _BV(TP7)); }
 
-inline void mmr_tp10_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP10), mode); }
-inline void mmr_tp10_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP10), dir);   }
-inline void mmr_tp10_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP10), val);  }
-inline uint8_t mmr_tp10_get(void)       { return _pin_get(&PINB, _BV(TP10)); }
+static inline void mmr_tp10_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP10), mode); }
+static inline void mmr_tp10_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP10), dir);   }
+static inline void mmr_tp10_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP10), val);  }
+static inline uint8_t mmr_tp10_get(void)       { return _pin_get(&PINB, _BV(TP10)); }
 
-inline void mmr_led_on(void)  { _pin_dir(&DDRD, _BV(LED1), OUTPUT); }
-inline void mmr_led_off(void) { _pin_dir(&DDRD, _BV(LED1), INPUT);  }
+static inline void mmr_led_on(void)  { _pin_dir(&DDRD, _BV(LED1), OUTPUT); }
+static inline void mmr_led_off(void) { _pin_dir(&DDRD, _BV(LED1), INPUT);  }
 
-inline void mmr_rdsint_mode(uint8_t mode) {  _pin_mode(&DDRD, _BV(RDSINT), mode); }
-inline void mmr_rdsint_set(uint8_t val)   {  _pin_set(&PORTD, _BV(RDSINT), val);  }
-inline uint8_t mmr_rdsint_get(void)       { return _pin_get(&PIND, _BV(RDSINT));  }
+static inline void mmr_rdsint_mode(uint8_t mode) {  _pin_mode(&DDRD, _BV(RDSINT), mode); }
+static inline void mmr_rdsint_set(uint8_t val)   {  _pin_set(&PORTD, _BV(RDSINT), val);  }
+static inline uint8_t mmr_rdsint_get(void)       { return _pin_get(&PIND, _BV(RDSINT));  }
 
 // Arduino-type delay
 static inline void delay(uint16_t msec)
 {
 	_delay_ms(msec);
 }
+
+// define mask of populated ADC inputs here, 0 if not populated
+#define ADC_PA0 0x01
+#define ADC_PA1 0x02
+#define ADC_PA2 0x04
+#define ADC_PA3 0x08
+#define ADC_PA4 0x10
+#define ADC_PA5 0x20
+#define ADC_PA6 0x40
+#define ADC_PA7 0x80
+
+#define ADC_MASK (ADC_PA3 | ADC_PA5 | ADC_PA7)
 
 // in case if you managed to solder some wires to analogue inputs...
 // Arduino-type analogRead()
@@ -162,7 +174,7 @@ static inline uint16_t analogRead(uint8_t channel)
 }
 
 // pretty accurate conversion to 3.3V without using floats 
-inline uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
+static inline uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
 {
 	uint32_t v = adc * 323LL + 500LL;
 	uint32_t dec = (v % 100000LL) / 1000LL;

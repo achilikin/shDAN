@@ -57,15 +57,15 @@ typedef struct rht_s
 static inline void   rht_init(void) { rht03_init(); }
 static inline void   rht_print(const char *data) { rht03_print(data); }
 static inline int8_t rht_poll(rht_t *prht) { return rht03_poll(prht); }
-static inline int8_t rht_getTemperature(rht_t *prht) { return rht03_getTemperature(prht); }
-static inline int8_t rht_getHumidity(rht_t *prht)  { return rht03_getHumidity(prht); }
+static inline int8_t rht_get_temperature(rht_t *prht) { return rht03_get_temperature(prht); }
+static inline int8_t rht_get_humidity(rht_t *prht)  { return rht03_get_humidity(prht); }
 #else
 #include "sht1x.h"
 static inline void   rht_init(void) { sht1x_init(); }
 static inline void   rht_print(const char *data) { sht1x_print(data); }
 static inline int8_t rht_poll(rht_t *prht) { return sht1x_poll(prht); }
-static inline int8_t rht_getTemperature(rht_t *prht) { return sht1x_getTemperature(prht); }
-static inline int8_t rht_getHumidity(rht_t *prht)  { return sht1x_getHumidity(prht); }
+static inline int8_t rht_get_temperature(rht_t *prht) { return sht1x_get_temperature(prht); }
+static inline int8_t rht_get_humidity(rht_t *prht)  { return sht1x_get_humidity(prht); }
 #endif
 
 int8_t rht_read(rht_t *rht, int8_t echo);

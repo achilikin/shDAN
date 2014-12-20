@@ -27,8 +27,8 @@ int8_t rht_read(rht_t *rht, int8_t echo)
 {
 	int8_t ret = rht_poll(rht);
 	if (ret == 0) {
-		rht_getTemperature(rht);
-		rht_getHumidity(rht);
+		rht_get_temperature(rht);
+		rht_get_humidity(rht);
 		sprintf(rds_data, "T %d.%d H %d.%d", 
 			rht->temperature.val, rht->temperature.dec,
 			rht->humidity.val, rht->humidity.dec);

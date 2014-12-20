@@ -35,8 +35,8 @@ extern "C" {
 void   rht03_init(void);
 void   rht03_print(const char *data);
 int8_t rht03_poll(rht_t *prht);
-int8_t rht03_getTemperature(rht_t *prht);
-int8_t rht03_getHumidity(rht_t *prht);
+int8_t rht03_get_temperature(rht_t *prht);
+int8_t rht03_get_humidity(rht_t *prht);
 
 #ifdef __cplusplus
 }

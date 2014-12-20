@@ -31,6 +31,7 @@
 #include "main.h"
 #include "ns741.h"
 #include "timer.h"
+#include "bmp180.h"
 #include "serial.h"
 #include "pcf2127.h"
 #include "mmr70pin.h"
@@ -63,6 +64,8 @@ uint8_t  debug_flags;
 uint32_t uptime;
 uint32_t sw_clock;
 
+bmp180_cc_t press;
+
 inline const char *is_on(uint8_t val)
 {
 	if (val) return "ON";
@@ -81,9 +84,11 @@ void get_tx_pwr(char *buf)
 
 int main(void)
 {
+	rht_t rht;
 	uint8_t poll_clock = 0;
 
-	rht_t rht;
+	mmr_led_on(); // turn on LED while booting
+
 	rht.valid = 0;
 	rht.errors = 0;
 
@@ -98,9 +103,10 @@ int main(void)
 	if (rt_flags & LOAD_OSCCAL)
 		new_osccal = eeprom_read_byte(&em_osccal);
 	serial_init(new_osccal);
+	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
+
 	rht_init();
-	cli_init();
-	i2c_init(); // needed for ns741_* and ossd_*
+	bmp180_init(&press);
 	ossd_init(OSSD_UPDOWN);
 	ossd_select_font(OSSD_FONT_6x8);
 
@@ -109,6 +115,13 @@ int main(void)
 	ns741_rds_set_progname(rds_name);
 	// initialize ns741 with default parameters
 	ns741_init();
+	// turn ON
+	if (rt_flags & RADIO_POWER) {
+		delay(700);
+		ns741_radio_power(1);
+		delay(150);
+	}
+	ns741_gain(ns741_word & RADIO_GAIN);
 	// read radio frequency from EEPROM
 	radio_freq = eeprom_read_word(&em_radio_freq);
 	if (radio_freq < NS741_MIN_FREQ) radio_freq = NS741_MIN_FREQ;
@@ -116,14 +129,10 @@ int main(void)
 	ns741_set_frequency(radio_freq);
 	ns741_txpwr(ns741_word & RADIO_TXPWR);
 	ns741_stereo(ns741_word & RADIO_STEREO);
-	ns741_gain(ns741_word & RADIO_GAIN);
 	ns741_volume((ns741_word & RADIO_VOLUME) >> 8);
-	// turn ON
-	if (rt_flags & RADIO_POWER)
-		ns741_radio(1);
-	// setup our ~millisecond timer for mill*() and tenth_clock counter
-	init_millis();
 
+	// setup our ~millisecond timer for mill*() and tenth_clock counter
+	init_time_clock();
 #if _DEBUG
 	{
 		uint16_t ms = mill16();
@@ -133,6 +142,7 @@ int main(void)
 		// calibrate(osccal_def);
 	}
 #endif
+
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
 		rds_name,	fm_freq,
@@ -157,6 +167,9 @@ int main(void)
 	// reset our soft clock
 	uptime   = 0;
 	sw_clock = 0;
+	
+	mmr_led_off();
+	cli_init();
 
 	for(;;) {
 		// RDSPIN is low when NS741 is ready to transmit next RDS frame
@@ -189,11 +202,12 @@ int main(void)
 						uint16_t val = analogRead(i);
 						uint8_t dec;
 						uint8_t v = get_voltage(val, &dec);
-						printf("adc%d %4d %d.%02d\n", i, val, v, dec);
+						printf_P(PSTR("adc%d %4d %d.%02d\n"), i, val, v, dec);
 					}
 				}
 			}
 #endif
+			bmp180_poll(&press);
 		}
 
 		// poll RHT every 5 seconds
@@ -209,10 +223,11 @@ int main(void)
 					ts[1] = (sw_clock / 60) % 60;
 					ts[2] = sw_clock % 60;
 				}
-				printf_P(PSTR("\n%02d:%02d:%02d %d.%02d %d.%02d"), 
+				printf_P(PSTR("\n%02d:%02d:%02d %d.%d %d.%d %d.%02d"), 
 					ts[0], ts[1], ts[2],
 					rht.temperature.val, rht.temperature.dec,
-					rht.humidity.val, rht.humidity.dec);
+					rht.humidity.val, rht.humidity.dec,
+					press.p, press.pdec);
 			}
 		}
     }

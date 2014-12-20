@@ -32,8 +32,8 @@ extern "C" {
 void   sht1x_init(void);
 void   sht1x_print(const char *data);
 int8_t sht1x_poll(rht_t *psht);
-int8_t sht1x_getTemperature(rht_t *psht);
-int8_t sht1x_getHumidity(rht_t *psht);
+int8_t sht1x_get_temperature(rht_t *psht);
+int8_t sht1x_get_humidity(rht_t *psht);
 
 #ifdef __cplusplus
 }

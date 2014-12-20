@@ -29,9 +29,12 @@
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
+#include "bmp180.h"
 #include "pcf2127.h"
 #include "ossd_i2c.h"
 #include "mmr70pin.h"
+
+extern bmp180_cc_t press;
 
 static uint16_t free_mem(void)
 {
@@ -212,8 +215,6 @@ static int8_t process(char *buf, void *rht)
 	}
 #if ADC_MASK
 	if (str_is(cmd, PSTR("adc"))) {
-		// put names for your analogue inputs here
-		const char *name[4] = { "Vcc", "GND", "Light", "R"};
 		uint8_t ai = atoi((const char *)arg);
 		if (ai > 7 || (ADC_MASK & (1 << ai)) == 0) {
 			printf_P(PSTR("Invalid Analog input, use"));
@@ -228,16 +229,15 @@ static int8_t process(char *buf, void *rht)
 		uint32_t v = val * 323LL + 500LL;
 		uint32_t dec = (v % 100000LL) / 1000LL;
 		v = v / 100000LL;
-		printf_P(PSTR("ADC %d %4d %d.%dV (%s)\n"), ai, val, (int)v, (int)dec, name[ai-4]);
+		printf_P(PSTR("ADC %d %4d %d.%dV\n"), ai, val, (int)v, (int)dec);
 		// if you want to use floats then do not forget to uncomment in Makefile 
 		// #PRINTF_LIB = $(PRINTF_LIB_FLOAT)
 		// to enable float point printing
 		//double v = val*3.3/1024.0;
-		//printf("ADC %d %4d %.2fV (%s)\n", ai, val, v, name[ai-4]);
+		//printf("ADC %d %4d %.2fV (%s)\n", ai, val, v);
 		return 0;
 	}
 #endif
-
 	if (str_is(cmd, PSTR("rdsid"))) {
 		if (*arg != '\0') {
 			memset(rds_name, 0, 8);
@@ -272,7 +272,7 @@ static int8_t process(char *buf, void *rht)
 			rds_name,	fm_freq,
 			is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 			rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
-		puts(rds_data);
+		printf_P(PSTR("%s P %d.%02d\n"), rds_data, press.p, press.pdec);
 		return 0;
 	}
 
@@ -373,7 +373,7 @@ static int8_t process(char *buf, void *rht)
 			rt_flags |= RADIO_POWER;
 		else if (str_is(arg, PSTR("off")))
 			rt_flags &= ~RADIO_POWER;
-		ns741_radio(rt_flags & RADIO_POWER);
+		ns741_radio_power(rt_flags & RADIO_POWER);
 		printf_P(PSTR("radio %s\n"), is_on(rt_flags & RADIO_POWER));
 		get_tx_pwr(status);
 		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
@@ -400,8 +400,6 @@ void cli_init(void)
 		cmd[i] = '\0';
 		hist[i] = '\0';
 	}
-
-	mmr_led_off();
 }
 
 int8_t cli_interact(void *rht)
