@@ -1,10 +1,10 @@
 mmr70mod
 ========
 
-Modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
+Weather station using modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
 Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
 
-Reads temperature and humidity data from T/H sensor (RHT03 or SHT1x), displays data on attached OLED SSD1306 display:
+Reads temperature and humidity data from T/H sensor (RHT03 or SHT1x), pressure from BMP180 digital pressure and displays data on attached OLED SSD1306 display:
 
 ![mmr70 screen](http://achilikin.com/github/mmr-mod-03.png)
 
