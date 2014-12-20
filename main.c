@@ -52,10 +52,11 @@ uint8_t EEMEM em_osccal = 181;
 // runtime flags
 uint16_t EEMEM em_rt_flags = (RADIO_STEREO | RADIO_RDS | RADIO_TXPWR0 | LOAD_OSCCAL);
 
-char rds_name[9]; // RDS PS name
-char rds_data[61];  // RDS RT string
-char fm_freq[17];   // FM frequency
-char status[17];
+char rds_name[9];  // RDS PS name
+char fm_freq[17];  // FM frequency
+char rds_data[61]; // RDS RT string
+char hpa[17];	   // pressure in hPa
+char status[17];   // TxPwr status
 
 uint16_t radio_freq;
 uint16_t rt_flags;
@@ -107,6 +108,7 @@ int main(void)
 
 	rht_init();
 	bmp180_init(&press);
+	hpa[0] = '\0';
 	ossd_init(OSSD_UPDOWN);
 	ossd_select_font(OSSD_FONT_6x8);
 
@@ -207,7 +209,12 @@ int main(void)
 				}
 			}
 #endif
-			bmp180_poll(&press);
+			if ((bmp180_poll(&press) == 0) && (press.valid & BMP180_P_VALID)) {
+				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
+				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+				ossd_putlx(6, -1, hpa, 0);
+				ossd_select_font(font);
+			}
 		}
 
 		// poll RHT every 5 seconds

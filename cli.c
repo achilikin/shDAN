@@ -29,12 +29,9 @@
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
-#include "bmp180.h"
 #include "pcf2127.h"
 #include "ossd_i2c.h"
 #include "mmr70pin.h"
-
-extern bmp180_cc_t press;
 
 static uint16_t free_mem(void)
 {
@@ -272,7 +269,7 @@ static int8_t process(char *buf, void *rht)
 			rds_name,	fm_freq,
 			is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 			rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
-		printf_P(PSTR("%s P %d.%02d\n"), rds_data, press.p, press.pdec);
+		printf_P(PSTR("%s %s\n"), rds_data, hpa);
 		return 0;
 	}
 

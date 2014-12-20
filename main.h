@@ -36,7 +36,8 @@ extern "C" {
 extern char rds_name[9];  // RDS PS name
 extern char rds_data[61]; // RDS RT string
 extern char fm_freq[17];  // FM frequency
-extern char status[17];
+extern char hpa[17];      // pressure in hPa
+extern char status[17];   // TxPwr status
 
 // runtime radio flags
 #define RADIO_TXPWR0 0x0000

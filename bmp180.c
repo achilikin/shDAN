@@ -110,7 +110,8 @@ int8_t bmp180_init(bmp180_cc_t *pcc)
 int8_t bmp180_poll(bmp180_cc_t *pcc)
 {
 	// read raw t/p from bmp180
-	bmp180_read_data(pcc);
+	if (bmp180_read_data(pcc) != 0)
+		return -1;
 
 	// quite lengthly conversion of raw t/p values
 	if (pcc->cmd == BMP180_GET_T) {
@@ -156,6 +157,5 @@ int8_t bmp180_poll(bmp180_cc_t *pcc)
 		pcc->cmd = BMP180_GET_T;
 	}
 
-	bmp180_write(BMP180_CMD_REG, pcc->cmd);
-	return 0;
+	return bmp180_write(BMP180_CMD_REG, pcc->cmd);
 }
