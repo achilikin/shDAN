@@ -4,7 +4,7 @@ mmr70mod
 Weather station using modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
 Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
 
-Reads temperature and humidity data from T/H sensor (RHT03 or SHT1x), pressure from BMP180 digital pressure and displays data on attached OLED SSD1306 display:
+Reads temperature and humidity data from local and remote T/H sensor (RHT03 or SHT1x), pressure from local BMP180 digital pressure sensor and displays data on attached OLED SSD1306 display:
 
 ![mmr70 screen](http://achilikin.com/github/mmr-mod-03.png)
 
@@ -12,6 +12,8 @@ and broadcasts RDS signal with sensor's readings:
 
 ![RDS](http://3.bp.blogspot.com/-cB2P4Qp3eOI/U4kIqX7pSPI/AAAAAAAAASs/hKfAir5Qco4/s1600/screenshot.png)
 
+To talk to remote sensors RFM12BS (Si4420 based) transceiver is used.
+ 
 [Blog](http://achilikin.blogspot.ie/2014/06/sony-ericsson-mmr-70-modding-extreme.html) with some extra pictures.
 
 If RTC ([NXP PCF2127](http://www.nxp.com/documents/data_sheet/PCF2127.pdf), for example, [RasClock](http://afterthoughtsoftware.com/products/rasclock)) is detected then it will be used to timestamp data for *log* output
@@ -43,11 +45,12 @@ Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://tt
 
 **Digital/analogue inputs:**
 * _poll_ - read T/H sensor connected to MMR-70
+* _get pin_ - read digital pin, for example `get d3`
 * _adc chan_ - read ADC channel, for example `adc 7`
 
 **Debugging:**
 * _mem_ - show available memory
-* _debug rht|adc|rds|off_ - enable/disable debug output to serial port
+* _echo rht|adc|rds|remote|off_ - enable/disable data output to serial port
 * _log on|off_ - enable/disable timestamped output of T/H readings
 
 
@@ -77,7 +80,14 @@ For SHT1x:
 ```
 #define RHT_TYPE RHT_TYPE_SHT10
 ```
-and connect SCK to tp4 and Data to tp5. 
+and connect SCK to tp4 and Data to tp5.
+
+For RFM12BS:
+```
+#define RFM_MODE RFM_MODE_RX // receive data from remote sensor (RX mode)
+or
+#define RFM_MODE RFM_MODE_TX // transmit data (TX mode)
+```
 
 For new versions of UART/I2C libraries check [Peter Fleury's page](http://homepage.hispeed.ch/peterfleury/avr-software.html)
 
@@ -101,3 +111,4 @@ Useful links not listed above
 * MMR-70 discussion at [www.mikrocontroller.net](http://www.mikrocontroller.net/topic/252124)
 * MMR-70 hack: [ISP-Programmmer](http://www.elektronik-labor.de/AVR/MMR70_2.html)
 * How to protect Raspberry Pi GPIOs with a [74LVC244](http://blog.stevemarple.co.uk/2012/07/avrarduino-isp-programmer-using.html) buffer
+* RFM12BS ARSSI [hack](http://blog.strobotics.com.au/2008/06/17/rfm12-tutorial-part2)
