@@ -1,7 +1,7 @@
 /*  Polling relative humidity/temperature sensors RHT03/SHT1x
 
     This copy is optimized for AVR Atmega32 on MMR-70
-    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ int8_t rht_read(rht_t *rht, int8_t echo)
 	if (ret == 0) {
 		rht_get_temperature(rht);
 		rht_get_humidity(rht);
-		sprintf(rds_data, "T %d.%d H %d.%d", 
+		sprintf(rds_data, "i T %d.%d H %d.%d",
 			rht->temperature.val, rht->temperature.dec,
 			rht->humidity.val, rht->humidity.dec);
 	}

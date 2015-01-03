@@ -1,7 +1,7 @@
 /* Simple timer routine for ATmega32 on MMR-70
    Counts milliseconds and separately tenth of a second
 
-   Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,20 +27,19 @@
 #error Change init_millis() for F_CPU != 8MHz
 #endif
 
-static volatile uint8_t sec_clock = 0;
-
-volatile uint32_t ms_clock = 0;
-volatile uint8_t tenth_clock = 0;
+volatile uint8_t  ms_clock; // up to 100 ms
+volatile uint8_t  tenth_clock;
+volatile uint32_t millis_clock;
 
 // compare interrupt handler
 ISR(TIMER1_COMPA_vect)
 {
-   ms_clock++;
+   millis_clock++;
    // separate counter for tenth of a second
-   sec_clock++;
-   if (sec_clock == 100) {
+   ms_clock++;
+   if (ms_clock == 100) {
 		tenth_clock++;
-		sec_clock = 0;
+		ms_clock = 0;
    }
 }
 
@@ -52,16 +51,21 @@ ISR(INT1_vect)
 // initialize 1ms timer
 void init_time_clock(void)
 {
+	millis_clock = 0;
+	tenth_clock  = 0;
+
 	// for 8MHz: divide by 64 and then increment clock every millisecond
 	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10);
 	OCR1A = 125;
 	// enable compare interrupt
 	TIMSK |= _BV(OCIE1A);
-	
+	/* 
+	// INT1 handler
 	// set PD3 (INT1) as input and enable pull-up resistor 
 	_pin_mode(&DDRD, _BV(PD3), INPUT_UP);
 	// enable INT1
 	GICR = _BV(INT1);
 	// trigger INT1 on falling edge
 	MCUCR = _BV(ISC11);
+	*/
 }

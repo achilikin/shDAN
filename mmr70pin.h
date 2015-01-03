@@ -1,6 +1,6 @@
 /*  Simple wrappers for accesing ATmega32 registers populated on MMR-70
 
-    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -33,18 +33,23 @@
 // MMR-70 has only some pins of ports B and D populated
 #define TP4		PB0 // TP4, T0
 #define TP5		PB1 // TP5, T1
+#define EXSS    PB4 // an extra pin soldered to SPI SS
 #define TP7     PB5	// TP7, MOSI
 #define TP3     PB6	// TP3, MISO
 #define TP10    PB7	// TP10, SCK
 
+#define EXPC3   PC3 // PC3 if soldered
+#define EXPC4   PC4 // PC4 if soldered
+
 #define RDSINT	PD2 // RDSINT
+#define EXINT1  PD3 // an extra pin soldered to INT1 (PD3)
 #define LED1	PD7 // LED1
 
 #define PNB0	0  // TP4, T0
 #define PNB1	1  // TP5, T1
 #define PNB2	2  // NC
 #define PNB3	3  // NC
-#define PNB4	4  // NC 
+#define PNB4	4  // SPI SS, if soldered 
 #define PNB5	5  // TP7, MOSI
 #define PNB6	6  // TP3, MISO
 #define PNB7	7  // TP10, SCK
@@ -52,11 +57,23 @@
 #define PND0	8  // RXD
 #define PND1	9  // TXD
 #define PND2	10 // RDSINT
-#define PND3	11 // NC, INT1
+#define PND3	11 // INT1, if soldered
 #define PND4	12 // NC
 #define PND5	13 // NC
 #define PND6	14 // NC
 #define PND7	15 // LED1
+
+// define mask of populated ADC inputs here, 0 if not populated
+#define ADC_PA0 0x01
+#define ADC_PA1 0x02
+#define ADC_PA2 0x04
+#define ADC_PA3 0x08
+#define ADC_PA4 0x10
+#define ADC_PA5 0x20
+#define ADC_PA6 0x40
+#define ADC_PA7 0x80
+
+#define ADC_MASK (ADC_PA3 | ADC_PA5 | ADC_PA7)
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,7 +118,10 @@ static inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
 	return (*port & mask);
 }
 
-// Port B pins access
+// Port access
+// *mode(INPUT_HIGHZ) or *mode(OUTPUT_LOW)
+// *dir(INPUT) or *dir(OUTPUT)
+// *set(LOW|HIGH)
 static inline void mmr_tp3_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP3), mode); }
 static inline void mmr_tp3_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP3), dir);   }
 static inline void mmr_tp3_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP3), val);  }
@@ -140,28 +160,20 @@ static inline void delay(uint16_t msec)
 	_delay_ms(msec);
 }
 
-// define mask of populated ADC inputs here, 0 if not populated
-#define ADC_PA0 0x01
-#define ADC_PA1 0x02
-#define ADC_PA2 0x04
-#define ADC_PA3 0x08
-#define ADC_PA4 0x10
-#define ADC_PA5 0x20
-#define ADC_PA6 0x40
-#define ADC_PA7 0x80
-
-#define ADC_MASK (ADC_PA3 | ADC_PA5 | ADC_PA7)
-
 // in case if you managed to solder some wires to analogue inputs...
 // Arduino-type analogRead()
+#define VREF_AVCC     _BV(REFS0)
+#define VREF_EXTERNAL 0
+#define VREF_INTERNAL (_BV(REFS0) | _BV(REFS1))
+
 static inline uint16_t analogRead(uint8_t channel)
 {
 	uint16_t val;
 	// Select pin ADC0 using MUX
-	ADMUX = _BV(REFS0) | (channel & 0x7); // VCC ref
+	ADMUX =  VREF_AVCC | (channel & 0x7);
 
 	// Activate ADC with Prescaler 128 --> 8Mhz/128 = 62.5kHz
-	ADCSRA =_BV(ADEN) |_BV(ADPS2) |_BV(ADPS1) | _BV(ADPS0);
+	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
 
 	// Start conversion
 	ADCSRA |= _BV(ADSC);

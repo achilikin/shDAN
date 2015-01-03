@@ -1,6 +1,6 @@
 /* Simple command line parser for ATmega32 on MMR-70
 
-   Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -58,9 +58,10 @@ const char cmd_list[] PROGMEM =
 	"  status\n"
 	"  mem\n"
 	"  poll\n"
-	"  debug rht|adc|rds|off\n"
+	"  echo rht|adc|rds|remote|off\n"
 	"  rtc init|time|date|dump|dump mem|init mem\n"
 	"  adc chan\n"
+	"  get pin (d3, b4,c2...)\n"
 	"  rdsid id\n"
 	"  rdstext text\n"
 	"  freq nnnn\n"
@@ -131,7 +132,7 @@ static int8_t process(char *buf, void *rht)
 
 		if (str_is(arg, PSTR("time"))) {
 			uint8_t ts[3];
-			if (pcf2127_get_time((pcf_td_t *)ts) == 0) {
+			if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
 				// reset our sw clock
 				sw_clock = ts[2];
 				sw_clock += ts[1] * 60;
@@ -182,10 +183,15 @@ static int8_t process(char *buf, void *rht)
 		return 0;
 	}
 
-	if (str_is(cmd, PSTR("debug"))) {
+	if (str_is(cmd, PSTR("echo"))) {
 		if (str_is(arg, PSTR("rht"))) {
 			debug_flags ^= RHT_ECHO;
 			printf_P(PSTR("%s echo %s\n"), arg, is_on(debug_flags & RHT_ECHO));
+			return 0;
+		}
+		if (str_is(arg, PSTR("remote"))) {
+			debug_flags ^= RD_ECHO;
+			printf_P(PSTR("%s echo %s\n"), arg, is_on(debug_flags & RD_ECHO));
 			return 0;
 		}
 #if ADC_MASK
@@ -195,21 +201,23 @@ static int8_t process(char *buf, void *rht)
 			return 0;
 		}
 #endif
+		if (str_is(arg, PSTR("rds"))) {
+			ns741_rds_debug(1);
+			return 0;
+		}
 		if (str_is(arg, PSTR("off"))) {
 			debug_flags = 0;
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}
-		if (str_is(arg, PSTR("rds"))) {
-			ns741_rds_debug(1);
-			return 0;
-		}
 		return -1;
 	}
+
 	if (str_is(cmd, PSTR("mem"))) {
 		printf_P(PSTR("memory %d\n"), free_mem());
 		return 0;
 	}
+
 #if ADC_MASK
 	if (str_is(cmd, PSTR("adc"))) {
 		uint8_t ai = atoi((const char *)arg);
@@ -235,6 +243,21 @@ static int8_t process(char *buf, void *rht)
 		return 0;
 	}
 #endif
+
+	if (str_is(cmd, PSTR("get"))) {
+		char   port = arg[0];
+		uint8_t idx = atoi(arg+1) & 0x07;
+		uint8_t val = 0;
+		if (port == 'b')
+			val = _pin_get(&PINB, 1 << idx);
+		if (port == 'c')
+			val = _pin_get(&PINC, 1 << idx);
+		if (port == 'd')
+			val = _pin_get(&PIND, 1 << idx);
+		printf_P(PSTR("%c%d = %d\n"), port, idx, !!val);
+		return 0;
+	}
+
 	if (str_is(cmd, PSTR("rdsid"))) {
 		if (*arg != '\0') {
 			memset(rds_name, 0, 8);
@@ -270,6 +293,7 @@ static int8_t process(char *buf, void *rht)
 			is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 			rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
 		printf_P(PSTR("%s %s\n"), rds_data, hpa);
+		print_rd();
 		return 0;
 	}
 

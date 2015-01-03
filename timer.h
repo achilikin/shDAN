@@ -1,7 +1,7 @@
 /* Simple timer routine for ATmega32 on MMR-70
    Counts milliseconds and separately tenth of a second
 
-   Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,15 +25,16 @@
 extern "C" {
 #endif
 
-extern volatile uint8_t tenth_clock;
-extern volatile uint32_t ms_clock;
+extern volatile uint8_t  ms_clock;     // up to 100 ms
+extern volatile uint8_t  tenth_clock;  // increments every 1/10 of a second
+extern volatile uint32_t millis_clock; // global millis counter
 
 void init_time_clock(void);
 
 static inline uint32_t millis(void)
 {
 	cli();
-	uint32_t mil = ms_clock;
+	uint32_t mil = millis_clock;
 	sei();
 	return mil;
 }
@@ -41,16 +42,14 @@ static inline uint32_t millis(void)
 static inline uint16_t mill16(void)
 {
 	cli();
-	uint16_t mil = (uint16_t)ms_clock;
+	uint16_t mil = (uint16_t)millis_clock;
 	sei();
 	return mil;
 }
 
 static inline uint8_t mill8(void)
 {
-	cli();
-	uint8_t mil = (uint8_t)ms_clock;
-	sei();
+	uint8_t mil = ms_clock;
 	return mil;
 }
 

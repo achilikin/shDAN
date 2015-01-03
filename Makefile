@@ -72,7 +72,7 @@ TARGET = main
 ###############################################################################
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).c cli.c serial.c timer.c rht03.c sht1x.c rht.c ossd_i2c.c\
-		ns741.c pcf2127.c bmp180.c lib/twimaster.c lib/uart.c
+		ns741.c pcf2127.c bmp180.c rfm12bs.c lib/twimaster.c lib/uart.c
 SRCPP = 
 
 # List Assembler source files here.

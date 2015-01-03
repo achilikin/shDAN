@@ -2,7 +2,7 @@
     http://www.sensirion.com/nc/en/products/humidity-temperature/download-center/
 
     This copy is optimized for AVR Atmega32 on MMR-70
-    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -172,7 +172,7 @@ static int8_t sht1x_read_status(sht1x_t *psh)
 	return (status.check == 0x7500) ? 0 : -1;
 }
 
-static uint8_t sht1x_crc(uint8_t data, uint8_t seed)
+uint8_t sht1x_crc(uint8_t data, uint8_t seed)
 {
 	uint8_t crc = seed;
 

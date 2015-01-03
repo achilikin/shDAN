@@ -1,7 +1,7 @@
 /* Real Time Clock PCF2127AT support for ATmega32L on MMR-70
    http://www.nxp.com/documents/data_sheet/PCF2127.pdf
 
-   Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ static inline uint8_t bcd_to_dec(uint8_t bcd)
 	return (bcd & 0x0F) + (bcd >> 4) * 10;
 }
 
-int8_t pcf2127_get_time(pcf_td_t *ptd)
+int8_t pcf2127_get_time(pcf_td_t *ptd, uint32_t swclock)
 {
 	uint8_t buf[3];
 	uint8_t *ptm = (uint8_t *)ptd;
@@ -90,6 +90,9 @@ int8_t pcf2127_get_time(pcf_td_t *ptd)
 		return 0;
 	}
 
+	ptm[0] = (swclock / 3600) % 24;
+	ptm[1] = (swclock / 60) % 60;
+	ptm[2] = swclock % 60;
 	return -1;
 }
 

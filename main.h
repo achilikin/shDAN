@@ -1,6 +1,6 @@
 /* Using ATmega32L on MMR-70
 
-   Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ extern "C" {
 #define ADC_ECHO 0x01
 #define RHT_ECHO 0x02
 #define RHT_LOG  0x04
+#define RD_ECHO   0x08 // remote sensor data log
 
 extern char rds_name[9];  // RDS PS name
 extern char rds_data[61]; // RDS RT string
@@ -43,8 +44,8 @@ extern char status[17];   // TxPwr status
 #define RADIO_TXPWR0 0x0000
 #define RADIO_TXPWR1 0x0001
 #define RADIO_TXPWR2 0x0002
-#define RADIO_TXPWR3 0x0003 // txpwr mask
-#define RADIO_TXPWR  0x0003
+#define RADIO_TXPWR3 0x0003
+#define RADIO_TXPWR  0x0003 // txpwr mask
 #define RADIO_POWER  0x0004
 #define RADIO_RDS    0x0008
 #define RADIO_MUTE   0x0010
@@ -53,6 +54,7 @@ extern char status[17];   // TxPwr status
 #define RADIO_VOLUME 0x0F00 // volume mask
 
 // other runtime flags
+#define RDATA_VALID  0x1000 // remote sensor data valid
 #define LOAD_OSCCAL  0x2000
 #define RDS_RESET    0x4000
 #define RDS_RT_SET   0x8000
@@ -68,8 +70,8 @@ extern uint8_t  debug_flags;
 extern uint32_t uptime;
 extern uint32_t sw_clock;
 
-void   get_tx_pwr(char *buf);
-
+void get_tx_pwr(char *buf); // get current NS741 tx power
+void print_rd(void); // print remote sensor data
 #ifdef __cplusplus
 }
 #endif

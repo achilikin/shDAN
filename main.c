@@ -1,6 +1,6 @@
 /* Example of using ATmega32 on MMR-70
 
-   Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include "timer.h"
 #include "bmp180.h"
 #include "serial.h"
+#include "rfm12bs.h"
 #include "pcf2127.h"
 #include "mmr70pin.h"
 #include "ossd_i2c.h"
@@ -83,6 +84,23 @@ void get_tx_pwr(char *buf)
 		rt_flags & RADIO_POWER ? "on" : "off");
 }
 
+// Select mode - receiver or transmitter
+#define RFM_MODE RFM_MODE_RX
+
+typedef struct remote_s
+{
+	int8_t  vbat;
+	uint8_t tval;
+	uint8_t tdec;
+	uint8_t hval;
+	uint8_t hdec;
+} remote_t;
+
+remote_t rd;
+uint16_t rd_bv;     // battery voltage
+uint8_t  rd_ts[3];  // last session time
+uint8_t  rd_signal; // session signal
+
 int main(void)
 {
 	rht_t rht;
@@ -105,6 +123,12 @@ int main(void)
 		new_osccal = eeprom_read_byte(&em_osccal);
 	serial_init(new_osccal);
 	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
+
+	rfm12_init(RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+#if (RFM_MODE == RFM_MODE_RX)
+	uint16_t arssi = 5;
+	rfm12_set_mode(RFM_MODE_RX);
+#endif
 
 	rht_init();
 	bmp180_init(&press);
@@ -147,7 +171,7 @@ int main(void)
 
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
-		rds_name,	fm_freq,
+		rds_name, fm_freq,
 		is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 		rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
 
@@ -177,6 +201,38 @@ int main(void)
 		// RDSPIN is low when NS741 is ready to transmit next RDS frame
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
+		
+#if	(RFM_MODE == RFM_MODE_RX)
+		#define ARSSI_IDLE 110
+		#define ARSSI_MAX  364
+		if (rfm12_receive_data(&rd, sizeof(rd), &arssi) == sizeof(rd)) {
+			rt_flags |= RDATA_VALID;
+			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+			if (arssi & 0x8000) {
+				arssi &= 0x0FFF;
+				if (arssi < ARSSI_IDLE)
+					arssi = ARSSI_IDLE;
+				rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
+				if (rd_signal > 100)
+					rd_signal = 100;
+			}
+			// overwrite FM frequency on the screen
+			sprintf_P(fm_freq, PSTR("o T %d.%d H %d.%d"), rd.tval, rd.tdec, rd.hval, rd.hdec);
+			ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+			// overwrite NS741 status
+			rd_bv = 0;
+			if (rd.vbat != -1)
+				rd_bv = 230 + rd.vbat * 10;
+			sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
+			uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+			ossd_putlx(7, -1, status, 0);
+			ossd_select_font(font);
+			if (debug_flags & RD_ECHO)
+				print_rd();
+
+			arssi = 5;
+		}
+#endif
 
 		// process serial port commands
 		cli_interact(&rht);
@@ -225,17 +281,31 @@ int main(void)
 			ossd_putlx(4, -1, rds_data, 0);
 			if (debug_flags & RHT_LOG) {
 				uint8_t ts[3];
-				if (pcf2127_get_time((pcf_td_t *)ts) != 0) {
-					ts[0] = (sw_clock / 3600) % 24;
-					ts[1] = (sw_clock / 60) % 60;
-					ts[2] = sw_clock % 60;
-				}
-				printf_P(PSTR("\n%02d:%02d:%02d %d.%d %d.%d %d.%02d"), 
+				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
+				printf_P(PSTR("%02d:%02d:%02d %d.%d %d.%d %d.%02d\n"),
 					ts[0], ts[1], ts[2],
 					rht.temperature.val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec,
 					press.p, press.pdec);
 			}
+
+#if (RFM_MODE == RFM_MODE_TX)
+			rd.tval = rht.temperature.val;
+			rd.tdec = rht.temperature.dec;
+			rd.hval = rht.humidity.val;
+			rd.hdec = rht.humidity.dec;
+			rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
+			rfm12_send((uint8_t *)&rd, sizeof(rd));
+#endif
 		}
     }
+}
+
+void print_rd(void)
+{
+	if (!(rt_flags & RDATA_VALID))
+		return;
+
+	printf_P(PSTR("%02d:%02d:%02d ARSSI %d%% V %d T %d.%d H %d.%d\n"),
+		rd_ts[0], rd_ts[1], rd_ts[2], rd_signal, rd_bv, rd.tval, rd.tdec, rd.hval, rd.hdec);
 }
