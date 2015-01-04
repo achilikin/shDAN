@@ -25,7 +25,7 @@
 #include "cli.h"
 #include "rht.h"
 #include "main.h"
-#include "sht10.h"
+#include "sht1x.h"
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
