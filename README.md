@@ -2,7 +2,7 @@ mmr70mod
 ========
 
 Weather station using modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
-Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
+Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi. Pure C + avr-gcc is used (not Arduino). 
 
 Reads temperature and humidity data from local and remote T/H sensor (RHT03 or SHT1x), pressure from local BMP180 digital pressure sensor and displays data on attached OLED SSD1306 display:
 
