@@ -19,38 +19,65 @@
 #ifndef _TIMER_MILLIS_H_
 #define _TIMER_MILLIS_H_
 
+#include <util/atomic.h>
 #include <avr/interrupt.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern volatile uint8_t  ms_clock;     // up to 100 ms
 extern volatile uint8_t  tenth_clock;  // increments every 1/10 of a second
 extern volatile uint32_t millis_clock; // global millis counter
+extern volatile uint32_t rtc_clock;    // rtc driven seconds counter
+extern volatile uint8_t  rtc_sec, rtc_min, rtc_hour;
 
-void init_time_clock(void);
+#define CLOCK_RTC    0x01
+#define CLOCK_MILLIS 0x02
+
+void init_time_clock(uint8_t clock);
 
 static inline uint32_t millis(void)
 {
-	cli();
-	uint32_t mil = millis_clock;
-	sei();
+	uint32_t mil;
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+	mil = millis_clock;
+	}
 	return mil;
 }
 
 static inline uint16_t mill16(void)
 {
-	cli();
-	uint16_t mil = (uint16_t)millis_clock;
-	sei();
+	uint16_t mil;
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+	mil = (uint16_t)millis_clock;
+	}
 	return mil;
 }
 
 static inline uint8_t mill8(void)
 {
-	uint8_t mil = ms_clock;
+	uint8_t mil;
+	volatile uint8_t *pms = (volatile uint8_t *)&millis_clock;
+	mil = pms[0];
 	return mil;
+}
+
+static inline uint32_t rtc_get_clock(void)
+{
+	uint32_t rtc;
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+	rtc = rtc_clock;
+	}
+	return rtc;
+}
+
+static inline void rtc_get_time(uint8_t *rtc)
+{
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+		rtc[0] = rtc_sec;
+		rtc[1] = rtc_min;
+		rtc[2] = rtc_hour;
+	}
 }
 
 #ifdef __cplusplus

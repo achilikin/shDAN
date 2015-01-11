@@ -21,15 +21,18 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include "timer.h"
 #include "mmr70pin.h"
 
 #if (F_CPU != 8000000)
 #error Change init_millis() for F_CPU != 8MHz
 #endif
 
-volatile uint8_t  ms_clock; // up to 100 ms
+static volatile uint8_t ms_clock; // up to 100 ms
 volatile uint8_t  tenth_clock;
 volatile uint32_t millis_clock;
+volatile uint32_t rtc_clock;
+volatile uint8_t  rtc_sec, rtc_min, rtc_hour;
 
 // compare interrupt handler
 ISR(TIMER1_COMPA_vect)
@@ -43,29 +46,43 @@ ISR(TIMER1_COMPA_vect)
    }
 }
 
-// RTC sync vector
-ISR(INT1_vect)
+ISR(TIMER2_COMP_vect)
 {
+	rtc_clock++;
+	// Increment time
+	if (++rtc_sec == 60) {
+		rtc_sec = 0;
+		if (++rtc_min == 60) {
+			rtc_min = 0;
+			if (++rtc_hour == 24)
+				rtc_hour = 0;
+		}
+	}
 }
 
 // initialize 1ms timer
-void init_time_clock(void)
+void init_time_clock(uint8_t clock)
 {
 	millis_clock = 0;
 	tenth_clock  = 0;
+	ms_clock     = 0;
+	rtc_clock    = 0;
+	rtc_sec = rtc_min = rtc_hour = 0;
 
-	// for 8MHz: divide by 64 and then increment clock every millisecond
-	TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10);
-	OCR1A = 125;
-	// enable compare interrupt
-	TIMSK |= _BV(OCIE1A);
-	/* 
-	// INT1 handler
-	// set PD3 (INT1) as input and enable pull-up resistor 
-	_pin_mode(&DDRD, _BV(PD3), INPUT_UP);
-	// enable INT1
-	GICR = _BV(INT1);
-	// trigger INT1 on falling edge
-	MCUCR = _BV(ISC11);
-	*/
+	if (clock & CLOCK_MILLIS) {
+		// for 8MHz: divide by 64 and then increment clock every millisecond
+		TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10);
+		OCR1A = 125;
+		// enable compare interrupt
+		TIMSK |= _BV(OCIE1A);
+	}
+
+	// RTC timer
+	if (clock & CLOCK_RTC) {
+		OCR2 = 31; //
+		TCCR2 = _BV(WGM21) | _BV(CS22) | _BV(CS21) | _BV(CS20);
+		TIFR = _BV(OCF2);
+		TIMSK |= _BV(OCIE2);
+		ASSR |= _BV(AS2);
+	}
 }
