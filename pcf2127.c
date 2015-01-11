@@ -74,9 +74,28 @@ int8_t pcf2127_init(void)
 	return 0;
 }
 
+static inline uint8_t dec_to_bcd(uint8_t dec)
+{
+	return ((dec / 10) << 4) | (dec % 10);
+}
+
 static inline uint8_t bcd_to_dec(uint8_t bcd)
 {
 	return (bcd & 0x0F) + (bcd >> 4) * 10;
+}
+
+int8_t pcf2127_set_time(pcf_td_t *ptd)
+{
+	uint8_t buf[3];
+	uint8_t *ptm = (uint8_t *)ptd;
+	
+	for(int8_t i = 0; i < 3; i++)
+		buf[i] = dec_to_bcd(ptm[2 - i]);
+
+	if (pcf2127_write(PCF_REG_SEC, buf, 3) == 0)
+		return 0;
+
+	return -1;
 }
 
 int8_t pcf2127_get_time(pcf_td_t *ptd, uint32_t swclock)
@@ -93,6 +112,18 @@ int8_t pcf2127_get_time(pcf_td_t *ptd, uint32_t swclock)
 	ptm[0] = (swclock / 3600) % 24;
 	ptm[1] = (swclock / 60) % 60;
 	ptm[2] = swclock % 60;
+	return -1;
+}
+
+int8_t pcf2127_set_date(pcf_td_t *ptd)
+{
+	uint8_t buf[2];
+	buf[0] = dec_to_bcd(ptd->day);
+	pcf2127_write(PCF_REG_DAY, buf, 1);
+	buf[0] = dec_to_bcd(ptd->month);
+	buf[1] = dec_to_bcd(ptd->year);
+	if (pcf2127_write(PCF_REG_MONTH, buf, 2) == 0)
+		return 0;
 	return -1;
 }
 

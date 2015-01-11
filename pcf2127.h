@@ -108,6 +108,11 @@ int8_t pcf2127_write(uint8_t addr, uint8_t *buf, uint8_t len);
 int8_t pcf2127_ram_read(uint16_t addr, uint8_t *buf, uint8_t len);
 int8_t pcf2127_ram_write(uint16_t addr, uint8_t *buf, uint8_t len);
 
+// sets time only from ptd
+int8_t pcf2127_set_time(pcf_td_t *ptd);
+// sets date only from ptd
+int8_t pcf2127_set_date(pcf_td_t *ptd);
+
 // reads only time to the ptd
 int8_t pcf2127_get_time(pcf_td_t *ptd, uint32_t swclock);
 int8_t pcf2127_get_date(pcf_td_t *ptd); // reads time+date to the ptd
