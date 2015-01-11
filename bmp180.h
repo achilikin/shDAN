@@ -34,7 +34,7 @@ extern "C" {
 #define BMP180_T_VALID 0x01
 #define BMP180_P_VALID 0x02
 
-typedef struct bmp180_cc_s
+typedef struct bmp180_s
 {
 	// calibration coefficients from E2PROM
 	union {
@@ -58,13 +58,13 @@ typedef struct bmp180_cc_s
 	uint32_t rawp;  // raw pressure
 	uint16_t p;     // pressure in hPa
 	uint8_t  pdec;  // pressure decimal
-} bmp180_cc_t;
+} bmp180_t;
 
-// read calibration coefficients and sent first request
-int8_t bmp180_init(bmp180_cc_t *pcc);
+// read calibration coefficients and sent first request for temperature
+int8_t bmp180_init(bmp180_t *pcc);
 
 // process requested data and issue new read request
-int8_t bmp180_poll(bmp180_cc_t *pcc);
+int8_t bmp180_poll(bmp180_t *pcc, uint8_t t_only);
 
 #ifdef __cplusplus
 }

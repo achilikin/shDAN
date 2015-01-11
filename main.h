@@ -62,6 +62,7 @@ extern char status[17];   // TxPwr status
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;
 extern uint16_t EEMEM em_rt_flags;
+extern uint8_t  EEMEM em_osccal;
 
 extern uint16_t radio_freq;
 extern uint16_t rt_flags;

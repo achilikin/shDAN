@@ -73,7 +73,7 @@
 #define ADC_PA6 0x40
 #define ADC_PA7 0x80
 
-#define ADC_MASK (ADC_PA3 | ADC_PA5 | ADC_PA7)
+#define ADC_MASK (ADC_PA4 | ADC_PA3)
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,6 +117,15 @@ static inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
 {
 	return (*port & mask);
 }
+
+// reads PINB register
+static inline uint8_t get_pinb(uint8_t pin)
+{
+	return (PINB & _BV(pin));
+}
+
+#define set_pinb(pin) (PORTB |= _BV(pin))
+#define clear_pinb(pin) (PORTB &= ~_BV(pin))
 
 // Port access
 // *mode(INPUT_HIGHZ) or *mode(OUTPUT_LOW)
@@ -170,7 +179,7 @@ static inline uint16_t analogRead(uint8_t channel)
 {
 	uint16_t val;
 	// Select pin ADC0 using MUX
-	ADMUX =  VREF_AVCC | (channel & 0x7);
+	ADMUX = VREF_AVCC | (channel & 0x7);
 
 	// Activate ADC with Prescaler 128 --> 8Mhz/128 = 62.5kHz
 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
@@ -181,7 +190,10 @@ static inline uint16_t analogRead(uint8_t channel)
 	// wait until conversion completed
 	while(ADCSRA & _BV(ADSC));
 	val = ADCW;
+	// do not disable ADC to avoid "Extended conversion"
+	// we disable it only when going to sleep modes
 	ADCSRA &= ~_BV(ADEN);
+
 	return val;
 }
 

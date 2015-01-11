@@ -41,25 +41,44 @@ static uint16_t free_mem(void)
 	return val;
 }
 
-inline int8_t str_is(const char *cmd, const char *str)
-{
-	return strcmp_P(cmd, str) == 0;
-}
-
 inline const char *is_on(uint8_t val)
 {
 	if (val) return "ON";
 	return "OFF";
 }
 
+inline int8_t str_is(const char *cmd, const char *str)
+{
+	return strcmp_P(cmd, str) == 0;
+}
+
+static char *get_arg(char *str)
+{
+	char *arg;
+
+	for(arg = str; *arg && *arg != ' '; arg++);
+
+	if (*arg == ' ') {
+		*arg = '\0';
+		arg++;
+	}
+
+	return arg;
+}
+
+
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
-	"  reset\n"
-	"  status\n"
 	"  mem\n"
 	"  poll\n"
+	"  reset\n"
+	"  status\n"
+	"  calibrate\n"
+	"  set osccal X\n"
+	"  set time HH:MM:SS\n"
+	"  set date YY/MM/DD\n"
 	"  echo rht|adc|rds|remote|off\n"
-	"  rtc init|time|date|dump|dump mem|init mem\n"
+	"  rtc time|date|dump [mem]|init [mem]\n"
 	"  adc chan\n"
 	"  get pin (d3, b4,c2...)\n"
 	"  rdsid id\n"
@@ -70,8 +89,7 @@ const char cmd_list[] PROGMEM =
 	"  mute on|off\n"
 	"  stereo on|off\n"
 	"  radio on|off\n"
-	"  gain low|off\n"
-	"  calibrate\n";
+	"  gain low|off\n";
 
 static int8_t process(char *buf, void *rht)
 {
@@ -79,12 +97,7 @@ static int8_t process(char *buf, void *rht)
 	char cmd[CMD_LEN + 1];
 
 	memcpy(cmd, buf, sizeof(cmd));
-
-	for(arg = cmd; *arg && *arg != ' '; arg++);
-	if (*arg == ' ') {
-		*arg = '\0';
-		arg++;
-	}
+	arg = get_arg(cmd);
 
 	if (str_is(cmd, PSTR("help"))) {
 		uart_puts_p(cmd_list);
@@ -92,31 +105,32 @@ static int8_t process(char *buf, void *rht)
 	}
 
 	if (str_is(cmd, PSTR("rtc"))) {
+		char *sval = get_arg(arg);
 		if (str_is(arg, PSTR("init"))) {
+			if (str_is(sval, PSTR("mem"))) {
+				for(uint8_t i = 0; i < 16; i++)
+					cmd[i] = 0;
+				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++)
+					pcf2127_ram_write(i*16, (uint8_t *)cmd, 16);
+				return 0;
+			}
+
 			pcf2127_init();
 			return 0;
 		}
 
-		if (str_is(arg, PSTR("dump mem"))) {
-			for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++) {
-				pcf2127_ram_read(i*16, (uint8_t *)cmd, 16);
-				printf_P(PSTR("%3u | "), i*16);
-				for(int8_t n = 0; n < 16; n++)
-					printf("%02X ", cmd[n]);
-				printf("\n");
-			}
-			return 0;
-		}
-
-		if (str_is(arg, PSTR("init mem"))) {
-			for(uint8_t i = 0; i < 16; i++)
-				cmd[i] = 0;
-			for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++)
-				pcf2127_ram_write(i*16, (uint8_t *)cmd, 16);
-			return 0;
-		}
-
 		if (str_is(arg, PSTR("dump"))) {
+			if (str_is(sval, PSTR("mem"))) {
+				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++) {
+					pcf2127_ram_read(i*16, (uint8_t *)cmd, 16);
+					printf_P(PSTR("%3u | "), i*16);
+					for(int8_t n = 0; n < 16; n++)
+						printf("%02X ", cmd[n]);
+					printf("\n");
+				}
+				return 0;
+			}
+
 			if (pcf2127_read(0x00, (uint8_t *)cmd, PCF_MAX_REG) == 0) {
 				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
 					printf("%02X ", i);
@@ -153,11 +167,54 @@ static int8_t process(char *buf, void *rht)
 		return -1;
 	}
 
+	if (str_is(cmd, PSTR("set"))) {
+		char *sval = get_arg(arg);
+
+		if (str_is(arg, PSTR("osccal"))) {
+			uint8_t osc = atoi(sval);
+			serial_set_osccal(osc);
+			eeprom_update_byte(&em_osccal, osc);
+			return 0;
+		}
+
+		if (str_is(sval, PSTR("time"))) {
+			uint8_t ts[3];
+			ts[0] = strtoul(arg, &arg, 10);
+			if (ts[0] < 24 && *arg == ':') {
+				ts[1] = strtoul(arg + 1, &arg, 10);
+				if (ts[1] < 60 && *arg == ':') {
+					ts[2] = strtoul(arg + 1, &arg, 10);
+					if (ts[2] < 60) {
+						pcf2127_set_time((pcf_td_t *)ts);
+						return 0;
+					}
+				}
+			}
+		}
+
+		if (str_is(sval, PSTR("date"))) {
+			pcf_td_t ts;
+			ts.year = strtoul(arg, &arg, 10);
+			if (ts.year < 99 && *arg == '/') {
+				ts.month = strtoul(arg + 1, &arg, 10);
+				if (ts.month < 13 && *arg == '/') {
+					ts.day = strtoul(arg + 1, &arg, 10);
+					if (ts.day < 31) {
+						pcf2127_set_date(&ts);
+						return 0;
+					}
+				}
+			}
+		}
+		return -1;
+	}
+
 	if (str_is(cmd, PSTR("reset"))) {
 		puts_P(PSTR("\nresetting..."));
 		wdt_enable(WDTO_15MS);
 		while(1);
 	}
+
 	if (str_is(cmd, PSTR("calibrate"))) {
 		puts_P(PSTR("\ncalibrating..."));
 		if (str_is(arg, PSTR("default")))
@@ -289,7 +346,7 @@ static int8_t process(char *buf, void *rht)
 	if (str_is(cmd, PSTR("status"))) {
 		printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
 		printf_P(PSTR("RDSID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
-			rds_name,	fm_freq,
+			rds_name, fm_freq,
 			is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
 			rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
 		printf_P(PSTR("%s %s\n"), rds_data, hpa);
@@ -459,8 +516,12 @@ int8_t cli_interact(void *rht)
 
 	if (ch == '\n') {
 		serial_putc(ch);
-		if (*cmd && process(cmd, &rht) == 0)
-			memcpy(hist, cmd, sizeof(cmd));
+		if (*cmd) { 
+			if (process(cmd, &rht) == 0)
+				memcpy(hist, cmd, sizeof(cmd));
+			else
+				puts_P(PSTR("Invalid format"));
+		}
 		for(uint8_t i = 0; i < cursor; i++)
 			cmd[i] = '\0';
 		cursor = 0;

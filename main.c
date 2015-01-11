@@ -42,6 +42,8 @@
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
 #endif
 
+#define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
+
 // some default variables we want to store in EEPROM
 uint8_t  EEMEM em_rds_name[8] = "MMR70mod"; // NS471 "station" name
 uint16_t EEMEM em_radio_freq  = 9700; // 97.00 MHz
@@ -66,7 +68,7 @@ uint8_t  debug_flags;
 uint32_t uptime;
 uint32_t sw_clock;
 
-bmp180_cc_t press;
+bmp180_t press;
 
 inline const char *is_on(uint8_t val)
 {
@@ -86,20 +88,26 @@ void get_tx_pwr(char *buf)
 
 // Select mode - receiver or transmitter
 #define RFM_MODE RFM_MODE_RX
+// adc channel ARSSI connected to
+#define ARSSI_ADC 5
+
+#define SID_MASK   0x0F
+#define ZONE_MASK  0x70
+#define ZONE_TSYNC 0x80
 
 typedef struct remote_s
 {
+	uint8_t sid; // sensor id
 	int8_t  vbat;
 	uint8_t tval;
 	uint8_t tdec;
-	uint8_t hval;
-	uint8_t hdec;
 } remote_t;
 
 remote_t rd;
 uint16_t rd_bv;     // battery voltage
 uint8_t  rd_ts[3];  // last session time
 uint8_t  rd_signal; // session signal
+uint16_t rd_arssi;
 
 int main(void)
 {
@@ -118,15 +126,18 @@ int main(void)
 	debug_flags = 0;
 
 	sei();
-	uint8_t new_osccal = 0;
-	if (rt_flags & LOAD_OSCCAL)
-		new_osccal = eeprom_read_byte(&em_osccal);
-	serial_init(new_osccal);
+	serial_init(UART_BAUD_RATE);
+	if (rt_flags & LOAD_OSCCAL) {
+		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
+		serial_set_osccal(new_osccal);
+	}
+
 	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
 
+	rd_arssi = ARSSI_ADC;
+	analogRead(ARSSI_ADC); // dummy read to start ADC
 	rfm12_init(RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 #if (RFM_MODE == RFM_MODE_RX)
-	uint16_t arssi = 5;
 	rfm12_set_mode(RFM_MODE_RX);
 #endif
 
@@ -158,7 +169,7 @@ int main(void)
 	ns741_volume((ns741_word & RADIO_VOLUME) >> 8);
 
 	// setup our ~millisecond timer for mill*() and tenth_clock counter
-	init_time_clock();
+	init_time_clock(CLOCK_MILLIS);
 #if _DEBUG
 	{
 		uint16_t ms = mill16();
@@ -204,33 +215,49 @@ int main(void)
 		
 #if	(RFM_MODE == RFM_MODE_RX)
 		#define ARSSI_IDLE 110
-		#define ARSSI_MAX  364
-		if (rfm12_receive_data(&rd, sizeof(rd), &arssi) == sizeof(rd)) {
-			rt_flags |= RDATA_VALID;
-			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
-			if (arssi & 0x8000) {
-				arssi &= 0x0FFF;
-				if (arssi < ARSSI_IDLE)
-					arssi = ARSSI_IDLE;
-				rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
+		#define ARSSI_MAX  340
+		if (rfm12_receive_data(&rd, sizeof(rd), &rd_arssi) == sizeof(rd)) {
+			if (rd.sid & ZONE_TSYNC) {
+				remote_t tsync;
+				tsync.sid = 0;
+				pcf2127_get_time((pcf_td_t *)&tsync.vbat, sw_clock);
+
+				rfm12_set_mode(RFM_MODE_TX);
+				rfm12_send(&tsync, sizeof(tsync));
+				rfm12_set_mode(RFM_MODE_RX);
+				if (debug_flags & RD_ECHO)
+					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.tval, tsync.tdec, rd.sid);
+			}
+
+			if (rd_arssi & 0x8000) {
+				rd_arssi &= 0x0FFF;
+				if (rd_arssi < ARSSI_IDLE)
+					rd_arssi = ARSSI_IDLE;
+				rd_signal = ((100*(rd_arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
 				if (rd_signal > 100)
 					rd_signal = 100;
 			}
-			// overwrite FM frequency on the screen
-			sprintf_P(fm_freq, PSTR("o T %d.%d H %d.%d"), rd.tval, rd.tdec, rd.hval, rd.hdec);
-			ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
-			// overwrite NS741 status
-			rd_bv = 0;
-			if (rd.vbat != -1)
-				rd_bv = 230 + rd.vbat * 10;
-			sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
-			uint8_t font = ossd_select_font(OSSD_FONT_6x8);
-			ossd_putlx(7, -1, status, 0);
-			ossd_select_font(font);
+
+			if (rd.sid & ZONE_MASK) {
+				rt_flags |= RDATA_VALID;
+				pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+				// overwrite FM frequency on the screen
+				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.sid, rd.tval, rd.tdec);
+				ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+				// overwrite NS741 status
+				rd_bv = 0;
+				if (rd.vbat != -1)
+					rd_bv = 230 + rd.vbat * 10;
+				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
+				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+				ossd_putlx(7, -1, status, 0);
+				ossd_select_font(font);
+			}
+
 			if (debug_flags & RD_ECHO)
 				print_rd();
 
-			arssi = 5;
+			rd_arssi = ARSSI_ADC;
 		}
 #endif
 
@@ -265,7 +292,7 @@ int main(void)
 				}
 			}
 #endif
-			if ((bmp180_poll(&press) == 0) && (press.valid & BMP180_P_VALID)) {
+			if ((bmp180_poll(&press, 0) == 0) && (press.valid & BMP180_P_VALID)) {
 				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
 				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 				ossd_putlx(6, -1, hpa, 0);
@@ -290,10 +317,9 @@ int main(void)
 			}
 
 #if (RFM_MODE == RFM_MODE_TX)
+			rd.sid  = 15;
 			rd.tval = rht.temperature.val;
 			rd.tdec = rht.temperature.dec;
-			rd.hval = rht.humidity.val;
-			rd.hdec = rht.humidity.dec;
 			rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
 			rfm12_send((uint8_t *)&rd, sizeof(rd));
 #endif
@@ -306,6 +332,6 @@ void print_rd(void)
 	if (!(rt_flags & RDATA_VALID))
 		return;
 
-	printf_P(PSTR("%02d:%02d:%02d ARSSI %d%% V %d T %d.%d H %d.%d\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2], rd_signal, rd_bv, rd.tval, rd.tdec, rd.hval, rd.hdec);
+	printf_P(PSTR("%02d:%02d:%02d %02X ARSSI %u %3d%% V %d T %d.%d\n"),
+		rd_ts[0], rd_ts[1], rd_ts[2], rd.sid, rd_arssi, rd_signal, rd_bv, rd.tval, rd.tdec);
 }

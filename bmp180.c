@@ -32,7 +32,7 @@ static int8_t bmp180_write(uint8_t addr, uint8_t cmd)
 	return 0;
 }
 
-static int8_t bmp180_read_data(bmp180_cc_t *pcc)
+static int8_t bmp180_read_data(bmp180_t *pcc)
 {
 	if (i2c_start(I2C_BMP | I2C_WRITE) != 0)
 		return -1;
@@ -64,10 +64,10 @@ static inline uint16_t bswap16(uint16_t val)
 	return *(uint16_t *)pbyte;
 }
 
-int8_t bmp180_init(bmp180_cc_t *pcc)
+int8_t bmp180_init(bmp180_t *pcc)
 {
 	uint16_t buf[11];
-	memset(pcc, 0, sizeof(bmp180_cc_t));
+	memset(pcc, 0, sizeof(bmp180_t));
 
 	if (i2c_start(I2C_BMP | I2C_WRITE) != 0)
 		return -1;
@@ -107,14 +107,16 @@ int8_t bmp180_init(bmp180_cc_t *pcc)
 	return 0;
 }
 
-int8_t bmp180_poll(bmp180_cc_t *pcc)
+int8_t bmp180_poll(bmp180_t *pcc, uint8_t t_only)
 {
 	// read raw t/p from bmp180
-	if (bmp180_read_data(pcc) != 0)
+	if (bmp180_read_data(pcc) != 0) {
+		pcc->valid &= ~(BMP180_T_VALID | BMP180_P_VALID);
 		return -1;
+	}
 
 	// quite lengthly conversion of raw t/p values
-	if (pcc->cmd == BMP180_GET_T) {
+	if (t_only || (pcc->cmd == BMP180_GET_T)) {
 		int32_t x1 = (((uint32_t)pcc->rawt - (uint32_t)pcc->ac6)*pcc->ac5) >> 15;
 		int32_t x2 = (((int32_t)pcc->mc) << 11)/(x1 + pcc->md);
 		int32_t b5 = x1 + x2;
@@ -123,7 +125,7 @@ int8_t bmp180_poll(bmp180_cc_t *pcc)
 		pcc->t = t / 10;
 		pcc->tdec = t % 10;
 		pcc->valid |= BMP180_T_VALID;
-		pcc->cmd = BMP180_GET_P;
+		pcc->cmd = (t_only) ? BMP180_GET_T : BMP180_GET_P;
 	}
 	else {
 		int32_t x1 = pcc->b2;
