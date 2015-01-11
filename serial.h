@@ -45,12 +45,15 @@ extern "C" {
 #define KEY_PGUP    0x0105
 #define KEY_PGDN    0x0106
 
-void     serial_init(uint8_t load_osccal);
+void     serial_init(long baud_rate);
 uint16_t serial_getc(void);
 
 #define serial_putc(x) uart_putc((uint8_t)x)
+#define serial_wait_sending() for(uint8_t i = 0; UCSRB & _BV(UDRIE); i++)
 
 extern uint8_t osccal_def;
+
+uint8_t serial_set_osccal(uint8_t osccal);
 void serial_calibrate(uint8_t osccal);
 
 #ifdef __cplusplus

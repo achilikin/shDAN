@@ -23,8 +23,6 @@
 
 #include "serial.h"
 
-uint8_t osccal_def;
-
 // Escape sequence states
 #define ESC_CHAR    0
 #define ESC_BRACKET 1
@@ -32,14 +30,15 @@ uint8_t osccal_def;
 #define ESC_TILDA   3
 #define ESC_CRLF    5
 
+uint8_t osccal_def;
+
 // -------------------- UART related begin ----------------------------
 // USART stability wrt F_CPU clock
 // http://www.wormfood.net/avrbaudcalc.php
 // At 8MHz and 3.3V we could get a lot of errors with baudrate > 38400
 // using calibrate() might help a bit, but better stick to 38400
-
-#define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
-// #define UART_BAUD_RATE 115200UL // at 8MHz errors up to 7.8%
+// 38400 at 8MHz gives only 0.2% errors
+// 115200 at 8MHz errors up to 7.8%
 
 int uart_tx(char data, FILE *stream);
 FILE uart_stdout = FDEV_SETUP_STREAM(uart_tx, NULL, _FDEV_SETUP_WRITE);
@@ -75,20 +74,22 @@ void serial_calibrate(uint8_t osccal)
 	puts_P(PSTR("\nDone"));
 }
 
-void serial_init(uint8_t load_osccal)
+uint8_t serial_set_osccal(uint8_t osccal)
+{
+	uint8_t ret = OSCCAL;
+	OSCCAL = osccal;
+	printf_P(PSTR("Loaded new OSCCAL %d instead of %d\n"), osccal, osccal_def);
+	return ret;
+}
+
+void serial_init(long baud_rate)
 {
 	// all necessary initializations
-	uart_init(UART_BAUD_SELECT(UART_BAUD_RATE,F_CPU));
+	uart_init(UART_BAUD_SELECT(baud_rate,F_CPU));
 	// enable printf, puts...
 	stdout = &uart_stdout;
-	
 	// save current OSCCAL just in case
 	osccal_def = OSCCAL;
-	// load new OSCCAL if needed
-	if (load_osccal) {
-		OSCCAL = load_osccal;
-		printf_P(PSTR("Loaded new OSCCAL %d instead of %d\n"), load_osccal, osccal_def);
-	}
 }
 
 uint16_t serial_getc(void)
