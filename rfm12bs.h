@@ -222,9 +222,23 @@ extern "C" {
 #define RFM_MODE_RX    RFM12_ERXCHAIN
 #define RFM_MODE_TX    RFM12_ETXSTART
 
+// RFM12B interface pins
+// by default standard SPI pins are used
+#define RF_SCK PB7 // SPI clock
+#define RF_SDO PB6 // MISO
+#define RF_SDI PB5 // MOSI
+#define RF_SS  PB4 // SPI SS (slave select)
+#define nIRQ   PD3 // interrupt request
+
+#define RFM_SPI_MODE_SW 0
+#define RFM_SPI_MODE_HW 1
+
+#define RFM_SPI_MODE RFM_SPI_MODE_HW
+
 // initializes RFM12 and puts it to idle mode 
 int8_t   rfm12_init(uint8_t band, double freq, uint8_t rate);
-uint16_t rfm12_cmd(uint16_t cmd); // RFM12 command
+void     rfm12_cmdw(uint16_t cmd); // write RFM12 command
+uint16_t rfm12_cmdrw(uint16_t cmd); // write RFM12 command and read reply
 
 // some of 'set' functions
 void    rfm12_set_mode(uint8_t mode); // set working mode RFM_MODE_* above
@@ -236,7 +250,7 @@ int8_t  rfm12_set_rxbw(uint8_t bw);
 // rate - one of RFM12_BPS_* above
 static inline void rfm12_set_rate(uint8_t rate)
 {
-	rfm12_cmd(RFM12CMD_DRATE | rate);
+	rfm12_cmdw(RFM12CMD_DRATE | rate);
 }
 
 // very rough battery voltage measurement using Low Battery Detector
@@ -251,7 +265,7 @@ int16_t rfm12_poll(uint16_t *status);
 uint16_t rfm12_receive(uint16_t *status);
 // receive data stream
 uint8_t rfm12_receive_data(void *buf, uint8_t len, uint16_t *arssi);
-int8_t  rfm12_send(uint8_t *data, uint8_t len); // transmit data stream
+int8_t  rfm12_send(void *data, uint8_t len); // transmit data stream
 
 #ifdef __cplusplus
 }
