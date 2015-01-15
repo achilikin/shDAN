@@ -29,13 +29,14 @@
 #include "cli.h"
 #include "rht.h"
 #include "main.h"
+#include "dnode.h"
+#include "pinio.h"
 #include "ns741.h"
 #include "timer.h"
 #include "bmp180.h"
 #include "serial.h"
 #include "rfm12bs.h"
 #include "pcf2127.h"
-#include "mmr70pin.h"
 #include "ossd_i2c.h"
 
 #ifndef F_CPU
@@ -91,19 +92,7 @@ void get_tx_pwr(char *buf)
 // adc channel ARSSI connected to
 #define ARSSI_ADC 5
 
-#define SID_MASK   0x0F
-#define ZONE_MASK  0x70
-#define ZONE_TSYNC 0x80
-
-typedef struct remote_s
-{
-	uint8_t sid; // sensor id
-	int8_t  vbat;
-	uint8_t tval;
-	uint8_t tdec;
-} remote_t;
-
-remote_t rd;
+dnode_t  rd;
 uint16_t rd_bv;     // battery voltage
 uint8_t  rd_ts[3];  // last session time
 uint8_t  rd_signal; // session signal
@@ -217,16 +206,16 @@ int main(void)
 		#define ARSSI_IDLE 110
 		#define ARSSI_MAX  340
 		if (rfm12_receive_data(&rd, sizeof(rd), &rd_arssi) == sizeof(rd)) {
-			if (rd.sid & ZONE_TSYNC) {
-				remote_t tsync;
-				tsync.sid = 0;
+			if (rd.nid & ZONE_TSYNC) {
+				dnode_t tsync;
+				tsync.nid = 0;
 				pcf2127_get_time((pcf_td_t *)&tsync.vbat, sw_clock);
 
 				rfm12_set_mode(RFM_MODE_TX);
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
 				if (debug_flags & RD_ECHO)
-					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.tval, tsync.tdec, rd.sid);
+					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.val, tsync.dec, rd.nid);
 			}
 
 			if (rd_arssi & 0x8000) {
@@ -238,11 +227,11 @@ int main(void)
 					rd_signal = 100;
 			}
 
-			if (rd.sid & ZONE_MASK) {
+			if (rd.nid & ZONE_MASK) {
 				rt_flags |= RDATA_VALID;
 				pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 				// overwrite FM frequency on the screen
-				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.sid, rd.tval, rd.tdec);
+				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
 				ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 				// overwrite NS741 status
 				rd_bv = 0;
@@ -317,9 +306,9 @@ int main(void)
 			}
 
 #if (RFM_MODE == RFM_MODE_TX)
-			rd.sid  = 15;
-			rd.tval = rht.temperature.val;
-			rd.tdec = rht.temperature.dec;
+			rd.nid  = 0x11;
+			rd.val  = rht.temperature.val;
+			rd.dec  = rht.temperature.dec;
 			rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
 			rfm12_send((uint8_t *)&rd, sizeof(rd));
 #endif
@@ -333,5 +322,5 @@ void print_rd(void)
 		return;
 
 	printf_P(PSTR("%02d:%02d:%02d %02X ARSSI %u %3d%% V %d T %d.%d\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2], rd.sid, rd_arssi, rd_signal, rd_bv, rd.tval, rd.tdec);
+		rd_ts[0], rd_ts[1], rd_ts[2], rd.nid, rd_arssi, rd_signal, rd_bv, rd.val, rd.dec);
 }
