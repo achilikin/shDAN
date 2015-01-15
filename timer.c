@@ -21,8 +21,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include "pinio.h"
 #include "timer.h"
-#include "mmr70pin.h"
 
 #if (F_CPU != 8000000)
 #error Change init_millis() for F_CPU != 8MHz

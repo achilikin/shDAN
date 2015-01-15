@@ -27,8 +27,8 @@
 
 #include "rht.h"
 #include "sht1x.h"
+#include "pinio.h"
 #include "timer.h"
-#include "mmr70pin.h"
 
 // ack timeout
 #define SHT1X_TIMEOUT 128

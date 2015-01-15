@@ -27,8 +27,8 @@
 
 #include "rht.h"
 #include "rht03.h"
+#include "pinio.h"
 #include "timer.h"
-#include "mmr70pin.h"
 
 #define RHTDATA     46 // start bit, 40 bits raw data, 5 decoded data
 

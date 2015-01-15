@@ -22,9 +22,9 @@
 #include <stddef.h>
 #include <avr/io.h>
 
+#include "pinio.h"
 #include "timer.h"
 #include "rfm12bs.h"
-#include "mmr70pin.h"
 
 #define RFM_DEBUG_RX 0
 

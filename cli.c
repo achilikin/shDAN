@@ -25,13 +25,13 @@
 #include "cli.h"
 #include "rht.h"
 #include "main.h"
+#include "pinio.h"
 #include "sht1x.h"
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
 #include "pcf2127.h"
 #include "ossd_i2c.h"
-#include "mmr70pin.h"
 
 static uint16_t free_mem(void)
 {
