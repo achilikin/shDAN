@@ -15,8 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __SERIAL_CHAR_H__
-#define __SERIAL_CHAR_H__
+#ifndef SERIAL_CHAR_H
+#define SERIAL_CHAR_H
 
 #include <stdint.h>
 

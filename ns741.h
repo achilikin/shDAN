@@ -17,8 +17,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __NS741_H_FMBERRY_
-#define __NS741_H_FMBERRY_
+#ifndef NS741_RADIO_H
+#define NS741_RADIO_H
 
 #include <stdint.h>
 

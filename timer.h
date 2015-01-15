@@ -16,8 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _TIMER_MILLIS_H_
-#define _TIMER_MILLIS_H_
+#ifndef ATMEGA_TIMERS_H
+#define ATMEGA_TIMERS_H
 
 #include <util/atomic.h>
 #include <avr/interrupt.h>

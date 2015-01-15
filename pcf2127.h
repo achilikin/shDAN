@@ -16,8 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __RTC_PFC2127_I2C__
-#define __RTC_PFC2127_I2C__
+#ifndef RTC_PFC2127_I2C_H
+#define RTC_PFC2127_I2C_H
 
 #include <stdint.h>
 

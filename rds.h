@@ -16,8 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __RDS_CONSTANTS_H__
-#define __RDS_CONSTANTS_H__
+#ifndef RDS_CONSTANTS_H
+#define RDS_CONSTANTS_H
 
 // RBDS Standard, Annex D
 // Program Identification: Country Code, Area Coverage, Reference Number

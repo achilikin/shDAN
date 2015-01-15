@@ -19,8 +19,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __RHT03_MMR_70_H__
-#define __RHT03_MMR_70_H__
+#ifndef RHT03_MMR_70_H
+#define RHT03_MMR_70_H
 
 #include <stdint.h>
 #include <stdlib.h>

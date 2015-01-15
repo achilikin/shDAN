@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _RFM_12BS_H_
-#define _RFM_12BS_H_
+#ifndef RFM_12BS_H
+#define RFM_12BS_H
 
 #ifdef __cplusplus
 extern "C" {

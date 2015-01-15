@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __OLED_SSD1306_I2C__
-#define __OLED_SSD1306_I2C__
+#ifndef OLED_SSD1306_I2C_H
+#define OLED_SSD1306_I2C_H
 
 /**
 	Limited set of functions for SSD1306 compatible OLED displays in text mode

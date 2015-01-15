@@ -16,8 +16,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __SHT10_MMR_70_H__
-#define __SHT10_MMR_70_H__
+#ifndef SHT10_MMR_70_H
+#define SHT10_MMR_70_H
 
 #include <stdint.h>
 #include <stdlib.h>
