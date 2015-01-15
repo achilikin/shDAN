@@ -158,7 +158,7 @@ void rfm12_reset_fifo(void)
 	rfm12_cmdw(RFM12CMD_FIFO | RFM12_RXBIT8 | RFM12_SYNCFIFO | RFM12_DRESET);
 }
 
-int8_t rfm12_init(uint8_t band, double freq, uint8_t rate)
+int8_t rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate)
 {
 	_pin_mode(&DDRB, _BV(RF_SS), OUTPUT_HIGH);
 	_pin_dir(&DDRB, _BV(RF_SDI), OUTPUT);
@@ -183,7 +183,7 @@ int8_t rfm12_init(uint8_t band, double freq, uint8_t rate)
 	rfm12_cmdw(RFM12CMD_RX_CTL | RFM12_VDI_FAST | rfm_rxctl);
 	rfm12_cmdw(RFM12CMD_DFILT | RFM12_CR_ALC | RFM12_DQD4);
 	rfm12_cmdw(RFM12CMD_FIFO | RFM12_RXBIT8 | RFM12_SYNCFIFO | RFM12_DRESET);
-	rfm12_cmdw(RFM12CMD_SYNCPAT | 0xD4);
+	rfm12_cmdw(RFM12CMD_SYNCPAT | syncpat);
 	rfm12_cmdw(RFM12CMD_AFC | RFM12_AFC_MODE3 | RFM12_RANGELMT3 | RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
 	rfm_txctl = RFM12_FSK_45 | RFM12_OPWR_MAX;
 	rfm12_cmdw(RFM12CMD_TX_CTL | rfm_txctl);

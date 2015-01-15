@@ -131,7 +131,7 @@ int main(void)
 
 	arssi = ARSSI_ADC;
 	analogRead(ARSSI_ADC); // dummy read to start ADC
-	rfm12_init(RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 #if (RFM_MODE == RFM_MODE_RX)
 	rfm12_set_mode(RFM_MODE_RX);
 #endif

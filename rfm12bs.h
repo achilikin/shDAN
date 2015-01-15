@@ -236,7 +236,7 @@ extern "C" {
 #define RFM_SPI_MODE RFM_SPI_MODE_HW
 
 // initializes RFM12 and puts it to idle mode 
-int8_t   rfm12_init(uint8_t band, double freq, uint8_t rate);
+int8_t   rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate);
 void     rfm12_cmdw(uint16_t cmd); // write RFM12 command
 uint16_t rfm12_cmdrw(uint16_t cmd); // write RFM12 command and read reply
 

@@ -107,7 +107,7 @@ int8_t bmp180_init(bmp180_t *pcc)
 	return 0;
 }
 
-int8_t bmp180_poll(bmp180_t *pcc, uint8_t t_only)
+int8_t bmp180_poll(bmp180_t *pcc, uint8_t tmode)
 {
 	// read raw t/p from bmp180
 	if (bmp180_read_data(pcc) != 0) {
@@ -116,7 +116,7 @@ int8_t bmp180_poll(bmp180_t *pcc, uint8_t t_only)
 	}
 
 	// quite lengthly conversion of raw t/p values
-	if (t_only || (pcc->cmd == BMP180_GET_T)) {
+	if (tmode || (pcc->cmd == BMP180_GET_T)) {
 		int32_t x1 = (((uint32_t)pcc->rawt - (uint32_t)pcc->ac6)*pcc->ac5) >> 15;
 		int32_t x2 = (((int32_t)pcc->mc) << 11)/(x1 + pcc->md);
 		int32_t b5 = x1 + x2;
@@ -125,7 +125,7 @@ int8_t bmp180_poll(bmp180_t *pcc, uint8_t t_only)
 		pcc->t = t / 10;
 		pcc->tdec = t % 10;
 		pcc->valid |= BMP180_T_VALID;
-		pcc->cmd = (t_only) ? BMP180_GET_T : BMP180_GET_P;
+		pcc->cmd = (tmode) ? BMP180_GET_T : BMP180_GET_P;
 	}
 	else {
 		int32_t x1 = pcc->b2;

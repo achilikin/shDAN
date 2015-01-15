@@ -143,21 +143,25 @@ void ossd_set_user_font(ossd_font_t *nfont, ossd_font_t *ofont)
 
 #if (OSSD_TARGET == OSSD_AVR)
 
-static void ossd_send_byte(uint8_t dc, uint8_t data)
+static int8_t ossd_send_byte(uint8_t dc, uint8_t data)
 {
-	i2c_start(I2C_OSSD | I2C_WRITE);
+	if (i2c_start(I2C_OSSD | I2C_WRITE) != 0)
+		return -1;
 	i2c_write(dc);
 	i2c_write(data);
 	i2c_stop();
+	return 0;
 }
 
-static void ossd_cmd_arg(uint8_t cmd, uint8_t arg)
+static int8_t ossd_cmd_arg(uint8_t cmd, uint8_t arg)
 {
-	i2c_start(I2C_OSSD | I2C_WRITE);
+	if (i2c_start(I2C_OSSD | I2C_WRITE) != 0)
+		return -1;
 	i2c_write(OSSD_CMD);
 	i2c_write(cmd);
 	i2c_write(arg);
 	i2c_stop();
+	return 0;
 }
 
 static void ossd_cmd_arg2(uint8_t cmd, uint8_t arg1, uint8_t arg2)
@@ -181,22 +185,24 @@ static void ossd_fill_line(uint8_t data, uint8_t num)
 
 #else
 
-static void ossd_send_byte(uint8_t dc, uint8_t data)
+static int8_t ossd_send_byte(uint8_t dc, uint8_t data)
 {
 	uint8_t buf[2];
 	buf[0] = dc;
 	buf[1] = data;
 
 	pi2c_write(PI2C_BUS, buf, 2);
+	return 0;
 }
 
-static void ossd_cmd_arg(uint8_t cmd, uint8_t arg)
+static int8_t ossd_cmd_arg(uint8_t cmd, uint8_t arg)
 {
 	uint8_t data[3];
 	data[0] = OSSD_CMD;
 	data[1] = cmd;
 	data[2] = arg;
 	pi2c_write(PI2C_BUS, data, 3);
+	return 0;
 }
 
 static void ossd_cmd_arg2(uint8_t cmd, uint8_t arg1, uint8_t arg2)
@@ -219,14 +225,14 @@ static void ossd_fill_line(uint8_t data, uint8_t num)
 
 #endif
 
-static inline void ossd_cmd(uint8_t cmd)
+static inline int8_t ossd_cmd(uint8_t cmd)
 {
-	ossd_send_byte(OSSD_CMD, cmd);
+	return ossd_send_byte(OSSD_CMD, cmd);
 }
 
-static inline void ossd_data(uint8_t data)
+static inline int8_t ossd_data(uint8_t data)
 {
-	ossd_send_byte(OSSD_DATA, data);
+	return ossd_send_byte(OSSD_DATA, data);
 }
 
 static uint8_t ossd_set_addr_mode(uint8_t set_mode)
@@ -363,11 +369,12 @@ void ossd_putlx(uint8_t line, int8_t x, const char *str, uint8_t atr)
 	ossd_set_addr_mode(cmode);
 }
 
-void ossd_init(uint8_t orientation)
+int8_t ossd_init(uint8_t orientation)
 {
 	_mode = 0xFF;
 	// set all default values
-	ossd_cmd(OSSD_SET_SLEEP_ON);
+	if (ossd_cmd(OSSD_SET_SLEEP_ON) != 0)
+		return -1;
 	ossd_cmd_arg(OSSD_SET_MUX_RATIO, 63);	
 	ossd_cmd_arg(OSSD_SET_DISP_OFFSET, 0);
 	ossd_cmd(OSSD_SET_START_LINE | 0);
@@ -385,4 +392,5 @@ void ossd_init(uint8_t orientation)
 	ossd_fill_screen(0);
 	ossd_cmd(OSSD_SET_SLEEP_OFF);
 	ossd_goto(0, 0);
+	return 0;
 }

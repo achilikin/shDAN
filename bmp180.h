@@ -64,7 +64,9 @@ typedef struct bmp180_s
 int8_t bmp180_init(bmp180_t *pcc);
 
 // process requested data and issue new read request
-int8_t bmp180_poll(bmp180_t *pcc, uint8_t t_only);
+#define BMP180_P_MODE 0
+#define BMP180_T_MODE 1
+int8_t bmp180_poll(bmp180_t *pcc, uint8_t mode);
 
 #ifdef __cplusplus
 }

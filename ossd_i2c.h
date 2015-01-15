@@ -69,7 +69,7 @@ typedef struct ossd_font_s
 #define OSSD_UPDOWN 0x09
 
 /** set default parameters */
-void ossd_init(uint8_t orientation);
+int8_t ossd_init(uint8_t orientation);
 
 /** fill screen with specified pattern */
 void ossd_fill_screen(uint8_t data);
