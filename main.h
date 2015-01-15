@@ -28,45 +28,49 @@ extern "C" {
 #endif
 #endif
 
-// debug flags
-#define ADC_ECHO 0x01
-#define RHT_ECHO 0x02
-#define RHT_LOG  0x04
-#define RD_ECHO   0x08 // remote sensor data log
-
 extern char rds_name[9];  // RDS PS name
 extern char rds_data[61]; // RDS RT string
 extern char fm_freq[17];  // FM frequency
 extern char hpa[17];      // pressure in hPa
 extern char status[17];   // TxPwr status
 
-// runtime radio flags
-#define RADIO_TXPWR0 0x0000
-#define RADIO_TXPWR1 0x0001
-#define RADIO_TXPWR2 0x0002
-#define RADIO_TXPWR3 0x0003
-#define RADIO_TXPWR  0x0003 // txpwr mask
-#define RADIO_POWER  0x0004
-#define RADIO_RDS    0x0008
-#define RADIO_MUTE   0x0010
-#define RADIO_STEREO 0x0020
-#define RADIO_GAIN   0x0040 // turn on -9bD audio gain
-#define RADIO_VOLUME 0x0F00 // volume mask
+// ns741 power flags
+#define NS741_TXPWR0 0x00
+#define NS741_TXPWR1 0x01
+#define NS741_TXPWR2 0x02
+#define NS741_TXPWR3 0x03
+#define NS741_TXPWR  0x03 // txpwr mask
+#define NS741_POWER  0x04
+#define NS741_GAIN   0x08 // turn on -9bD audio gain
+#define NS741_VOLUME 0xF0 // volume mask
 
-// other runtime flags
-#define RDATA_VALID  0x1000 // remote sensor data valid
-#define LOAD_OSCCAL  0x2000
-#define RDS_RESET    0x4000
-#define RDS_RT_SET   0x8000
+// ns741 runtime flags
+#define NS741_RDS    0x01
+#define NS741_MUTE   0x02
+#define NS741_STEREO 0x04
+#define RDS_RESET    0x08
+#define RDS_RT_SET   0x10
+
+// runtime flags
+#define RDATA_VALID  0x01 // remote sensor data valid
+#define LOAD_OSCCAL  0x02
+// echo flags
+#define ADC_ECHO     0x10
+#define RHT_ECHO     0x20
+#define RHT_LOG      0x40
+#define RD_ECHO      0x80 // remote sensor data log
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;
-extern uint16_t EEMEM em_rt_flags;
+extern uint8_t  EEMEM em_ns_rt_flags;
+extern uint8_t  EEMEM em_ns_pwr_flags;
 extern uint8_t  EEMEM em_osccal;
 
 extern uint16_t radio_freq;
-extern uint16_t rt_flags;
-extern uint8_t  debug_flags;
+extern uint8_t  ns_rt_flags;
+extern uint8_t  ns_pwr_flags;
+
+extern uint8_t  rt_flags;
 
 extern uint32_t uptime;
 extern uint32_t sw_clock;

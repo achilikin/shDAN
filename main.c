@@ -53,8 +53,11 @@ uint16_t EEMEM em_radio_freq  = 9700; // 97.00 MHz
 // for MMR70 I'm running this code on it is 168 for 115200, 181 for 38400
 uint8_t EEMEM em_osccal = 181;
 
-// runtime flags
-uint16_t EEMEM em_rt_flags = (RADIO_STEREO | RADIO_RDS | RADIO_TXPWR0 | LOAD_OSCCAL);
+// NS741 flags
+uint8_t EEMEM em_ns_rt_flags = (NS741_STEREO | NS741_RDS);
+uint8_t EEMEM em_ns_pwr_flags = NS741_TXPWR0;
+
+uint8_t EEMEM em_rt_flags = LOAD_OSCCAL;
 
 char rds_name[9];  // RDS PS name
 char fm_freq[17];  // FM frequency
@@ -63,8 +66,9 @@ char hpa[17];	   // pressure in hPa
 char status[17];   // TxPwr status
 
 uint16_t radio_freq;
-uint16_t rt_flags;
-uint8_t  debug_flags;
+uint8_t  ns_rt_flags;
+uint8_t  ns_pwr_flags;
+uint8_t  rt_flags;
 
 uint32_t uptime;
 uint32_t sw_clock;
@@ -83,8 +87,8 @@ static const char *s_pwr[4] = {
 
 void get_tx_pwr(char *buf)
 {
-	sprintf_P(buf, PSTR("TxPwr %smW %s"), s_pwr[rt_flags & RADIO_TXPWR], 
-		rt_flags & RADIO_POWER ? "on" : "off");
+	sprintf_P(buf, PSTR("TxPwr %smW %s"), s_pwr[ns_pwr_flags & NS741_TXPWR], 
+		ns_pwr_flags & NS741_POWER ? "on" : "off");
 }
 
 // Select mode - receiver or transmitter
@@ -101,6 +105,7 @@ uint16_t rd_arssi;
 int main(void)
 {
 	rht_t rht;
+	uint16_t arssi;
 	uint8_t poll_clock = 0;
 
 	mmr_led_on(); // turn on LED while booting
@@ -110,9 +115,10 @@ int main(void)
 
 	// initialise all components
 	// read settings from EEPROM
-	uint16_t ns741_word = eeprom_read_word(&em_rt_flags);
-	rt_flags = ns741_word;
-	debug_flags = 0;
+	ns_rt_flags = eeprom_read_byte(&em_ns_rt_flags);
+	ns_pwr_flags = eeprom_read_byte(&em_ns_pwr_flags);
+
+	rt_flags = eeprom_read_byte(&em_rt_flags);
 
 	sei();
 	serial_init(UART_BAUD_RATE);
@@ -123,7 +129,7 @@ int main(void)
 
 	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
 
-	rd_arssi = ARSSI_ADC;
+	arssi = ARSSI_ADC;
 	analogRead(ARSSI_ADC); // dummy read to start ADC
 	rfm12_init(RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 #if (RFM_MODE == RFM_MODE_RX)
@@ -142,20 +148,20 @@ int main(void)
 	// initialize ns741 with default parameters
 	ns741_init();
 	// turn ON
-	if (rt_flags & RADIO_POWER) {
+	if (ns_pwr_flags & NS741_POWER) {
 		delay(700);
 		ns741_radio_power(1);
 		delay(150);
 	}
-	ns741_gain(ns741_word & RADIO_GAIN);
+	ns741_gain(ns_pwr_flags & NS741_GAIN);
 	// read radio frequency from EEPROM
 	radio_freq = eeprom_read_word(&em_radio_freq);
 	if (radio_freq < NS741_MIN_FREQ) radio_freq = NS741_MIN_FREQ;
 	if (radio_freq > NS741_MAX_FREQ) radio_freq = NS741_MAX_FREQ;
 	ns741_set_frequency(radio_freq);
-	ns741_txpwr(ns741_word & RADIO_TXPWR);
-	ns741_stereo(ns741_word & RADIO_STEREO);
-	ns741_volume((ns741_word & RADIO_VOLUME) >> 8);
+	ns741_txpwr(ns_pwr_flags & NS741_TXPWR);
+	ns741_stereo(ns_rt_flags & NS741_STEREO);
+	ns741_volume((ns_pwr_flags & NS741_VOLUME) >> 8);
 
 	// setup our ~millisecond timer for mill*() and tenth_clock counter
 	init_time_clock(CLOCK_MILLIS);
@@ -172,10 +178,10 @@ int main(void)
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
 		rds_name, fm_freq,
-		is_on(rt_flags & RADIO_POWER), is_on(rt_flags & RADIO_STEREO),
-		rt_flags & RADIO_TXPWR, (rt_flags & RADIO_VOLUME) >> 8, (rt_flags & RADIO_GAIN) ? -9 : 0);
+		is_on(ns_pwr_flags & NS741_POWER), is_on(ns_rt_flags & NS741_STEREO),
+		ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
 
-	rht_read(&rht, debug_flags & RHT_ECHO);
+	rht_read(&rht, rt_flags & RHT_ECHO);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
 	get_tx_pwr(status);
@@ -187,8 +193,8 @@ int main(void)
 
 	// turn on RDS
 	ns741_rds(1);
-	rt_flags |= RADIO_RDS;
-	rt_flags |= RDS_RESET; // set reset flag so next poll of RHT will start new text
+	ns_rt_flags |= NS741_RDS;
+	ns_rt_flags |= RDS_RESET; // set reset flag so next poll of RHT will start new text
 
 	// reset our soft clock
 	uptime   = 0;
@@ -205,7 +211,7 @@ int main(void)
 #if	(RFM_MODE == RFM_MODE_RX)
 		#define ARSSI_IDLE 110
 		#define ARSSI_MAX  340
-		if (rfm12_receive_data(&rd, sizeof(rd), &rd_arssi) == sizeof(rd)) {
+		if (rfm12_receive_data(&rd, sizeof(rd), &arssi) == sizeof(rd)) {
 			if (rd.nid & ZONE_TSYNC) {
 				dnode_t tsync;
 				tsync.nid = 0;
@@ -214,17 +220,18 @@ int main(void)
 				rfm12_set_mode(RFM_MODE_TX);
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
-				if (debug_flags & RD_ECHO)
+				if (rt_flags & RD_ECHO)
 					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.val, tsync.dec, rd.nid);
 			}
-
-			if (rd_arssi & 0x8000) {
-				rd_arssi &= 0x0FFF;
-				if (rd_arssi < ARSSI_IDLE)
-					rd_arssi = ARSSI_IDLE;
-				rd_signal = ((100*(rd_arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
+			rd_arssi = 0;
+			if (arssi & 0x8000) {
+				arssi &= 0x0FFF;
+				if (arssi < ARSSI_IDLE)
+					arssi = ARSSI_IDLE;
+				rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
 				if (rd_signal > 100)
 					rd_signal = 100;
+				rd_arssi = arssi;
 			}
 
 			if (rd.nid & ZONE_MASK) {
@@ -243,10 +250,10 @@ int main(void)
 				ossd_select_font(font);
 			}
 
-			if (debug_flags & RD_ECHO)
+			if (rt_flags & RD_ECHO)
 				print_rd();
 
-			rd_arssi = ARSSI_ADC;
+			arssi = ARSSI_ADC;
 		}
 #endif
 
@@ -260,15 +267,15 @@ int main(void)
 			sw_clock++; 
 			poll_clock ++;
 
-			if (rt_flags & RDS_RESET) {
+			if (ns_rt_flags & RDS_RESET) {
 				ns741_rds_reset_radiotext();
-				rt_flags &= ~RDS_RESET;
+				ns_rt_flags &= ~RDS_RESET;
 			}
 
-			if (!(rt_flags & RDS_RT_SET))
+			if (!(ns_rt_flags & RDS_RT_SET))
 				ns741_rds_set_radiotext(rds_data);
 #if ADC_MASK
-			if (debug_flags & ADC_ECHO) {
+			if (rt_flags & ADC_ECHO) {
 				// if you want to use floats enable PRINTF_LIB_FLOAT in the makefile
 				puts("");
 				for(uint8_t i = 0; i < 8; i++) {
@@ -293,9 +300,9 @@ int main(void)
 		if (poll_clock >= 5) {
 			poll_clock = 0;
 			ossd_putlx(4, 0, "*", 0);
-			rht_read(&rht, debug_flags & RHT_ECHO);
+			rht_read(&rht, rt_flags & RHT_ECHO);
 			ossd_putlx(4, -1, rds_data, 0);
-			if (debug_flags & RHT_LOG) {
+			if (rt_flags & RHT_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
 				printf_P(PSTR("%02d:%02d:%02d %d.%d %d.%d %d.%02d\n"),
