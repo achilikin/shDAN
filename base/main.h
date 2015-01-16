@@ -77,6 +77,7 @@ extern uint32_t sw_clock;
 
 void get_tx_pwr(char *buf); // get current NS741 tx power
 void print_rd(void); // print remote sensor data
+
 #ifdef __cplusplus
 }
 #endif

@@ -75,6 +75,19 @@ uint32_t sw_clock;
 
 bmp180_t press;
 
+dnode_t  rd;
+uint16_t rd_bv;     // battery voltage
+uint8_t  rd_ts[3];  // last session time
+uint8_t  rd_signal; // session signal
+
+// adc channel ARSSI connected to (> 0)
+#define ARSSI_ADC 5
+// ARSSI limits
+#define ARSSI_IDLE (110 >> 2)
+#define ARSSI_MAX  (340 >> 2)
+
+uint8_t rd_arssi;
+
 inline const char *is_on(uint8_t val)
 {
 	if (val) return "ON";
@@ -91,21 +104,43 @@ void get_tx_pwr(char *buf)
 		ns_pwr_flags & NS741_POWER ? "on" : "off");
 }
 
-// Select mode - receiver or transmitter
-#define RFM_MODE RFM_MODE_RX
-// adc channel ARSSI connected to
-#define ARSSI_ADC 5
+// simple bubble sort for uint8 arrays
+static void bsort(uint8_t *data, int8_t len)
+{
+	for(int8_t i = 0; i < (len - 1); i++) {
+		for(int8_t j = 0; j < (len-(i+1)); j++) {
+			if (data[j] > data[j+1]) {
+				register uint8_t t = data[j];
+				data[j] = data[j+1];
+				data[j+1] = t;
+			}
+		}
+	}
+}
 
-dnode_t  rd;
-uint16_t rd_bv;     // battery voltage
-uint8_t  rd_ts[3];  // last session time
-uint8_t  rd_signal; // session signal
-uint16_t rd_arssi;
+// pretty accurate conversion to 3.3V without using floats 
+static uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
+{
+	uint32_t v = adc * 323LL + 500LL;
+	uint32_t dec = (v % 100000LL) / 1000LL;
+	v = v / 100000LL;
+
+	*decimal = (uint8_t)dec;
+	return (uint8_t)v;
+}
+
+static volatile uint8_t aidx;
+static uint8_t  areads[8];
+
+ISR(ADC_vect)
+{
+	areads[aidx] = ADCH;
+	aidx = (aidx + 1) & 0x07;
+}
 
 int main(void)
 {
 	rht_t rht;
-	uint16_t arssi;
 	uint8_t poll_clock = 0;
 
 	mmr_led_on(); // turn on LED while booting
@@ -128,13 +163,11 @@ int main(void)
 	}
 
 	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
-
-	arssi = ARSSI_ADC;
+	analogReference(VREF_AVCC); // enable ADC with Vcc reference
 	analogRead(ARSSI_ADC); // dummy read to start ADC
+
 	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
-#if (RFM_MODE == RFM_MODE_RX)
 	rfm12_set_mode(RFM_MODE_RX);
-#endif
 
 	rht_init();
 	bmp180_init(&press);
@@ -203,16 +236,23 @@ int main(void)
 	mmr_led_off();
 	cli_init();
 
+	// initialize ADC interrupt data
+	aidx = 0;
+	for(uint8_t i = 0; i < 8; i++)
+		areads[i] = 0;
+	rd_arssi = 0;
+
+	ADMUX  |= _BV(ADLAR); // 8 bit resolution
+	ADCSRA |= _BV(ADIE);  // enable ADC interrupts
+
 	for(;;) {
 		// RDSPIN is low when NS741 is ready to transmit next RDS frame
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
 		
-#if	(RFM_MODE == RFM_MODE_RX)
-		#define ARSSI_IDLE 110
-		#define ARSSI_MAX  340
-		if (rfm12_receive_data(&rd, sizeof(rd), &arssi) == sizeof(rd)) {
-			if (rd.nid & ZONE_TSYNC) {
+		if (rfm12_receive_data(&rd, sizeof(rd), ARSSI_ADC) == sizeof(rd)) {
+			analogStop(); // stop any pending conversion
+			if (rd.nid & SENS_TSYNC) {
 				dnode_t tsync;
 				tsync.nid = 0;
 				pcf2127_get_time((pcf_td_t *)&tsync.vbat, sw_clock);
@@ -223,18 +263,31 @@ int main(void)
 				if (rt_flags & RD_ECHO)
 					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.val, tsync.dec, rd.nid);
 			}
-			rd_arssi = 0;
-			if (arssi & 0x8000) {
-				arssi &= 0x0FFF;
+			
+			// we should have at least 6 ARSSI reads in our areads array
+			bsort(areads, 8);
+			rd_arssi  = 0;
+			rd_signal = 0;
+			// use two read from the middle and reset ARSSI array
+			uint16_t average = 0;
+			for(uint8_t i = 0; i < 8; i++) {
+				if (i == 3 || i == 4)
+					average += areads[i];
+				areads[i] = 0;
+			}
+			rd_arssi = average / 2;
+			aidx = 0;
+
+			if (rd_arssi) {
+				uint8_t arssi = rd_arssi;
 				if (arssi < ARSSI_IDLE)
 					arssi = ARSSI_IDLE;
 				rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
 				if (rd_signal > 100)
 					rd_signal = 100;
-				rd_arssi = arssi;
 			}
 
-			if (rd.nid & ZONE_MASK) {
+			if (rd.nid & SENS_MASK) {
 				rt_flags |= RDATA_VALID;
 				pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 				// overwrite FM frequency on the screen
@@ -252,10 +305,7 @@ int main(void)
 
 			if (rt_flags & RD_ECHO)
 				print_rd();
-
-			arssi = ARSSI_ADC;
 		}
-#endif
 
 		// process serial port commands
 		cli_interact(&rht);
@@ -311,14 +361,6 @@ int main(void)
 					rht.humidity.val, rht.humidity.dec,
 					press.p, press.pdec);
 			}
-
-#if (RFM_MODE == RFM_MODE_TX)
-			rd.nid  = 0x11;
-			rd.val  = rht.temperature.val;
-			rd.dec  = rht.temperature.dec;
-			rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
-			rfm12_send((uint8_t *)&rd, sizeof(rd));
-#endif
 		}
     }
 }

@@ -25,18 +25,26 @@ extern "C" {
 #endif
 #endif
 
-#define NID_MASK   0x0F
-#define ZONE_MASK  0x70
-#define ZONE_TSYNC 0x80
+#define NID_MASK   0x0F // node index mask
+#define SENS_MASK  0x70 // sensor index mask
+#define SENS_TSYNC 0x80 // time sync request
 
-#define VBAT_MASK  0x0F
-#define VBAT_SLEEP 0x80 // sensor is in sleep mode
+// up to 15 different sensor types
+#define SENS_TEMPER 0x01 // temperature, i8 val + u8 dec
+#define SENS_HUMID  0x02 // humidity, u8 val + u8 dec
+#define SENS_PRESS  0x03 // pressure, u16 bit value
+#define SENS_LIGHT  0x04 // light, 10 bit adc
+#define SENS_DIGIT  0x05 // digital, 16bit mask
+#define SENS_COUNT  0x06 // counter, u16 value
+
+#define VBAT_MASK  0x0F // Vbat mask
+#define VBAT_SLEEP 0x80 // node is in sleep mode
 #define VBAT_LED   0x40 // poll led is on
 
 /*
  sid bits: tsssnnnn
  t:    time sync request/reply
- sss:  sensor id, 0 reserved
+ sss:  sensor id, 0 reserved, 7 - sensors description
  nnnn: node id, 0-base station, 1-11 nodes for 1 minute multiplexing cycle
  sss/nnnn combination is used to build simple time-division multiplexing,
  for example if there are no more than 4 different sensors (zones) per

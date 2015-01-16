@@ -297,9 +297,8 @@ uint16_t rfm12_receive(uint16_t *status)
 		// read RX FIFO
 		data = rfm12_cmdrw(RFM12CMD_RX_FIFO);
 		// high bits are set if data is available
-		if (data & 0x8000) {
+		if (data & 0x8000)
 			return (data & 0x80FF);
-		}
 		// some other interrupt (RX FIFO overrun, for example)
 		if (status)
 			data = *status;
@@ -366,26 +365,22 @@ int8_t rfm12_send(void *buf, uint8_t len)
 }
 
 // receive data, use data len as packet start byte
-// if *arssi is not NULL, then it contains ADC channel to read ARSSI value from
+// if adc is no null then start ADC conversion to read ARSSI
 // (RFM12BS supplies analogue RSSI output on one of the capacitors)
-uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint16_t *arssi)
+uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t adc)
 {
 	static uint8_t ridx = 0;
 	uint8_t *buf = (uint8_t *)dbuf;
 
 	uint16_t ch;
 	while(((ch = rfm12_receive(NULL)) & 0x8000)) {
+		if (adc)
+			analogStart();
 		uint8_t data = (uint8_t)ch;
 		if (ridx == 0) {
 			if (data == len)
 				ridx++;
 			continue;
-		}
-		if (ridx == 1) {
-			if (arssi && *arssi < 8) {
-				*arssi = analogRead(*arssi);
-				*arssi |= 0x8000;
-			}
 		}
 		if (ridx == (len + 1)) { // data should contain CRC now
 			ridx = 0; // reset buffer index

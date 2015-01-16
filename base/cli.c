@@ -287,7 +287,11 @@ static int8_t process(char *buf, void *rht)
 			printf("\n");
 			return -1;
 		}
+
+		uint8_t adc = analogGetChannel();
 		uint16_t val = analogRead(ai);
+		analogSetChannel(adc);
+
 		uint32_t v = val * 323LL + 500LL;
 		uint32_t dec = (v % 100000LL) / 1000LL;
 		v = v / 100000LL;

@@ -187,42 +187,74 @@ static inline void delay(uint16_t msec)
 }
 
 // in case if you managed to solder some wires to analogue inputs...
-// Arduino-type analogRead()
 #define VREF_AVCC     _BV(REFS0)
 #define VREF_EXTERNAL 0
 #define VREF_INTERNAL (_BV(REFS0) | _BV(REFS1))
 
-static inline uint16_t analogRead(uint8_t channel)
+static inline void analogReference(uint8_t ref)
 {
-	uint16_t val;
-	// Select pin ADC0 using MUX
-	ADMUX = VREF_AVCC | (channel & 0x7);
+	uint8_t admux = ADMUX;
+	admux &= ~(_BV(REFS0) | _BV(REFS1));
+	admux |= ref;
+	ADMUX = admux;
 
 	// Activate ADC with Prescaler 128 --> 8Mhz/128 = 62.5kHz
 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+}
 
+static inline void analogSetChannel(uint8_t channel)
+{
+	uint8_t admux = ADMUX;
+	admux &= ~0x07;
+	admux |= (channel & 0x07);
+	ADMUX = admux;
+}
+
+static inline uint8_t analogGetChannel(void)
+{
+	return (ADMUX & 0x07);
+}
+
+static inline void analogStart(void)
+{
 	// Start conversion
 	ADCSRA |= _BV(ADSC);
+}
 
+static inline void analogStop(void)
+{
+	// Stop conversion by reseting ADEN
+	ADCSRA &= ~_BV(ADEN);
+	ADCSRA |= _BV(ADEN);
+}
+
+// Arduino-type analogRead(): synchronous ADC conversion
+static inline uint16_t analogRead(uint8_t channel)
+{
+	uint16_t val;
+
+	// disable interrupt and select 10 bit resolution
+	uint8_t adie = ADCSRA & _BV(ADIE);
+	ADCSRA &= ~_BV(ADIE);
+	uint8_t adlar = ADMUX & _BV(ADLAR);
+	ADMUX &= ~_BV(ADLAR);
+
+	// select ADC channel
+	analogSetChannel(channel);
+	analogStart();
 	// wait until conversion completed
 	while(ADCSRA & _BV(ADSC));
 	val = ADCW;
+
+	// restore interrupt flag and resolution
+	ADCSRA |= adie;
+	ADMUX  |= adlar;
+
 	// do not disable ADC to avoid "Extended conversion"
 	// we disable it only when going to sleep modes
 	// ADCSRA &= ~_BV(ADEN);
 
 	return val;
-}
-
-// pretty accurate conversion to 3.3V without using floats 
-static inline uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
-{
-	uint32_t v = adc * 323LL + 500LL;
-	uint32_t dec = (v % 100000LL) / 1000LL;
-	v = v / 100000LL;
-
-	*decimal = (uint8_t)dec;
-	return (uint8_t)v;
 }
 
 #ifdef __cplusplus

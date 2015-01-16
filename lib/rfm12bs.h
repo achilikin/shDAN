@@ -264,7 +264,7 @@ int16_t rfm12_poll(uint16_t *status);
 // check if data available (nIRQ is LOW) and read data byte
 uint16_t rfm12_receive(uint16_t *status);
 // receive data stream
-uint8_t rfm12_receive_data(void *buf, uint8_t len, uint16_t *arssi);
+uint8_t rfm12_receive_data(void *buf, uint8_t len, uint8_t adc);
 int8_t  rfm12_send(void *data, uint8_t len); // transmit data stream
 
 #ifdef __cplusplus
