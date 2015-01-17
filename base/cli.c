@@ -275,35 +275,17 @@ static int8_t process(char *buf, void *rht)
 		return 0;
 	}
 
-#if ADC_MASK
 	if (str_is(cmd, PSTR("adc"))) {
 		uint8_t ai = atoi((const char *)arg);
-		if (ai > 7 || (ADC_MASK & (1 << ai)) == 0) {
-			printf_P(PSTR("Invalid Analog input, use"));
-			for(uint8_t i = 0; i < 8; i++) {
-				if (ADC_MASK & (1 << i))
-					printf(" %d", i);
-			}
-			printf("\n");
-			return -1;
+		if (ai < 8) {
+			uint8_t adc = analogGetChannel();
+			uint16_t val = analogRead(ai);
+			analogSetChannel(adc);
+			printf_P(PSTR("ADC %d %4d\n"), ai, val);
+			return 0;
 		}
-
-		uint8_t adc = analogGetChannel();
-		uint16_t val = analogRead(ai);
-		analogSetChannel(adc);
-
-		uint32_t v = val * 323LL + 500LL;
-		uint32_t dec = (v % 100000LL) / 1000LL;
-		v = v / 100000LL;
-		printf_P(PSTR("ADC %d %4d %d.%dV\n"), ai, val, (int)v, (int)dec);
-		// if you want to use floats then do not forget to uncomment in Makefile 
-		// #PRINTF_LIB = $(PRINTF_LIB_FLOAT)
-		// to enable float point printing
-		//double v = val*3.3/1024.0;
-		//printf("ADC %d %4d %.2fV (%s)\n", ai, val, v);
-		return 0;
+		return -1;
 	}
-#endif
 
 	if (str_is(cmd, PSTR("get"))) {
 		char   port = arg[0];

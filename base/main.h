@@ -75,6 +75,8 @@ extern uint8_t  rt_flags;
 extern uint32_t uptime;
 extern uint32_t sw_clock;
 
+#define ADC_MASK (ADC_PA4 | ADC_PA3)
+
 void get_tx_pwr(char *buf); // get current NS741 tx power
 void print_rd(void); // print remote sensor data
 

@@ -85,8 +85,6 @@
 #define ADC_PA6 0x40
 #define ADC_PA7 0x80
 
-#define ADC_MASK (ADC_PA4 | ADC_PA3)
-
 #ifdef __cplusplus
 extern "C" {
 #if 0 // to trick VisualAssist

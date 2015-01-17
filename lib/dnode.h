@@ -26,8 +26,14 @@ extern "C" {
 #endif
 
 #define NID_MASK   0x0F // node index mask
-#define SENS_MASK  0x70 // sensor index mask
 #define SENS_TSYNC 0x80 // time sync request
+#define SENS_MASK  0x70 // sensor index mask
+
+#define SET_NID(nid,sens) (((sens << 4) & SENS_MASK) | (nid & NID_MASK))
+
+// reserved sensor indexes
+#define SENS_TXPWR 0x00 // radio TX power
+#define SENS_LIST  0x70 // list of sensors in data[]
 
 // up to 15 different sensor types
 #define SENS_TEMPER 0x01 // temperature, i8 val + u8 dec
@@ -44,7 +50,7 @@ extern "C" {
 /*
  sid bits: tsssnnnn
  t:    time sync request/reply
- sss:  sensor id, 0 reserved, 7 - sensors description
+ sss:  sensor id, 0 - RFM TX power, 7 - sensors description
  nnnn: node id, 0-base station, 1-11 nodes for 1 minute multiplexing cycle
  sss/nnnn combination is used to build simple time-division multiplexing,
  for example if there are no more than 4 different sensors (zones) per
@@ -67,8 +73,8 @@ typedef struct dnode_s
 			int8_t  vbat; // Vbat = ((vbat & 0x0F)*10 + 230)/100.0
 			union {
 				struct {
-					int8_t  val;  // value
-					uint8_t dec;  // decimal
+					int8_t  val; // value
+					uint8_t dec; // decimal
 				};
 				uint16_t v16; // for example: air pressure, hP
 			};
