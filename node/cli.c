@@ -104,7 +104,7 @@ static int8_t process(char *buf, void *ptr)
 
 	if (str_is(cmd, PSTR("time"))) {
 		get_rtc_time(cmd);
-		printf_P(PSTR("%s\n"), buf);
+		printf_P(PSTR("%s\n"), cmd);
 		return 0;
 	}
 
