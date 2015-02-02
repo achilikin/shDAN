@@ -287,24 +287,26 @@ int main(void)
 					rd_signal = 100;
 			}
 
-			if (rd.nid & SENS_MASK) {
+			if ((rd.nid & SENS_MASK) != SENS_LIST) {
 				rt_flags |= RDATA_VALID;
 				pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 				// overwrite FM frequency on the screen
+				sprintf_P(fm_freq, PSTR("%02d:%02d:%02d"), rd_ts[0], rd_ts[1], rd_ts[2]);
+				ossd_putlx(0, -1, fm_freq, 0);
 				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
 				ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 				// overwrite NS741 status
 				rd_bv = 0;
 				if (rd.vbat != -1)
-					rd_bv = 230 + rd.vbat * 10;
+					rd_bv = 230 + (rd.vbat & VBAT_MASK)* 10;
 				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
 				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 				ossd_putlx(7, -1, status, 0);
 				ossd_select_font(font);
-			}
 
-			if (rt_flags & RD_ECHO)
-				print_rd();
+				if (rt_flags & RD_ECHO)
+					print_rd();
+			}
 		}
 
 		// process serial port commands
@@ -370,6 +372,9 @@ void print_rd(void)
 	if (!(rt_flags & RDATA_VALID))
 		return;
 
-	printf_P(PSTR("%02d:%02d:%02d %02X ARSSI %u %3d%% V %d T %d.%d\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2], rd.nid, rd_arssi, rd_signal, rd_bv, rd.val, rd.dec);
+	printf_P(PSTR("%02d:%02d:%02d Node %u Zone %u V %d S %u L %u T % 3d.%d ARSSI %u %3d%%\n"),
+		rd_ts[0], rd_ts[1], rd_ts[2],
+		rd.nid & NID_MASK, (rd.nid & SENS_MASK) >> 4,
+		rd_bv, !!(rd.vbat & VBAT_SLEEP), !!(rd.vbat & VBAT_LED), rd.val, rd.dec,
+		rd_arssi, rd_signal);
 }
