@@ -75,15 +75,24 @@
 #define PNC6	22 //
 #define PNC7	23 //
 
+#define ADC0 0
+#define ADC1 1
+#define ADC2 2
+#define ADC3 3
+#define ADC4 4
+#define ADC5 5
+#define ADC6 6
+#define ADC7 7
+
 // define mask of populated ADC inputs here, 0 if not populated
-#define ADC_PA0 0x01
-#define ADC_PA1 0x02
-#define ADC_PA2 0x04
-#define ADC_PA3 0x08
-#define ADC_PA4 0x10
-#define ADC_PA5 0x20
-#define ADC_PA6 0x40
-#define ADC_PA7 0x80
+#define ADC_PA0 _BV(ADC0)
+#define ADC_PA1 _BV(ADC1)
+#define ADC_PA2 _BV(ADC2)
+#define ADC_PA3 _BV(ADC3)
+#define ADC_PA4 _BV(ADC4)
+#define ADC_PA5 _BV(ADC5)
+#define ADC_PA6 _BV(ADC6)
+#define ADC_PA7 _BV(ADC7)
 
 #ifdef __cplusplus
 extern "C" {
