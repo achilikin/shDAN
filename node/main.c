@@ -50,7 +50,7 @@
 uint8_t EEMEM em_osccal = 178;
 
 // node id
-uint8_t EEMEM em_nid = 5;
+uint8_t EEMEM em_nid = 4;
 
 // by default RFM12 uses max TX power
 uint8_t EEMEM em_txpwr = 0;
@@ -101,25 +101,37 @@ uint16_t rd_arssi;
 
 static void show_time(char *buf);
 
+// disable all unused interfaces
+static void asleep(void)
+{
+	power_spi_disable();
+	power_twi_disable();
+	power_adc_disable();
+}
+
+static void awake(void)
+{
+	power_twi_enable();
+	power_spi_enable();
+}
+
 static void sleep(uint8_t mode)
 {
 	// set sleep mode
 	set_sleep_mode(mode);
+	asleep();
 
-	// disable all unused interfaces
-	power_spi_disable();
-	power_twi_disable();
-	power_adc_disable();
 	power_timer1_disable(); // our msec timer
-
 	sleep_enable();
 	sei();
 	sleep_cpu();
 	sleep_disable();
-
 	power_timer1_enable();
-	power_twi_enable();
-	power_spi_enable();
+}
+
+static inline uint8_t is_interactive(void)
+{
+	return get_pinb(PB0) ^ _BV(PB0);
 }
 
 // returns -1 in case of error, or reply interval in ms (<60)
@@ -157,44 +169,44 @@ int8_t sync_time(uint8_t send)
 int main(void)
 {
 	char buf[16];
-	uint8_t tsync = SYNC_SPAN;
+	uint8_t tsync = 0;
 
 	mmr_led_on(); // turn on LED while booting
+
+	uptime = 0;
+	active = 0;
+	rd_arssi = ADC4;
+	MCUCSR |= _BV(JTD); // disable JTag if enabled in the fuses
+
 	sei();
 
-	// initialise all components
 	nid = eeprom_read_byte(&em_nid); // our node id
 	txpwr = eeprom_read_byte(&em_txpwr);
 	flags = eeprom_read_byte(&em_flags);
-	active = 0;
-	serial_init(UART_BAUD_RATE);
 
+	// RFM12 nIRQ pin
+	_pin_mode(&DDRD, _BV(PD2), INPUT_HIGHZ);
+	// interactive mode pin, if grounded then MCU will not enter sleep state
+	// and will read serial port for commands and display data on oled screen
+	_pin_mode(&DDRB, _BV(PB0), INPUT_UP);
+
+	// setup RTC timer with external 32768 crystal and
+	// setup our ~millisecond timer for mill*() and tenth_clock counter
+	init_time_clock(CLOCK_RTC | CLOCK_MILLIS);
+	mmr_led_off();
+
+	delay(1000); // to make sure that our 32kHz crystal is up and running
+
+	mmr_led_on();
+	serial_init(UART_BAUD_RATE);
 	if (flags & LOAD_OSCCAL) {
 		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
 		serial_set_osccal(new_osccal);
 	}
 
-	i2c_init(); // needed for ossd* and bmp180*
-	delay(1000); // to make sure that our 32kHz crystal is up and running
-	// setup RTC timer with external 32768 crystal and
-	// setup our ~millisecond timer for mill*() and tenth_clock counter
-	init_time_clock(CLOCK_RTC | CLOCK_MILLIS);
-
-	// RFM12 nIRQ pin
-	_pin_mode(&DDRD, _BV(PD2), INPUT_HIGHZ);
-
-	// interactive mode pin, if grounded then MCU will not enter sleep state
-	// and will read serial port for commands and display data on oled screen
-	_pin_mode(&DDRB, _BV(PB0), INPUT_UP);
-
-	rd_arssi = 5;
 	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 	rfm12_set_txpwr(txpwr);
 	rd.vbat = rfm12_battery(RFM_MODE_SLEEP, 14);
-	MCUCSR |= _BV(JTD); // disable JTag if enabled in the fuses
-
-	// reset our soft clock
-	uptime = 0;
 
 	// try to get RTC time from the base
 	for(uint8_t i = 0; i < 5; i++) {
@@ -203,32 +215,37 @@ int main(void)
 		delay(217);
 	}
 
+	i2c_init(); // needed for ossd* and bmp180*
+	// try to init oled display
 	if (ossd_init(OSSD_UPDOWN) == 0) {
 		ossd_select_font(OSSD_FONT_8x16);
 		sprintf_P(buf, PSTR("Sensor %d"), nid);
 		ossd_putlx(0, -1, buf, 0);
 		show_time(buf);
-
 		active |= OLED_ACTIVE;
 	}
 
 	bmp180_init(&bmp);
-
-	if (get_pinb(PB0))
-		ossd_sleep(1);
-	else
-		active |= UART_ACTIVE;
-	flags |= DATA_INIT;
-
-	print_status();
 	cli_init();
+	flags |= DATA_INIT;
 	mmr_led_off();
+
+	if (is_interactive()) {
+		active |= UART_ACTIVE;
+		print_status();
+	}
+	else {
+		if (active & OLED_ACTIVE)
+			ossd_sleep(1);
+		sleep(SLEEP_MODE_PWR_SAVE);
+	}
 
 	for(;;) {
 		// process serial port commands if in interactive mode
-		if (!get_pinb(PB0)) {
+		if (is_interactive()) {
 			// bring cli and screen out of sleep condition
 			if (!(active & UART_ACTIVE)) {
+				awake();
 				if (active & OLED_ACTIVE)
 					ossd_sleep(0);
 				rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
@@ -246,7 +263,12 @@ int main(void)
 
 		// poll bmp180 for temperature only every 1 minute
 		if ((flags & (DATA_POLL | DATA_INIT)) || (TIME_TO_POLL(ZONE_T1) && !(flags & DATA_SENT))) {
+			awake();
+			if (active & DLED_ACTIVE)
+				mmr_led_on();
 			bmp180_poll(&bmp, BMP180_T_MODE);
+			if (active & DLED_ACTIVE)
+				mmr_led_off();
 
 			// Local Sensor Data log
 			if ((flags & (LSD_ECHO | DATA_POLL)) && (active & UART_ACTIVE))
@@ -256,11 +278,7 @@ int main(void)
 				rd.nid = SET_NID(nid,ZONE_T1);
 				if (tsync == SYNC_SPAN) {
 					rd.nid |= SENS_TSYNC;
-					if (active & DLED_ACTIVE)
-						mmr_led_on();
 					rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
-					if (active & DLED_ACTIVE)
-						mmr_led_off();
 				}
 				rd.vbat &= ~(VBAT_LED | VBAT_SLEEP);
 				if (active & DLED_ACTIVE)
@@ -282,7 +300,7 @@ int main(void)
 				tsync++;
 			}
 
-			if (!get_pinb(PB0) && (active & OLED_ACTIVE)) {
+			if (is_interactive() && (active & OLED_ACTIVE)) {
 				show_time(buf);
 				get_vbat(buf);
 				ossd_putlx(6, -1, buf, 0);
@@ -295,11 +313,12 @@ int main(void)
 		if (!TIME_TO_POLL(ZONE_T1))
 			flags &= ~DATA_SENT;
 
-		if (get_pinb(PB0)) {
+		if (!is_interactive()) {
 			sleep(SLEEP_MODE_PWR_SAVE);
 			if (active & UART_ACTIVE) {
 				active &= ~UART_ACTIVE;
-				ossd_sleep(1);
+				if (active & OLED_ACTIVE)
+					ossd_sleep(1);
 			}
 		}
 	}
