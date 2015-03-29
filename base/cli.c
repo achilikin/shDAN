@@ -75,10 +75,13 @@ const char cmd_list[] PROGMEM =
 	"  status\n"
 	"  calibrate\n"
 	"  set osccal X\n"
+	"  time\n"
+	"  date\n"
 	"  set time HH:MM:SS\n"
 	"  set date YY/MM/DD\n"
 	"  echo rht|adc|rds|remote|off\n"
-	"  rtc time|date|dump [mem]|init [mem]\n"
+	"  rtc dump [mem]|init [mem]\n"
+	"  rtc dst on|off\n"
 	"  adc chan\n"
 	"  get pin (d3, b4,c2...)\n"
 	"  rdsid id\n"
@@ -91,6 +94,20 @@ const char cmd_list[] PROGMEM =
 	"  radio on|off\n"
 	"  gain low|off\n";
 
+static int8_t show_time(void)
+{
+	uint8_t ts[3];
+	if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
+		// reset our sw clock
+		sw_clock = ts[2];
+		sw_clock += ts[1] * 60;
+		sw_clock += ts[0] * 3600;
+		printf_P(PSTR("%02d:%02d:%02d\n"), ts[0], ts[1], ts[2]);
+		return 0;
+	}
+	return -1;
+}
+
 static int8_t process(char *buf, void *rht)
 {
 	char *arg;
@@ -101,6 +118,18 @@ static int8_t process(char *buf, void *rht)
 
 	if (str_is(cmd, PSTR("help"))) {
 		uart_puts_p(cmd_list);
+		return 0;
+	}
+
+	if (str_is(cmd, PSTR("time")))
+		return show_time();
+	
+	if (str_is(cmd, PSTR("date"))) {
+		pcf_td_t td;
+		if (pcf2127_get_date(&td) == 0) {
+			printf_P(PSTR("20%02d/%02d/%02d %02d:%02d:%02d\n"),
+				td.year, td.month, td.day, td.hour, td.min, td.sec);
+		}
 		return 0;
 	}
 
@@ -144,25 +173,26 @@ static int8_t process(char *buf, void *rht)
 			return 0;
 		}
 
-		if (str_is(arg, PSTR("time"))) {
+		if (str_is(arg, PSTR("dst"))) {
 			uint8_t ts[3];
-			if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
-				// reset our sw clock
-				sw_clock = ts[2];
-				sw_clock += ts[1] * 60;
-				sw_clock += ts[0] * 3600;
-				printf_P(PSTR("%02d:%02d:%02d\n"), ts[0], ts[1], ts[2]);
+			pcf2127_get_time((pcf_td_t *)ts, 0);
+			if (str_is(sval, PSTR("on"))) {
+				uint8_t hour = ts[0] + 1;
+				if (hour > 23)
+					hour = 0;
+				ts[0] = hour;
+				pcf2127_set_time((pcf_td_t *)ts);
+				return show_time();
 			}
-			return 0;
-		}
-
-		if (str_is(arg, PSTR("date"))) {
-			pcf_td_t td;
-			if (pcf2127_get_date(&td) == 0) {
-				printf_P(PSTR("20%02d/%02d/%02d %02d:%02d:%02d\n"),
-					td.year, td.month, td.day, td.hour, td.min, td.sec);
+			if (str_is(sval, PSTR("off"))) {
+				if (ts[0] != 0)
+					ts[0] -= 1;
+				else
+					ts[0] = 23;
+				pcf2127_set_time((pcf_td_t *)ts);
+				return show_time();
 			}
-			return 0;
+			return -1;
 		}
 		return -1;
 	}
@@ -177,9 +207,9 @@ static int8_t process(char *buf, void *rht)
 			return 0;
 		}
 
-		if (str_is(sval, PSTR("time"))) {
+		if (str_is(arg, PSTR("time"))) {
 			uint8_t ts[3];
-			ts[0] = strtoul(arg, &arg, 10);
+			ts[0] = strtoul(sval, &arg, 10);
 			if (ts[0] < 24 && *arg == ':') {
 				ts[1] = strtoul(arg + 1, &arg, 10);
 				if (ts[1] < 60 && *arg == ':') {
@@ -192,9 +222,9 @@ static int8_t process(char *buf, void *rht)
 			}
 		}
 
-		if (str_is(sval, PSTR("date"))) {
+		if (str_is(arg, PSTR("date"))) {
 			pcf_td_t ts;
-			ts.year = strtoul(arg, &arg, 10);
+			ts.year = strtoul(sval, &arg, 10);
 			if (ts.year < 99 && *arg == '/') {
 				ts.month = strtoul(arg + 1, &arg, 10);
 				if (ts.month < 13 && *arg == '/') {
