@@ -43,6 +43,12 @@ Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://tt
 * _reset_  - reset ATmega32
 * _calibrate_ - in case if serial communication is not stable, try to run calibration and check if OSCCAL value is too close to upper or lower boundary.
 
+**Time/date realted:**
+* _time_ - show current RTC time 
+* _date_ - show current RTC date
+* _set time HH:MM:SS_ - set RTC time, 24H format
+* _set date YY/MM/DD_ - set RTC date
+
 **Digital/analogue inputs:**
 * _poll_ - read T/H sensor connected to MMR-70
 * _get pin_ - read digital pin, for example `get d3`
