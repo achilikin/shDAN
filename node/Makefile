@@ -67,13 +67,13 @@ FUSES = -U lfuse:w:0xE4:m -U hfuse:w:0xD9:m
 FORMAT = ihex
 
 # Target file name (without extension).
-TARGET = main
+TARGET = node_main
 
 ###############################################################################
 # List C source files here. (C dependencies are automatically generated.)
 ###############################################################################
 
-SRC = $(TARGET).c cli.c ../lib/serial.c ../lib/timer.c ../lib/ossd_i2c.c \
+SRC = $(TARGET).c node_cli.c ../lib/serial.c ../lib/timer.c ../lib/ossd_i2c.c \
 	../lib/bmp180.c ../lib/rfm12bs.c ../lib/twimaster.c ../lib/uart.c
 SRCPP = 
 
