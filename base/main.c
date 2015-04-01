@@ -251,8 +251,9 @@ int main(void)
 			ns741_rds_isr();
 		
 		if (rfm12_receive_data(&rd, sizeof(rd), ARSSI_ADC) == sizeof(rd)) {
-			analogStop(); // stop any pending conversion
-			if (rd.nid & SENS_TSYNC) {
+			analogStop(); // stop any pending ARSSI conversion
+			
+			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
 				tsync.nid = 0;
 				pcf2127_get_time((pcf_td_t *)&tsync.vbat, sw_clock);
@@ -260,7 +261,7 @@ int main(void)
 				rfm12_set_mode(RFM_MODE_TX);
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
-				if (rt_flags & RD_ECHO)
+				if (rt_flags & RND_ECHO)
 					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.val, tsync.dec, rd.nid);
 			}
 			
@@ -268,7 +269,7 @@ int main(void)
 			bsort(areads, 8);
 			rd_arssi  = 0;
 			rd_signal = 0;
-			// use two read from the middle and reset ARSSI array
+			// use two reads from the middle and reset ARSSI array
 			uint16_t average = 0;
 			for(uint8_t i = 0; i < 8; i++) {
 				if (i == 3 || i == 4)
@@ -304,7 +305,7 @@ int main(void)
 				ossd_putlx(7, -1, status, 0);
 				ossd_select_font(font);
 
-				if (rt_flags & RD_ECHO)
+				if (rt_flags & RND_ECHO)
 					print_rd();
 			}
 		}

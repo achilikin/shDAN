@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 #define NID_MASK   0x0F // node index mask
-#define SENS_TSYNC 0x80 // time sync request
+#define NODE_TSYNC 0x80 // time sync request
 #define SENS_MASK  0x70 // sensor index mask
 
 #define SET_NID(nid,sens) (((sens << 4) & SENS_MASK) | (nid & NID_MASK))

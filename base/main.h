@@ -52,13 +52,13 @@ extern char status[17];   // TxPwr status
 #define RDS_RT_SET   0x10
 
 // runtime flags
-#define RDATA_VALID  0x01 // remote sensor data valid
+#define RDATA_VALID  0x01 // remote node data valid
 #define LOAD_OSCCAL  0x02
 // echo flags
 #define ADC_ECHO     0x10
 #define RHT_ECHO     0x20
 #define RHT_LOG      0x40
-#define RD_ECHO      0x80 // remote sensor data log
+#define RND_ECHO     0x80 // remote node data log
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;

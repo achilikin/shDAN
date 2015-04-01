@@ -277,8 +277,8 @@ static int8_t process(char *buf, void *rht)
 			return 0;
 		}
 		if (str_is(arg, PSTR("remote"))) {
-			rt_flags ^= RD_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RD_ECHO));
+			rt_flags ^= RND_ECHO;
+			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RND_ECHO));
 			return 0;
 		}
 #if ADC_MASK
@@ -293,7 +293,7 @@ static int8_t process(char *buf, void *rht)
 			return 0;
 		}
 		if (str_is(arg, PSTR("off"))) {
-			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG | RD_ECHO);
+			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG | RND_ECHO);
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}
