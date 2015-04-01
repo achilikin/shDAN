@@ -68,7 +68,8 @@ static inline int8_t rht_get_temperature(rht_t *prht) { return sht1x_get_tempera
 static inline int8_t rht_get_humidity(rht_t *prht)  { return sht1x_get_humidity(prht); }
 #endif
 
-int8_t rht_read(rht_t *rht, int8_t echo);
+// dst must be at least 61 byte long
+int8_t rht_read(rht_t *rht, int8_t echo, char *dst);
 
 #ifdef __cplusplus
 }

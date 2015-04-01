@@ -19,22 +19,22 @@
 #include <stdio.h>
 
 #include "rht.h"
-#include "main.h"
 #include "timer.h"
 
 // poll t/rh sensor and update RDS radio text
-int8_t rht_read(rht_t *rht, int8_t echo)
+// dst must be at least 61 byte long
+int8_t rht_read(rht_t *rht, int8_t echo, char *dst)
 {
 	int8_t ret = rht_poll(rht);
 	if (ret == 0) {
 		rht_get_temperature(rht);
 		rht_get_humidity(rht);
-		sprintf(rds_data, "i T %d.%d H %d.%d",
+		sprintf(dst, "i T %d.%d H %d.%d",
 			rht->temperature.val, rht->temperature.dec,
 			rht->humidity.val, rht->humidity.dec);
 	}
 	if (echo)
-		rht_print(ret ? NULL : rds_data);
+		rht_print(ret ? NULL : dst);
 
 	return ret;
 }

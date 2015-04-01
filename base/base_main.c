@@ -26,9 +26,7 @@
 // http://homepage.hispeed.ch/peterfleury/avr-software.html
 #include "i2cmaster.h"
 
-#include "cli.h"
 #include "rht.h"
-#include "main.h"
 #include "dnode.h"
 #include "pinio.h"
 #include "ns741.h"
@@ -38,6 +36,9 @@
 #include "rfm12bs.h"
 #include "pcf2127.h"
 #include "ossd_i2c.h"
+
+#include "base_main.h"
+#include "base_cli.h"
 
 #ifndef F_CPU
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
@@ -214,7 +215,7 @@ int main(void)
 		is_on(ns_pwr_flags & NS741_POWER), is_on(ns_rt_flags & NS741_STEREO),
 		ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
 
-	rht_read(&rht, rt_flags & RHT_ECHO);
+	rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
 	get_tx_pwr(status);
@@ -353,7 +354,7 @@ int main(void)
 		if (poll_clock >= 5) {
 			poll_clock = 0;
 			ossd_putlx(4, 0, "*", 0);
-			rht_read(&rht, rt_flags & RHT_ECHO);
+			rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
 			ossd_putlx(4, -1, rds_data, 0);
 			if (rt_flags & RHT_LOG) {
 				uint8_t ts[3];

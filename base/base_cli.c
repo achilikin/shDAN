@@ -22,9 +22,7 @@
 #include <avr/pgmspace.h>
 #include <util/delay.h>
 
-#include "cli.h"
 #include "rht.h"
-#include "main.h"
 #include "pinio.h"
 #include "sht1x.h"
 #include "ns741.h"
@@ -32,6 +30,9 @@
 #include "serial.h"
 #include "pcf2127.h"
 #include "ossd_i2c.h"
+
+#include "base_main.h"
+#include "base_cli.h"
 
 static uint16_t free_mem(void)
 {
@@ -256,7 +257,7 @@ static int8_t process(char *buf, void *rht)
 
 	if (str_is(cmd, PSTR("poll"))) {
 		puts_P(PSTR("polling..."));
-		rht_read(rht, RHT_ECHO);
+		rht_read(rht, RHT_ECHO, rds_data);
 		ns741_rds_set_radiotext(rds_data);
 		return 0;
 	}

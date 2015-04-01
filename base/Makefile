@@ -67,11 +67,11 @@ FUSES = -U lfuse:w:0xE4:m -U hfuse:w:0xD9:m
 FORMAT = ihex
 
 # Target file name (without extension).
-TARGET = main
+TARGET = base_main
 
 ###############################################################################
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c cli.c ../lib/serial.c ../lib/timer.c ../lib/rht03.c ../lib/sht1x.c ../lib/rht.c ../lib/ossd_i2c.c\
+SRC = $(TARGET).c base_cli.c ../lib/serial.c ../lib/timer.c ../lib/rht03.c ../lib/sht1x.c ../lib/rht.c ../lib/ossd_i2c.c\
 		../lib/ns741.c ../lib/pcf2127.c ../lib/bmp180.c ../lib/rfm12bs.c ../lib/twimaster.c ../lib/uart.c
 SRCPP = 
 
