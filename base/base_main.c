@@ -47,7 +47,7 @@
 #define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
 
 // some default variables we want to store in EEPROM
-uint8_t  EEMEM em_rds_name[8] = "MMR70mod"; // NS471 "station" name
+uint8_t  EEMEM em_rds_name[8] = "BASE 01 "; // Base station name
 uint16_t EEMEM em_radio_freq  = 9700; // 97.00 MHz
 
 // average value from serial_calibrate()
@@ -119,17 +119,6 @@ static void bsort(uint8_t *data, int8_t len)
 	}
 }
 
-// pretty accurate conversion to 3.3V without using floats 
-static uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
-{
-	uint32_t v = adc * 323LL + 500LL;
-	uint32_t dec = (v % 100000LL) / 1000LL;
-	v = v / 100000LL;
-
-	*decimal = (uint8_t)dec;
-	return (uint8_t)v;
-}
-
 static volatile uint8_t aidx;
 static uint8_t  areads[8];
 
@@ -187,15 +176,21 @@ int main(void)
 		ns741_radio_power(1);
 		delay(150);
 	}
-	ns741_gain(ns_pwr_flags & NS741_GAIN);
+	
+	// we use radio for RDS only, so set and to -9db and volume to minimum 
+	ns741_mute(NS741_MUTE);
+	// turn on -9db gain
+	ns741_gain(NS741_GAIN);
 	// read radio frequency from EEPROM
 	radio_freq = eeprom_read_word(&em_radio_freq);
 	if (radio_freq < NS741_MIN_FREQ) radio_freq = NS741_MIN_FREQ;
 	if (radio_freq > NS741_MAX_FREQ) radio_freq = NS741_MAX_FREQ;
 	ns741_set_frequency(radio_freq);
 	ns741_txpwr(ns_pwr_flags & NS741_TXPWR);
-	ns741_stereo(ns_rt_flags & NS741_STEREO);
-	ns741_volume((ns_pwr_flags & NS741_VOLUME) >> 8);
+	ns741_stereo(NS741_STEREO);
+	// set volume to 0
+	ns741_volume(0);
+	ns741_mute(0); // unmute to transmit RDS
 
 	// setup our ~millisecond timer for mill*() and tenth_clock counter
 	init_time_clock(CLOCK_MILLIS);
@@ -205,15 +200,13 @@ int main(void)
 		delay(1000);
 		ms = mill16() - ms;
 		printf_P(PSTR("delay(1000) = %u\n"), ms);
-		// calibrate(osccal_def);
 	}
 #endif
 
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
-	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
+	printf_P(PSTR("ID %s, %s\nRadio %s, TX Power %d\n> "),
 		rds_name, fm_freq,
-		is_on(ns_pwr_flags & NS741_POWER), is_on(ns_rt_flags & NS741_STEREO),
-		ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
+		is_on(ns_pwr_flags & NS741_POWER), ns_pwr_flags & NS741_TXPWR);
 
 	rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
@@ -228,7 +221,6 @@ int main(void)
 	// turn on RDS
 	ns741_rds(1);
 	ns_rt_flags |= NS741_RDS;
-	ns_rt_flags |= RDS_RESET; // set reset flag so next poll of RHT will start new text
 
 	// reset our soft clock
 	uptime   = 0;
@@ -321,27 +313,6 @@ int main(void)
 			sw_clock++; 
 			poll_clock ++;
 
-			if (ns_rt_flags & RDS_RESET) {
-				ns741_rds_reset_radiotext();
-				ns_rt_flags &= ~RDS_RESET;
-			}
-
-			if (!(ns_rt_flags & RDS_RT_SET))
-				ns741_rds_set_radiotext(rds_data);
-#if ADC_MASK
-			if (rt_flags & ADC_ECHO) {
-				// if you want to use floats enable PRINTF_LIB_FLOAT in the makefile
-				puts("");
-				for(uint8_t i = 0; i < 8; i++) {
-					if (ADC_MASK & (1 << i)) {
-						uint16_t val = analogRead(i);
-						uint8_t dec;
-						uint8_t v = get_voltage(val, &dec);
-						printf_P(PSTR("adc%d %4d %d.%02d\n"), i, val, v, dec);
-					}
-				}
-			}
-#endif
 			if ((bmp180_poll(&press, 0) == 0) && (press.valid & BMP180_P_VALID)) {
 				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
 				uint8_t font = ossd_select_font(OSSD_FONT_6x8);

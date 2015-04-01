@@ -48,8 +48,6 @@ extern char status[17];   // TxPwr status
 #define NS741_RDS    0x01
 #define NS741_MUTE   0x02
 #define NS741_STEREO 0x04
-#define RDS_RESET    0x08
-#define RDS_RT_SET   0x10
 
 // runtime flags
 #define RDATA_VALID  0x01 // remote node data valid

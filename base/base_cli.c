@@ -80,20 +80,16 @@ const char cmd_list[] PROGMEM =
 	"  date\n"
 	"  set time HH:MM:SS\n"
 	"  set date YY/MM/DD\n"
-	"  echo rht|adc|rds|remote|off\n"
+	"  echo rht|rds|remote|off\n"
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
 	"  get pin (d3, b4,c2...)\n"
 	"  rdsid id\n"
-	"  rdstext text\n"
+	"  rdstext\n"
 	"  freq nnnn\n"
 	"  txpwr 0-3\n"
-	"  volume 0-6\n"
-	"  mute on|off\n"
-	"  stereo on|off\n"
-	"  radio on|off\n"
-	"  gain low|off\n";
+	"  radio on|off\n";
 
 static int8_t show_time(void)
 {
@@ -282,13 +278,6 @@ static int8_t process(char *buf, void *rht)
 			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RND_ECHO));
 			return 0;
 		}
-#if ADC_MASK
-		if (str_is(arg, PSTR("adc"))) {
-			rt_flags ^= ADC_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & ADC_ECHO));
-			return 0;
-		}
-#endif
 		if (str_is(arg, PSTR("rds"))) {
 			ns741_rds_debug(1);
 			return 0;
@@ -350,13 +339,6 @@ static int8_t process(char *buf, void *rht)
 			puts(rds_data);
 			return 0;
 		}
-		ns_rt_flags |= RDS_RESET;
-		if (str_is(arg, PSTR("reset"))) 
-			ns_rt_flags &= ~RDS_RT_SET;
-		else {
-			ns_rt_flags |= RDS_RT_SET;
-			ns741_rds_set_radiotext(arg);
-		}
 		return 0;
 	}
 
@@ -405,61 +387,6 @@ static int8_t process(char *buf, void *rht)
 		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 		ossd_putlx(7, -1, status, 0);
 		ossd_select_font(font);
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("volume"))) {
-		uint8_t gain = (ns_pwr_flags & NS741_VOLUME) >> 4;
-
-		if (*arg != '\0')
-			gain = atoi((const char *)arg);
-		if (gain > 6) {
-			puts_P(PSTR("Invalid Audio Gain value 0-6\n"));
-			return -1;
-		}
-		ns741_volume(gain);
-		printf_P(PSTR("%s set to %d\n"), cmd, gain);
-		ns_pwr_flags &= ~NS741_VOLUME;
-		ns_pwr_flags |= gain << 4;
-		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("gain"))) {
-		int8_t gain = (ns_pwr_flags & NS741_GAIN) ? -9 : 0;
-
-		if (str_is(arg, PSTR("low")))
-			gain = -9;
-		else if (str_is(arg, PSTR("off")))
-			gain = 0;
-
-		ns741_gain(gain);
-		printf_P(PSTR("%s is %ddB\n"), cmd, gain);
-		ns_pwr_flags &= ~NS741_GAIN;
-		if (gain)
-			ns_pwr_flags |= NS741_GAIN;
-		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("mute"))) {
-		if (str_is(arg, PSTR("on")))
-			ns_rt_flags |= NS741_MUTE;
-		else if (str_is(arg, PSTR("off")))
-			ns_rt_flags &= ~NS741_MUTE;
-		ns741_mute(ns_rt_flags & NS741_MUTE);
-		printf_P(PSTR("mute %s\n"), is_on(ns_rt_flags & NS741_MUTE));
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("stereo"))) {
-		if (str_is(arg, PSTR("on")))
-			ns_rt_flags |= NS741_STEREO;
-		else if (str_is(arg, PSTR("off")))
-			ns_rt_flags &= ~NS741_STEREO;
-		ns741_stereo(ns_rt_flags & NS741_STEREO);
-		printf_P(PSTR("stereo %s\n"), is_on(ns_rt_flags & NS741_STEREO));
-		eeprom_update_byte(&em_ns_rt_flags, ns_rt_flags);
 		return 0;
 	}
 
