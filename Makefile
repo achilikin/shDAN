@@ -91,6 +91,16 @@ nodesize:
 prognode: 	
 	cd node; make program
 
+# FM Radion target
+radio:
+	cd radio; make
+
+radiosize:
+	cd radio; make size
+
+progradio:
+	cd radio; make program
+
 # Common targets
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
@@ -107,4 +117,5 @@ clean:
 # Listing of phony targets.
 .PHONY : all build clean reset fuses \
 base basesize progbase \
-node nodesize prognode
+node nodesize prognode \
+radio radiosize progradio
