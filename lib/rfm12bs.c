@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <avr/io.h>
+#include <util/crc16.h>
 
 #include "pinio.h"
 #include "timer.h"
@@ -321,9 +322,6 @@ static int8_t _rfm_send(uint8_t data, uint8_t timeout)
 	return -1;
 }
 
-// reuse CRC calculation from SHT1x code
-extern uint8_t sht1x_crc(uint8_t data, uint8_t seed);
-
 // transmit data stream in the following format:
 // data length - 1 byte
 // data        - len bytes
@@ -344,13 +342,13 @@ int8_t rfm12_send(void *buf, uint8_t len)
 	_rfm_send(0x2D, rfm_timeout); // two sync bytes
 	_rfm_send(0xD4, rfm_timeout);
 
-	uint8_t crc = sht1x_crc(len, len);
+	uint8_t crc = _crc_ibutton_update(len, len);
 	_rfm_send(len, rfm_timeout);
 
 	for(uint8_t i = 0; i < len; i++) {
 		uint8_t byte = data ? data[i] : 'A' + i;
 		_rfm_send(byte ^ 0xA5, rfm_timeout); // ^ xA5 to minimize long run of '0' or '1'
-		crc = sht1x_crc(byte, crc);
+		crc = _crc_ibutton_update(byte, crc);
 	}
 	_rfm_send(crc, rfm_timeout);
 
@@ -386,12 +384,12 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t adc)
 			ridx = 0; // reset buffer index
 			rfm12_reset_fifo();
 
-			uint8_t crc = sht1x_crc(len, len);
+			uint8_t crc = _crc_ibutton_update(len, len); //sht1x_crc(len, len);
 #if RFM_DEBUG
 			printf("len %d crc %02X\n", len, crc);
 #endif
 			for(uint8_t i = 0; i < len; i++) {
-				crc = sht1x_crc(buf[i], crc);
+				crc = _crc_ibutton_update(buf[i], crc);
 #if RFM_DEBUG
 				printf("data %02X %d %02X\n", buf[i], buf[i], crc);
 #endif
