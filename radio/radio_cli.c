@@ -28,11 +28,39 @@
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
-#include "pcf2127.h"
 #include "ossd_i2c.h"
 
 #include "radio_main.h"
 #include "radio_cli.h"
+
+static const char version[] PROGMEM = "2015-04-02";
+
+// list of supported commands 
+const char cmd_list[] PROGMEM =
+	"  mem\n"
+	"  poll\n"
+	"  reset\n"
+	"  status\n"
+	"  calibrate\n"
+	"  set osccal X\n"
+	"  time\n"
+	"  set time HH:MM:SS\n"
+#ifdef ADC_MASK
+	"  echo rht|adc|rds|off\n"
+	"  adc chan\n"
+#else
+	"  echo rht|rds|off\n"
+#endif
+	"  get pin (d3, b4,c2...)\n"
+	"  rdsid id\n"
+	"  rdstext text\n"
+	"  freq nnnn\n"
+	"  txpwr 0-3\n"
+	"  volume 0-6\n"
+	"  mute on|off\n"
+	"  stereo on|off\n"
+	"  radio on|off\n"
+	"  gain low|off\n";
 
 static uint16_t free_mem(void)
 {
@@ -67,48 +95,6 @@ static char *get_arg(char *str)
 	return arg;
 }
 
-
-// list of supported commands 
-const char cmd_list[] PROGMEM = 
-	"  mem\n"
-	"  poll\n"
-	"  reset\n"
-	"  status\n"
-	"  calibrate\n"
-	"  set osccal X\n"
-	"  time\n"
-	"  date\n"
-	"  set time HH:MM:SS\n"
-	"  set date YY/MM/DD\n"
-	"  echo rht|adc|rds|remote|off\n"
-	"  rtc dump [mem]|init [mem]\n"
-	"  rtc dst on|off\n"
-	"  adc chan\n"
-	"  get pin (d3, b4,c2...)\n"
-	"  rdsid id\n"
-	"  rdstext text\n"
-	"  freq nnnn\n"
-	"  txpwr 0-3\n"
-	"  volume 0-6\n"
-	"  mute on|off\n"
-	"  stereo on|off\n"
-	"  radio on|off\n"
-	"  gain low|off\n";
-
-static int8_t show_time(void)
-{
-	uint8_t ts[3];
-	if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
-		// reset our sw clock
-		sw_clock = ts[2];
-		sw_clock += ts[1] * 60;
-		sw_clock += ts[0] * 3600;
-		printf_P(PSTR("%02d:%02d:%02d\n"), ts[0], ts[1], ts[2]);
-		return 0;
-	}
-	return -1;
-}
-
 static int8_t process(char *buf, void *rht)
 {
 	char *arg;
@@ -118,86 +104,15 @@ static int8_t process(char *buf, void *rht)
 	arg = get_arg(cmd);
 
 	if (str_is(cmd, PSTR("help"))) {
+		printf_P(PSTR("version: %s\n"), version);
 		uart_puts_p(cmd_list);
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("time")))
-		return show_time();
-	
-	if (str_is(cmd, PSTR("date"))) {
-		pcf_td_t td;
-		if (pcf2127_get_date(&td) == 0) {
-			printf_P(PSTR("20%02d/%02d/%02d %02d:%02d:%02d\n"),
-				td.year, td.month, td.day, td.hour, td.min, td.sec);
-		}
+		printf_P(PSTR("%02d:%02d:%02d\n"), sw_clock / 3600, (sw_clock / 60) % 60, sw_clock % 60);
 		return 0;
-	}
-
-	if (str_is(cmd, PSTR("rtc"))) {
-		char *sval = get_arg(arg);
-		if (str_is(arg, PSTR("init"))) {
-			if (str_is(sval, PSTR("mem"))) {
-				for(uint8_t i = 0; i < 16; i++)
-					cmd[i] = 0;
-				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++)
-					pcf2127_ram_write(i*16, (uint8_t *)cmd, 16);
-				return 0;
-			}
-
-			pcf2127_init();
-			return 0;
-		}
-
-		if (str_is(arg, PSTR("dump"))) {
-			if (str_is(sval, PSTR("mem"))) {
-				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++) {
-					pcf2127_ram_read(i*16, (uint8_t *)cmd, 16);
-					printf_P(PSTR("%3u | "), i*16);
-					for(int8_t n = 0; n < 16; n++)
-						printf("%02X ", cmd[n]);
-					printf("\n");
-				}
-				return 0;
-			}
-
-			if (pcf2127_read(0x00, (uint8_t *)cmd, PCF_MAX_REG) == 0) {
-				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
-					printf("%02X ", i);
-				}
-				printf("\n");
-				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
-					printf("%02X ", cmd[i]);
-				}
-				printf("\n");
-			}
-			return 0;
-		}
-
-		if (str_is(arg, PSTR("dst"))) {
-			uint8_t ts[3];
-			pcf2127_get_time((pcf_td_t *)ts, 0);
-			if (str_is(sval, PSTR("on"))) {
-				uint8_t hour = ts[0] + 1;
-				if (hour > 23)
-					hour = 0;
-				ts[0] = hour;
-				pcf2127_set_time((pcf_td_t *)ts);
-				return show_time();
-			}
-			if (str_is(sval, PSTR("off"))) {
-				if (ts[0] != 0)
-					ts[0] -= 1;
-				else
-					ts[0] = 23;
-				pcf2127_set_time((pcf_td_t *)ts);
-				return show_time();
-			}
-			return -1;
-		}
-		return -1;
-	}
-
+	
 	if (str_is(cmd, PSTR("set"))) {
 		char *sval = get_arg(arg);
 
@@ -209,33 +124,21 @@ static int8_t process(char *buf, void *rht)
 		}
 
 		if (str_is(arg, PSTR("time"))) {
-			uint8_t ts[3];
+			uint8_t ts[3] ;
 			ts[0] = strtoul(sval, &arg, 10);
 			if (ts[0] < 24 && *arg == ':') {
 				ts[1] = strtoul(arg + 1, &arg, 10);
 				if (ts[1] < 60 && *arg == ':') {
 					ts[2] = strtoul(arg + 1, &arg, 10);
 					if (ts[2] < 60) {
-						pcf2127_set_time((pcf_td_t *)ts);
+						sw_clock =  ts[0] * 3600;
+						sw_clock += ts[1] * 60;
+						sw_clock += ts[2];
 						return 0;
 					}
 				}
 			}
-		}
-
-		if (str_is(arg, PSTR("date"))) {
-			pcf_td_t ts;
-			ts.year = strtoul(sval, &arg, 10);
-			if (ts.year < 99 && *arg == '/') {
-				ts.month = strtoul(arg + 1, &arg, 10);
-				if (ts.month < 13 && *arg == '/') {
-					ts.day = strtoul(arg + 1, &arg, 10);
-					if (ts.day < 31) {
-						pcf2127_set_date(&ts);
-						return 0;
-					}
-				}
-			}
+			return -1;
 		}
 		return -1;
 	}
@@ -277,12 +180,7 @@ static int8_t process(char *buf, void *rht)
 			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RHT_ECHO));
 			return 0;
 		}
-		if (str_is(arg, PSTR("remote"))) {
-			rt_flags ^= RND_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RND_ECHO));
-			return 0;
-		}
-#if ADC_MASK
+#ifdef ADC_MASK
 		if (str_is(arg, PSTR("adc"))) {
 			rt_flags ^= ADC_ECHO;
 			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & ADC_ECHO));
@@ -294,7 +192,7 @@ static int8_t process(char *buf, void *rht)
 			return 0;
 		}
 		if (str_is(arg, PSTR("off"))) {
-			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG | RND_ECHO);
+			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG);
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}
@@ -305,7 +203,7 @@ static int8_t process(char *buf, void *rht)
 		printf_P(PSTR("memory %d\n"), free_mem());
 		return 0;
 	}
-
+#ifdef ADC_MASK
 	if (str_is(cmd, PSTR("adc"))) {
 		uint8_t ai = atoi((const char *)arg);
 		if (ai < 8) {
@@ -317,7 +215,7 @@ static int8_t process(char *buf, void *rht)
 		}
 		return -1;
 	}
-
+#endif
 	if (str_is(cmd, PSTR("get"))) {
 		char   port = arg[0];
 		uint8_t idx = atoi(arg+1) & 0x07;
@@ -366,8 +264,7 @@ static int8_t process(char *buf, void *rht)
 			rds_name, fm_freq,
 			is_on(ns_pwr_flags & NS741_POWER), is_on(ns_rt_flags & NS741_STEREO),
 			ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
-		printf_P(PSTR("%s %s\n"), rds_data, hpa);
-		print_rd();
+		printf_P(PSTR("%s\n"), rds_data);
 		return 0;
 	}
 

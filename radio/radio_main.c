@@ -31,10 +31,7 @@
 #include "pinio.h"
 #include "ns741.h"
 #include "timer.h"
-#include "bmp180.h"
 #include "serial.h"
-#include "rfm12bs.h"
-#include "pcf2127.h"
 #include "ossd_i2c.h"
 
 #include "radio_main.h"
@@ -63,7 +60,6 @@ uint8_t EEMEM em_rt_flags = LOAD_OSCCAL;
 char rds_name[9];  // RDS PS name
 char fm_freq[17];  // FM frequency
 char rds_data[61]; // RDS RT string
-char hpa[17];	   // pressure in hPa
 char status[17];   // TxPwr status
 
 uint16_t radio_freq;
@@ -73,21 +69,6 @@ uint8_t  rt_flags;
 
 uint32_t uptime;
 uint32_t sw_clock;
-
-bmp180_t press;
-
-dnode_t  rd;
-uint16_t rd_bv;     // battery voltage
-uint8_t  rd_ts[3];  // last session time
-uint8_t  rd_signal; // session signal
-
-// adc channel ARSSI connected to (> 0)
-#define ARSSI_ADC 5
-// ARSSI limits
-#define ARSSI_IDLE (110 >> 2)
-#define ARSSI_MAX  (340 >> 2)
-
-uint8_t rd_arssi;
 
 inline const char *is_on(uint8_t val)
 {
@@ -105,20 +86,6 @@ void get_tx_pwr(char *buf)
 		ns_pwr_flags & NS741_POWER ? "on" : "off");
 }
 
-// simple bubble sort for uint8 arrays
-static void bsort(uint8_t *data, int8_t len)
-{
-	for(int8_t i = 0; i < (len - 1); i++) {
-		for(int8_t j = 0; j < (len-(i+1)); j++) {
-			if (data[j] > data[j+1]) {
-				register uint8_t t = data[j];
-				data[j] = data[j+1];
-				data[j+1] = t;
-			}
-		}
-	}
-}
-
 // pretty accurate conversion to 3.3V without using floats 
 static uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
 {
@@ -130,14 +97,6 @@ static uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
 	return (uint8_t)v;
 }
 
-static volatile uint8_t aidx;
-static uint8_t  areads[8];
-
-ISR(ADC_vect)
-{
-	areads[aidx] = ADCH;
-	aidx = (aidx + 1) & 0x07;
-}
 
 int main(void)
 {
@@ -163,19 +122,13 @@ int main(void)
 		serial_set_osccal(new_osccal);
 	}
 
-	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
-	analogReference(VREF_AVCC); // enable ADC with Vcc reference
-	analogRead(ARSSI_ADC); // dummy read to start ADC
-
-	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
-	rfm12_set_mode(RFM_MODE_RX);
-
+	i2c_init(); // needed for ns741* and ossd*
 	rht_init();
-	bmp180_init(&press);
-	hpa[0] = '\0';
 	ossd_init(OSSD_UPDOWN);
 	ossd_select_font(OSSD_FONT_6x8);
-
+#if ADC_MASK
+	analogReference(VREF_AVCC); // enable ADC with Vcc reference
+#endif
 	// initialize NS741 chip	
 	eeprom_read_block((void *)rds_name, (const void *)em_rds_name, 8);
 	ns741_rds_set_progname(rds_name);
@@ -208,7 +161,6 @@ int main(void)
 		// calibrate(osccal_def);
 	}
 #endif
-
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 	printf_P(PSTR("ID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n> "),
 		rds_name, fm_freq,
@@ -237,80 +189,10 @@ int main(void)
 	mmr_led_off();
 	cli_init();
 
-	// initialize ADC interrupt data
-	aidx = 0;
-	for(uint8_t i = 0; i < 8; i++)
-		areads[i] = 0;
-	rd_arssi = 0;
-
-	ADMUX  |= _BV(ADLAR); // 8 bit resolution
-	ADCSRA |= _BV(ADIE);  // enable ADC interrupts
-
 	for(;;) {
 		// RDSPIN is low when NS741 is ready to transmit next RDS frame
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
-		
-		if (rfm12_receive_data(&rd, sizeof(rd), ARSSI_ADC) == sizeof(rd)) {
-			analogStop(); // stop any pending ARSSI conversion
-			
-			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
-				dnode_t tsync;
-				tsync.nid = 0;
-				pcf2127_get_time((pcf_td_t *)&tsync.vbat, sw_clock);
-
-				rfm12_set_mode(RFM_MODE_TX);
-				rfm12_send(&tsync, sizeof(tsync));
-				rfm12_set_mode(RFM_MODE_RX);
-				if (rt_flags & RND_ECHO)
-					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.val, tsync.dec, rd.nid);
-			}
-			
-			// we should have at least 6 ARSSI reads in our areads array
-			bsort(areads, 8);
-			rd_arssi  = 0;
-			rd_signal = 0;
-			// use two reads from the middle and reset ARSSI array
-			uint16_t average = 0;
-			for(uint8_t i = 0; i < 8; i++) {
-				if (i == 3 || i == 4)
-					average += areads[i];
-				areads[i] = 0;
-			}
-			rd_arssi = average / 2;
-			aidx = 0;
-
-			if (rd_arssi) {
-				uint8_t arssi = rd_arssi;
-				if (arssi < ARSSI_IDLE)
-					arssi = ARSSI_IDLE;
-				rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
-				if (rd_signal > 100)
-					rd_signal = 100;
-			}
-
-			if ((rd.nid & SENS_MASK) != SENS_LIST) {
-				rt_flags |= RDATA_VALID;
-				pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
-				// overwrite FM frequency on the screen
-				sprintf_P(fm_freq, PSTR("%02d:%02d:%02d"), rd_ts[0], rd_ts[1], rd_ts[2]);
-				ossd_putlx(0, -1, fm_freq, 0);
-				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
-				ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
-				// overwrite NS741 status
-				rd_bv = 0;
-				if (rd.vbat != -1)
-					rd_bv = 230 + (rd.vbat & VBAT_MASK)* 10;
-				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
-				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
-				ossd_putlx(7, -1, status, 0);
-				ossd_select_font(font);
-
-				if (rt_flags & RND_ECHO)
-					print_rd();
-			}
-		}
-
 		// process serial port commands
 		cli_interact(&rht);
 
@@ -318,8 +200,10 @@ int main(void)
 		if (tenth_clock >= 10) {
 			tenth_clock = 0;
 			uptime++;
-			sw_clock++; 
-			poll_clock ++;
+			sw_clock++;
+			if (sw_clock == 86400)
+				sw_clock = 0;
+			poll_clock++;
 
 			if (ns_rt_flags & RDS_RESET) {
 				ns741_rds_reset_radiotext();
@@ -342,12 +226,6 @@ int main(void)
 				}
 			}
 #endif
-			if ((bmp180_poll(&press, 0) == 0) && (press.valid & BMP180_P_VALID)) {
-				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
-				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
-				ossd_putlx(6, -1, hpa, 0);
-				ossd_select_font(font);
-			}
 		}
 
 		// poll RHT every 5 seconds
@@ -357,26 +235,11 @@ int main(void)
 			rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
 			ossd_putlx(4, -1, rds_data, 0);
 			if (rt_flags & RHT_LOG) {
-				uint8_t ts[3];
-				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
-				printf_P(PSTR("%02d:%02d:%02d %d.%d %d.%d %d.%02d\n"),
-					ts[0], ts[1], ts[2],
+				printf_P(PSTR("%02d:%02d:%02d %d.%d %d.%d\n"),
+					sw_clock / 3600, (sw_clock / 60) % 60, sw_clock % 60,
 					rht.temperature.val, rht.temperature.dec,
-					rht.humidity.val, rht.humidity.dec,
-					press.p, press.pdec);
+					rht.humidity.val, rht.humidity.dec);
 			}
 		}
     }
-}
-
-void print_rd(void)
-{
-	if (!(rt_flags & RDATA_VALID))
-		return;
-
-	printf_P(PSTR("%02d:%02d:%02d Node %u Zone %u V %d S %u L %u T % 3d.%d ARSSI %u %3d%%\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2],
-		rd.nid & NID_MASK, (rd.nid & SENS_MASK) >> 4,
-		rd_bv, !!(rd.vbat & VBAT_SLEEP), !!(rd.vbat & VBAT_LED), rd.val, rd.dec,
-		rd_arssi, rd_signal);
 }

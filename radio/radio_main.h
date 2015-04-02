@@ -31,7 +31,6 @@ extern "C" {
 extern char rds_name[9];  // RDS PS name
 extern char rds_data[61]; // RDS RT string
 extern char fm_freq[17];  // FM frequency
-extern char hpa[17];      // pressure in hPa
 extern char status[17];   // TxPwr status
 
 // ns741 power flags
@@ -58,7 +57,6 @@ extern char status[17];   // TxPwr status
 #define ADC_ECHO     0x10
 #define RHT_ECHO     0x20
 #define RHT_LOG      0x40
-#define RND_ECHO     0x80 // remote node data log
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;
@@ -78,7 +76,6 @@ extern uint32_t sw_clock;
 #define ADC_MASK (ADC_PA4 | ADC_PA3)
 
 void get_tx_pwr(char *buf); // get current NS741 tx power
-void print_rd(void); // print remote sensor data
 
 #ifdef __cplusplus
 }
