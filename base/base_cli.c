@@ -34,6 +34,31 @@
 #include "base_main.h"
 #include "base_cli.h"
 
+static const char version[] PROGMEM = "2015-04-02";
+
+// list of supported commands 
+const char cmd_list[] PROGMEM = 
+	"  mem\n"
+	"  poll\n"
+	"  reset\n"
+	"  status\n"
+	"  calibrate\n"
+	"  set osccal X\n"
+	"  time\n"
+	"  date\n"
+	"  set time HH:MM:SS\n"
+	"  set date YY/MM/DD\n"
+	"  echo rht|rds|remote|off\n"
+	"  rtc dump [mem]|init [mem]\n"
+	"  rtc dst on|off\n"
+	"  adc chan\n"
+	"  get pin (d3, b4,c2...)\n"
+	"  rdsid id\n"
+	"  rdstext\n"
+	"  freq nnnn\n"
+	"  txpwr 0-3\n"
+	"  radio on|off\n";
+
 static uint16_t free_mem(void)
 {
 	extern int __heap_start, *__brkval; 
@@ -67,30 +92,6 @@ static char *get_arg(char *str)
 	return arg;
 }
 
-
-// list of supported commands 
-const char cmd_list[] PROGMEM = 
-	"  mem\n"
-	"  poll\n"
-	"  reset\n"
-	"  status\n"
-	"  calibrate\n"
-	"  set osccal X\n"
-	"  time\n"
-	"  date\n"
-	"  set time HH:MM:SS\n"
-	"  set date YY/MM/DD\n"
-	"  echo rht|rds|remote|off\n"
-	"  rtc dump [mem]|init [mem]\n"
-	"  rtc dst on|off\n"
-	"  adc chan\n"
-	"  get pin (d3, b4,c2...)\n"
-	"  rdsid id\n"
-	"  rdstext\n"
-	"  freq nnnn\n"
-	"  txpwr 0-3\n"
-	"  radio on|off\n";
-
 static int8_t show_time(void)
 {
 	uint8_t ts[3];
@@ -114,6 +115,7 @@ static int8_t process(char *buf, void *rht)
 	arg = get_arg(cmd);
 
 	if (str_is(cmd, PSTR("help"))) {
+		printf_P(PSTR("version: %s\n"), version);
 		uart_puts_p(cmd_list);
 		return 0;
 	}
