@@ -163,7 +163,6 @@ int main(void)
 	bmp180_init(&press);
 	hpa[0] = '\0';
 	ossd_init(OSSD_UPDOWN);
-	ossd_select_font(OSSD_FONT_6x8);
 
 	// initialize NS741 chip	
 	eeprom_read_block((void *)rds_name, (const void *)em_rds_name, 8);
@@ -211,9 +210,9 @@ int main(void)
 	rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
+	ossd_select_font(OSSD_FONT_6x8);
 	get_tx_pwr(status);
 	ossd_putlx(7, -1, status, 0);
-
 	ossd_select_font(OSSD_FONT_8x16);
 	ossd_putlx(0, -1, rds_name, 0);
 	ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
@@ -288,7 +287,7 @@ int main(void)
 				sprintf_P(fm_freq, PSTR("%02d:%02d:%02d"), rd_ts[0], rd_ts[1], rd_ts[2]);
 				ossd_putlx(0, -1, fm_freq, 0);
 				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
-				ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+				ossd_putlx(4, -1, fm_freq, 0);
 				// overwrite NS741 status
 				rd_bv = 0;
 				if (rd.vbat != -1)
@@ -324,9 +323,9 @@ int main(void)
 		// poll RHT every 5 seconds
 		if (poll_clock >= 5) {
 			poll_clock = 0;
-			ossd_putlx(4, 0, "*", 0);
+			ossd_putlx(2, 0, "*", 0);
 			rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
-			ossd_putlx(4, -1, rds_data, 0);
+			ossd_putlx(2, -1, rds_data, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 			if (rt_flags & RHT_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
