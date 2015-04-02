@@ -29,7 +29,7 @@ int8_t rht_read(rht_t *rht, int8_t echo, char *dst)
 	if (ret == 0) {
 		rht_get_temperature(rht);
 		rht_get_humidity(rht);
-		sprintf(dst, "i T %d.%d H %d.%d",
+		sprintf(dst, "T %d.%d H %d.%d",
 			rht->temperature.val, rht->temperature.dec,
 			rht->humidity.val, rht->humidity.dec);
 	}
