@@ -5,15 +5,6 @@ Data Node part of data acquisition network based on modified [Sony-Ericsson MMR-
 
 Depending on sensors attached to I2C/SPI buses and I/O pins exposed can be used to monitor temperature, humidity, pressure, digital/analogue signals, etc. Low power OLED SSD1306 display can be attached to show sensor readings and states. To talk to a remote base station RFM12BS (Si4420 based) transceiver is used.
 
-**Current code size**
-```
-> Creating Symbol Table: node_main.sym
-> avr-nm -n node_main.elf > node_main.sym
-> Program:   16882 bytes (51.5% Full)
-> Data:        471 bytes (23.0% Full)
-> EEPROM:        4 bytes (0.4% Full)
-```
-
 I/O configuration
 -----------------
 
@@ -58,3 +49,13 @@ Command line
 * _echo on|off_ - enable/disable data output to serial port
 
 For more information see Readme in the project root directory.
+
+**Current code size**
+Version 2015-04-02
+```
+> Creating Symbol Table: node_main.sym
+> avr-nm -n node_main.elf > node_main.sym
+> Program:   16944 bytes (51.7% Full)
+> Data:        471 bytes (23.0% Full)
+> EEPROM:        4 bytes (0.4% Full)
+```

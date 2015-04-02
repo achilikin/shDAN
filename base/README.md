@@ -17,15 +17,6 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 
 [NXP PCF2127](http://www.nxp.com/documents/data_sheet/PCF2127.pdf) real-time clock ([RasClock](http://afterthoughtsoftware.com/products/rasclock)) is used to synchronise time with data nodes and timestamp *log* output
 
-**Current code size**
-```
-> Creating Symbol Table: base_main.sym
-> avr-nm -n base_main.elf > base_main.sym
-> Program:   26440 bytes (80.7% Full)
-> Data:        901 bytes (44.0% Full)
-> EEPROM:       18 bytes (1.8% Full)
-```
-
 **Following general commands are available:**
 * _help_ - show all supported commands
 * _reset_ - reset ATmega32
@@ -96,10 +87,12 @@ Using different clock speed for ATmega32:
 2. Change init_millis(), as now it is hardcoded to for F_CPU = 8MHz
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
-Useful links not listed above
------------------------------
-
-* MMR-70 discussion at [www.mikrocontroller.net](http://www.mikrocontroller.net/topic/252124)
-* MMR-70 hack: [ISP-Programmmer](http://www.elektronik-labor.de/AVR/MMR70_2.html)
-* How to protect Raspberry Pi GPIOs with a [74LVC244](http://blog.stevemarple.co.uk/2012/07/avrarduino-isp-programmer-using.html) buffer
-* RFM12BS ARSSI [hack](http://blog.strobotics.com.au/2008/06/17/rfm12-tutorial-part2)
+**Current code size**
+Version 2015-04-02
+```
+> Creating Symbol Table: base_main.sym
+> avr-nm -n base_main.elf > base_main.sym
+> Program:   25370 bytes (77.4% Full)
+> Data:        899 bytes (43.9% Full)
+> EEPROM:       18 bytes (1.8% Full)
+```
