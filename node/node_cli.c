@@ -32,6 +32,25 @@
 #include "node_main.h"
 #include "node_cli.h"
 
+static const char version[] PROGMEM = "2015-04-02";
+
+// list of supported commands 
+const char cmd_list[] PROGMEM = 
+	"  time\n"
+	"  reset\n"
+	"  status\n"
+	"  calibrate\n"
+	"  set nid N\n"
+	"  set osccal X\n"
+	"  set txpwr pwr\n"
+	"  set led on|off\n"
+	"  set rtc hh:mm:ss\n"
+	"  poll\n"
+	"  get pin (d3,b4,c2...)\n"
+	"  adc chan\n"
+	"  mem\n"
+	"  echo on|off\n";
+
 static uint16_t free_mem(void)
 {
 	extern int __heap_start, *__brkval; 
@@ -50,23 +69,6 @@ inline const char *is_on(uint8_t val)
 	if (val) return "ON";
 	return "OFF";
 }
-
-// list of supported commands 
-const char cmd_list[] PROGMEM = 
-	"  time\n"
-	"  reset\n"
-	"  status\n"
-	"  calibrate\n"
-	"  set nid N\n"
-	"  set osccal X\n"
-	"  set txpwr pwr\n"
-	"  set led on|off\n"
-	"  set rtc hh:mm:ss\n"
-	"  poll\n"
-	"  get pin (d3,b4,c2...)\n"
-	"  adc chan\n"
-	"  mem\n"
-	"  echo on|off\n";
 
 static char *get_arg(char *str)
 {
@@ -92,6 +94,7 @@ static int8_t process(char *buf, void *ptr)
 	arg = get_arg(cmd);
 
 	if (str_is(cmd, PSTR("help"))) {
+		printf_P(PSTR("version: %s\n"), version);
 		uart_puts_p(cmd_list);
 		return 0;
 	}
