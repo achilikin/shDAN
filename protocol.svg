@@ -316,11 +316,11 @@
      pagecolor="#ffffff"
      bordercolor="#666666"
      borderopacity="1.0"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="413.33925"
-     inkscape:cy="151.43208"
+     inkscape:zoom="0.7"
+     inkscape:cx="525.3886"
+     inkscape:cy="374.47083"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -345,7 +345,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -754,12 +754,12 @@
     <text
        sodipodi:linespacing="125%"
        id="text3058"
-       y="438.02484"
-       x="495.79041"
+       y="439.4534"
+       x="499.36182"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
        xml:space="preserve"><tspan
-         y="438.02484"
-         x="495.79041"
+         y="439.4534"
+         x="499.36182"
          id="tspan3060"
          sodipodi:role="line">DATA (24 bits)</tspan></text>
     <text
@@ -929,12 +929,12 @@
          id="tspan3116"
          sodipodi:role="line">Vbat (8 bits)</tspan></text>
     <rect
-       y="222.21964"
-       x="404.79263"
-       height="34.00399"
-       width="165.55753"
+       y="222.2236"
+       x="404.7926"
+       height="34.000057"
+       width="165.55759"
        id="rect3118"
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:none;stroke:#000000;stroke-width:0.99994236;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        sodipodi:linespacing="125%"
        id="text3120"
@@ -1208,53 +1208,103 @@
          y="120.82128">tail</tspan></text>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker5792)"
-       d="m 643.57142,350.93362 30.71429,96.42857"
+       d="m 643.57142,350.42854 30.71429,96.93365"
        id="path5784"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker6454)"
-       d="m 412.85714,161.6479 -87.14286,57.14286"
+       d="m 413.03571,162.09433 -87.32143,56.69643"
        id="path6882"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker6904)"
-       d="m 565,161.6479 83.57142,56.42857"
+       d="m 564.77679,162.00504 83.79463,56.07143"
        id="path6896"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker7018)"
-       d="m 404.28571,255.21933 -77.85714,54.28571"
+       d="m 404.72765,256.19792 -77.76337,55.98569"
        id="path7010"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker7138)"
-       d="m 570,255.93362 67.85714,50.71428"
+       d="m 570,255.93362 70.53571,56.24999"
        id="path7130"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker7526)"
-       d="m 402.85714,350.21933 -18.57143,59.28571"
+       d="m 403.61475,350.3456 -19.32904,59.15944"
        id="path7518"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker7646)"
-       d="M 322.85714,350.21933 63.571428,405.93362"
+       d="M 323.42535,350.535 63.571428,405.93362"
        id="path7638"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker7772)"
-       d="m 403.57143,350.21933 30.71428,95.71428"
+       d="m 404.07651,350.40873 30.2092,95.52488"
        id="path7764"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker8052)"
-       d="m 515,577.36219 23.57143,57.14285"
+       d="m 515.63135,578.24607 22.94008,56.25897"
        id="path8044"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker8184)"
-       d="M 434.28571,577.36219 220.71428,633.79076"
+       d="M 435.48527,578.11981 220.71428,633.79076"
        id="path8176"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="60.403843"
+       y="464.03763"
+       id="text4334"
+       sodipodi:linespacing="125%"
+       inkscape:transform-center-y="-1.2626905"><tspan
+         sodipodi:role="line"
+         id="tspan4336"
+         x="60.403843"
+         y="464.03763">t: timesync request/reply</tspan><tspan
+         sodipodi:role="line"
+         x="60.403843"
+         y="482.78763"
+         id="tspan4338">s: sensor id</tspan><tspan
+         sodipodi:role="line"
+         x="60.403843"
+         y="501.53763"
+         id="tspan4340">n: node id</tspan></text>
+    <text
+       inkscape:transform-center-y="-1.2626905"
+       sodipodi:linespacing="125%"
+       id="text4342"
+       y="636.26868"
+       x="560.24121"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         y="636.26868"
+         x="560.24121"
+         id="tspan4344"
+         sodipodi:role="line">s: sleep mode on/off</tspan><tspan
+         id="tspan4346"
+         y="655.01868"
+         x="560.24121"
+         sodipodi:role="line">l:  led indication on/off</tspan><tspan
+         id="tspan4348"
+         y="673.76868"
+         x="560.24121"
+         sodipodi:role="line">v: Vbat=2.30 + vvvv*0.1</tspan></text>
   </g>
 </svg>
