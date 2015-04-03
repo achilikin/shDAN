@@ -3,11 +3,12 @@
 #----------------------------------------------------------------------------
 # On command line:
 #
-# make all = Make software.
+# make all = Make all projects
 #
-# make base = Make software.
-#
-# make node = Make software.
+# make test = Make test project.
+# make base = Make base project.
+# make node = Make node project.
+# make radio = Make radio project.
 #
 # make clean = Clean out built project files.
 #
@@ -69,7 +70,10 @@ AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
 all: build
 
 build:
+	cd test; make
 	cd base; make
+	cd node; make
+	cd radio; make
 
 # Base station target
 base:
@@ -91,7 +95,7 @@ nodesize:
 prognode: 	
 	cd node; make program
 
-# FM Radion target
+# FM Radio target
 radio:
 	cd radio; make
 
@@ -100,6 +104,16 @@ radiosize:
 
 progradio:
 	cd radio; make program
+
+# Test target
+test:
+	cd test; make
+
+testsize:
+	cd test; make size
+
+progtest:
+	cd test; make program
 
 # Common targets
 fuses:
@@ -112,10 +126,14 @@ reset:
 	$(AVRDUDE) $(AVRDUDE_FLAGS)
 
 clean:
+	cd test; make clean
 	cd base; make clean
+	cd node; make clean
+	cd radio; make clean
 
 # Listing of phony targets.
 .PHONY : all build clean reset fuses \
 base basesize progbase \
 node nodesize prognode \
-radio radiosize progradio
+radio radiosize progradio \
+test testsize progtest \
