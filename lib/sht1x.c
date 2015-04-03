@@ -172,7 +172,7 @@ static int8_t sht1x_read_status(sht1x_t *psh)
 	return (status.check == 0x7500) ? 0 : -1;
 }
 
-uint8_t sht1x_crc(uint8_t data, uint8_t seed)
+static uint8_t sht1x_crc(uint8_t data, uint8_t seed)
 {
 	uint8_t crc = seed;
 
@@ -271,9 +271,11 @@ void sht1x_print(const char *data)
 	u8val_t *pval = (sht.dtype == 'T') ? &sht.t : &sht.h;
 
 	printf_P(PSTR("%u %lu "), sht.errors, millis());
+	if (!data)
+		data = "error";
 	printf_P(PSTR("%c: %02X %02X %02X | %04d %d.%02d | %s\n"), sht.dtype,
 		sht.data[0], sht.data[1], sht.data[2],
-		sht.draw, pval->val, pval->dec, data ? data : "error");
+		sht.draw, pval->val, pval->dec, data);
 }
 
 int8_t sht1x_poll(rht_t *psht)

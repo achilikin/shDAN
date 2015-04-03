@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __AVR_MMR70_H__
-#define __AVR_MMR70_H__
+#ifndef TEST_MAIN_H
+#define TEST_MAIN_H
 
 #include <stdint.h>
 #include <avr/eeprom.h>
@@ -30,35 +30,22 @@ extern "C" {
 
 // runtime flags
 #define LOAD_OSCCAL  0x01
-#define LDATA_VALID  0x02 // local sensor data valid
-#define RDATA_VALID  0x04 // remote sensor data valid
-#define DATA_SENT    0x08
-#define DATA_POLL    0x10
-#define DATA_INIT    0x20
-#define LSD_ECHO     0x40 // local sensor data log
-#define RSD_ECHO     0x80 // remote sensor data log
 
-// active components
-#define OLED_ACTIVE  0x20
-#define DLED_ACTIVE  0x40
-#define UART_ACTIVE  0x80
-
-extern uint8_t EEMEM em_nid;
-extern uint8_t EEMEM em_txpwr;
 extern uint8_t EEMEM em_osccal;
 extern uint8_t EEMEM em_flags;
 
-extern uint8_t nid;
-extern uint8_t txpwr;
-extern uint8_t flags;
+#define ACTIVE_DLED 0x01
+
 extern uint8_t active;
+extern uint8_t rt_flags;
 
 extern uint32_t uptime;
+extern uint32_t swtime;
 
 void print_status(void);
+void get_time(char *buf); // convert seconds to hh:mm:ss 24h format
 
-void get_rtc_time(char *buf); // fill buffer with rtc time
-
+int8_t cli_test(char *buf, void *ptr);
 
 #ifdef __cplusplus
 }

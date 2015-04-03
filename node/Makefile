@@ -73,8 +73,9 @@ TARGET = node_main
 # List C source files here. (C dependencies are automatically generated.)
 ###############################################################################
 
-SRC = $(TARGET).c node_cli.c ../lib/serial.c ../lib/timer.c ../lib/ossd_i2c.c \
-	../lib/bmp180.c ../lib/rfm12bs.c ../lib/twimaster.c ../lib/uart.c
+SRC = $(TARGET).c node_cli.c ../lib/serial.c ../lib/serial_cli.c ../lib/timer.c\
+	 ../lib/ossd_i2c.c ../lib/bmp180.c ../lib/rfm12bs.c ../lib/twimaster.c\
+	 ../lib/uart.c
 SRCPP = 
 
 # List Assembler source files here.

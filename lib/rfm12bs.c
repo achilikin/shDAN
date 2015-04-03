@@ -323,9 +323,9 @@ static int8_t _rfm_send(uint8_t data, uint8_t timeout)
 }
 
 // transmit data stream in the following format:
-// data length - 1 byte
-// data        - len bytes
-// crc         - 1 byte
+// data len - 1 byte
+// data     - "len" bytes
+// crc      - 1 byte
 // for test purposes: if data is NULL string 'AB....' of len bytes will be sent
 int8_t rfm12_send(void *buf, uint8_t len)
 {

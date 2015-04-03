@@ -1,4 +1,4 @@
-/* Example of using ATmega32 on MMR-70
+/* Firmware for MMR-70 FM radio
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
@@ -33,15 +33,13 @@
 #include "timer.h"
 #include "serial.h"
 #include "ossd_i2c.h"
+#include "serial_cli.h"
 
 #include "radio_main.h"
-#include "radio_cli.h"
 
 #ifndef F_CPU
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
 #endif
-
-#define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
 
 // some default variables we want to store in EEPROM
 uint8_t  EEMEM em_rds_name[8] = "MMR70mod"; // NS471 "station" name
@@ -69,12 +67,6 @@ uint8_t  rt_flags;
 
 uint32_t uptime;
 uint32_t sw_clock;
-
-inline const char *is_on(uint8_t val)
-{
-	if (val) return "ON";
-	return "OFF";
-}
 
 static const char *s_pwr[4] = {
 	"0.5", "0.8", "1.0", "2.0"
@@ -158,7 +150,6 @@ int main(void)
 		delay(1000);
 		ms = mill16() - ms;
 		printf_P(PSTR("delay(1000) = %u\n"), ms);
-		// calibrate(osccal_def);
 	}
 #endif
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
@@ -194,7 +185,7 @@ int main(void)
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
 		// process serial port commands
-		cli_interact(&rht);
+		cli_interact(cli_radio, &rht);
 
 		// once-a-second checks
 		if (tenth_clock >= 10) {

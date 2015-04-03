@@ -51,11 +51,11 @@ Command line
 For more information see Readme in the project root directory.
 
 **Current code size**
-Version 2015-04-02
+Version 2015-04-03
 ```
 > Creating Symbol Table: node_main.sym
 > avr-nm -n node_main.elf > node_main.sym
-> Program:   16944 bytes (51.7% Full)
-> Data:        471 bytes (23.0% Full)
+> Program:   16994 bytes (51.9% Full)
+> Data:        468 bytes (22.9% Full)
 > EEPROM:        4 bytes (0.4% Full)
 ```

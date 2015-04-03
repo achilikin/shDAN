@@ -1,6 +1,6 @@
 /*  Simple wrapper for reading serial port (similar to getch) on ATmega32L
 
-    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -44,6 +44,9 @@ extern "C" {
 #define KEY_END	    0x0104
 #define KEY_PGUP    0x0105
 #define KEY_PGDN    0x0106
+
+// default baud rate
+#define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
 
 void     serial_init(long baud_rate);
 uint16_t serial_getc(void);

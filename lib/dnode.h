@@ -1,4 +1,4 @@
-/*  Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+/*  Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ extern "C" {
 #define VBAT_LED   0x40 // poll led is on
 
 /*
- sid bits: tsssnnnn
+ nid bits: tsssnnnn
  t:    time sync request/reply
  sss:  sensor id, 0 - RFM TX power, 7 - sensors description
  nnnn: node id, 0-base station, 1-11 nodes for 1 minute multiplexing cycle

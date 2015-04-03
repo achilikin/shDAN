@@ -74,11 +74,11 @@ Using different clock speed for ATmega32:
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 **Current code size**
-Version 2015-04-02
+Version 2015-04-03
 ```
 > Creating Symbol Table: radio_main.sym
 > avr-nm -n radio_main.elf > radio_main.sym
-> Program:   19760 bytes (60.3% Full)
-> Data:        809 bytes (39.5% Full)
+> Program:   19910 bytes (60.8% Full)
+> Data:        807 bytes (39.4% Full)
 > EEPROM:       18 bytes (1.8% Full)
 ```

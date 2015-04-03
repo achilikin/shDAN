@@ -5,12 +5,17 @@ Modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.n
 
 Includes different projects:
 
+**Modding test**
+[TEST](https://github.com/achilikin/mmr70mod/blob/master/test) - for testing freshly modified MMR-70s
+
 **FM Radio with RDS support firmware**
-[RADIO](https://github.com/achilikin/mmr70mod/blob/master/radio) - Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi. Pure C + avr-gcc is used (not Arduino).
+[RADIO](https://github.com/achilikin/mmr70mod/blob/master/radio) - Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
 
 **Data Acquisition Network**
 [BASE](https://github.com/achilikin/mmr70mod/blob/master/base) - Base Station for data acquisition network
 [NODE](https://github.com/achilikin/mmr70mod/blob/master/node) - Data Node for data acquisition network
+
+**At the moment all projects under major re-factoring/code clean-up**
 
 Avrdude on Raspberry Pi
 -----------------------
@@ -25,13 +30,7 @@ Building the firmware
 ---------------------
 Clone code from github, connect MMR-70 to Raspberry Pi as ISP or whatever you use for avr-gcc/avrdude.
 
-In the project's folder: `make` to make it, burn ATmega fuses to 8MHz: `make fuses`, upload firmware: `make program`.
-
-Serial console
---------------
-For new versions of UART/I2C libraries check [Peter Fleury's page](http://homepage.hispeed.ch/peterfleury/avr-software.html)
-
-Connect to MMR-70 serial port, open console (I'd recommend [Tera Term](http://ttssh2.sourceforge.jp/index.html.en)).
+In the project's folder: `make` to make it, burn ATmega fuses to 8MHz: `make fuses` (once off operation), upload firmware: `make program`.
 
 Useful links
 ------------
@@ -40,5 +39,5 @@ Useful links
 * MMR-70 as [ISP-Programmmer](http://www.elektronik-labor.de/AVR/MMR70_2.html)
 * How to protect Raspberry Pi GPIOs with a [74LVC244](http://blog.stevemarple.co.uk/2012/07/avrarduino-isp-programmer-using.html) buffer
 * RFM12BS ARSSI [hack](http://blog.strobotics.com.au/2008/06/17/rfm12-tutorial-part2)
-
-
+* [Tera Term](http://ttssh2.sourceforge.jp/index.html.en) useful terminal application
+* [UART/I2C](http://homepage.hispeed.ch/peterfleury/avr-software.html) Peter Fleury's UART/I2C libraries 

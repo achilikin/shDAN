@@ -1,4 +1,4 @@
-/* Simple command line parser for ATmega32 on MMR-70
+/* Command line parser for data node
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 

@@ -1,4 +1,4 @@
-/* Using ATmega32L on MMR-70
+/* Data Node for data acquisition network
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __AVR_MMR70_H__
-#define __AVR_MMR70_H__
+#ifndef NODE_MAIN_H
+#define NODE_MAIN_H
 
 #include <stdint.h>
 #include <avr/eeprom.h>
@@ -62,7 +62,7 @@ void print_status(void);
 void get_vbat(char *buf);
 void get_rtc_time(char *buf); // fill buffer with rtc time
 
-uint8_t sht1x_crc(uint8_t data, uint8_t seed);
+int8_t cli_node(char *buf, void *ptr);
 
 #ifdef __cplusplus
 }

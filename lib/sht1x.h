@@ -35,8 +35,6 @@ int8_t sht1x_poll(rht_t *psht);
 int8_t sht1x_get_temperature(rht_t *psht);
 int8_t sht1x_get_humidity(rht_t *psht);
 
-uint8_t sht1x_crc(uint8_t data, uint8_t seed);
-
 #ifdef __cplusplus
 }
 #endif

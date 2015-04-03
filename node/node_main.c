@@ -1,4 +1,4 @@
-/* Example of using ATmega32 on MMR-70
+/* Data Node for data acquisition network
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
@@ -35,15 +35,13 @@
 #include "serial.h"
 #include "rfm12bs.h"
 #include "ossd_i2c.h"
+#include "serial_cli.h"
 
-#include "node_cli.h"
 #include "node_main.h"
 
 #ifndef F_CPU
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
 #endif
-
-#define UART_BAUD_RATE 38400LL // 38400 at 8MHz gives only 0.2% errors
 
 // default configuration
 #define DEF_NID		1   // node id
@@ -59,7 +57,6 @@ uint8_t EEMEM em_flags = LOAD_OSCCAL; // runtime flags
 
 // I/O pins
 #define PIN_INTERACTIVE PB0 // on port B
-#define PIN_ARSSI ADC3      // ADC channel for ARSSI reading
 
 #define ZONE_T1 1
 
@@ -73,20 +70,12 @@ uint8_t  active;
 uint32_t uptime;
 bmp180_t bmp;
 
-inline const char *is_on(uint8_t val)
-{
-	if (val) return "ON";
-	return "OFF";
-}
-
 dnode_t  rd;
 uint8_t  nid;   // node id
 uint8_t  txpwr; // RFM12 TX power
 
 uint16_t rd_bv;     // battery voltage
 uint8_t  rd_ts[3];  // last session time
-uint8_t  rd_signal; // session signal
-uint16_t rd_arssi;
 
 #define power_twi_disable() (TWCR &= ~_BV(TWEN))
 #define power_adc_disable() (ADCSRA &= ~_BV(ADEN))
@@ -178,7 +167,6 @@ int main(void)
 
 	uptime = 0;
 	active = 0;
-	rd_arssi = PIN_ARSSI;
 	MCUCSR |= _BV(JTD); // disable JTag if enabled in the fuses
 
 	sei();
@@ -225,7 +213,7 @@ int main(void)
 	// try to init oled display
 	if (ossd_init(OSSD_UPDOWN) == 0) {
 		ossd_select_font(OSSD_FONT_8x16);
-		sprintf_P(buf, PSTR("Sensor %d"), nid);
+		sprintf_P(buf, PSTR("Node %d"), nid);
 		ossd_putlx(0, -1, buf, 0);
 		show_time(buf);
 		active |= OLED_ACTIVE;
@@ -258,7 +246,7 @@ int main(void)
 				uart_puts_p(PSTR("\n> "));
 				active |= UART_ACTIVE;
 			}
-			cli_interact(&rd);
+			cli_interact(cli_node, &rd);
 		}
 
 		// once-a-second checks
@@ -357,8 +345,8 @@ void print_rsd(void)
 	if (!(flags & RDATA_VALID))
 		return;
 
-	printf_P(PSTR("%02d:%02d:%02d ARSSI %d %d%% V %d T %d.%d\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2], rd_arssi, rd_signal, rd_bv, rd.val, rd.dec);
+	printf_P(PSTR("%02d:%02d:%02d V %d T %d.%d\n"),
+		rd_ts[0], rd_ts[1], rd_ts[2], rd_bv, rd.val, rd.dec);
 }
 
 void show_time(char *buf)
@@ -379,20 +367,4 @@ void print_status(void)
 	printf_P(PSTR("RTC time %s "), buf);
 	printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
 	print_rsd();
-}
-
-uint8_t sht1x_crc(uint8_t data, uint8_t seed)
-{
-	uint8_t crc = seed;
-
-	for(uint8_t i = 0; i < 8; i++) {
-		uint8_t bit = crc & 0x80;
-		crc <<= 1;
-		if (((data << i) & 0x80) ^ bit) {
-			crc |= 0x01;
-			crc ^= 0x30;
-		}
-	}
-
-	return crc;
 }

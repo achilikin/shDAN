@@ -1,4 +1,4 @@
-/* Simple command line parser for ATmega32 on MMR-70
+/* Command line parser for FM radio
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
@@ -24,16 +24,15 @@
 
 #include "rht.h"
 #include "pinio.h"
-#include "sht1x.h"
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
 #include "ossd_i2c.h"
+#include "serial_cli.h"
 
 #include "radio_main.h"
-#include "radio_cli.h"
 
-static const char version[] PROGMEM = "2015-04-02";
+static const char version[] PROGMEM = "2015-04-03";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM =
@@ -62,40 +61,7 @@ const char cmd_list[] PROGMEM =
 	"  radio on|off\n"
 	"  gain low|off\n";
 
-static uint16_t free_mem(void)
-{
-	extern int __heap_start, *__brkval; 
-	unsigned val;
-	val = (unsigned)((int)&val - (__brkval == 0 ? (int) &__heap_start : (int) __brkval));
-	return val;
-}
-
-inline const char *is_on(uint8_t val)
-{
-	if (val) return "ON";
-	return "OFF";
-}
-
-inline int8_t str_is(const char *cmd, const char *str)
-{
-	return strcmp_P(cmd, str) == 0;
-}
-
-static char *get_arg(char *str)
-{
-	char *arg;
-
-	for(arg = str; *arg && *arg != ' '; arg++);
-
-	if (*arg == ' ') {
-		*arg = '\0';
-		arg++;
-	}
-
-	return arg;
-}
-
-static int8_t process(char *buf, void *rht)
+int8_t cli_radio(char *buf, void *rht)
 {
 	char *arg;
 	char cmd[CMD_LEN + 1];
@@ -374,101 +340,5 @@ static int8_t process(char *buf, void *rht)
 		return 0;
 	}
 
-	printf_P(PSTR("Unknown command '%s'\n"), cmd);
-	return -1;
-}
-
-static uint16_t led;
-static uint8_t  cursor;
-static char cmd[CMD_LEN + 1];
-static char hist[CMD_LEN + 1];
-
-void cli_init(void)
-{
-	led = 0;
-	cursor = 0;
-
-	for(uint8_t i = 0; i <= CMD_LEN; i++) {
-		cmd[i] = '\0';
-		hist[i] = '\0';
-	}
-}
-
-int8_t cli_interact(void *rht)
-{
-	uint16_t ch;
-
-	// check if LED1 is ON long enough (20 ms in this case)
-	if (led) {
-		uint16_t span = mill16();
-		if ((span - led) > 20) {
-			mmr_led_off();
-			led = 0;
-		}
-	}
-
-	if ((ch = serial_getc()) == 0)
-		return 0;
-	// light up on board LED1 indicating serial data 
-	mmr_led_on();
-	led = mill16();
-	if (!led)
-		led = 1;
-
-	if (ch & EXTRA_KEY) {
-		if (ch == ARROW_UP && (cursor == 0)) {
-			// execute last successful command
-			for(cursor = 0; ; cursor++) {
-				cmd[cursor] = hist[cursor];
-				if (cmd[cursor] == '\0')
-					break;
-			}
-			uart_puts(cmd);
-		}
-		return 1;
-	}
-
-	if (ch == '\n') {
-		serial_putc(ch);
-		if (*cmd) { 
-			if (process(cmd, &rht) == 0)
-				memcpy(hist, cmd, sizeof(cmd));
-			else
-				puts_P(PSTR("Invalid format"));
-		}
-		for(uint8_t i = 0; i < cursor; i++)
-			cmd[i] = '\0';
-		cursor = 0;
-		serial_putc('>');
-		serial_putc(' ');
-		return 1;
-	}
-
-	// backspace processing
-	if (ch == '\b') {
-		if (cursor) {
-			cursor--;
-			cmd[cursor] = '\0';
-			serial_putc('\b');
-			serial_putc(' ');
-			serial_putc('\b');
-		}
-	}
-
-	// skip control or damaged bytes
-	if (ch < ' ')
-		return 0;
-
-	// echo
-	serial_putc((uint8_t)ch);
-
-	cmd[cursor++] = (uint8_t)ch;
-	cursor &= CMD_LEN;
-	// clean up in case of overflow (command too long)
-	if (!cursor) {
-		for(uint8_t i = 0; i <= CMD_LEN; i++)
-			cmd[i] = '\0';
-	}
-
-	return 1;
+	return -2;
 }

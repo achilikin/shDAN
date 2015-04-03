@@ -34,7 +34,7 @@ int8_t rht_read(rht_t *rht, int8_t echo, char *dst)
 			rht->humidity.val, rht->humidity.dec);
 	}
 	if (echo)
-		rht_print(ret ? NULL : dst);
+		rht_print(ret == 0 ? dst : NULL);
 
 	return ret;
 }

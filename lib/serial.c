@@ -1,6 +1,6 @@
 /*  Simple wrappers for reading serial port (similar to getch) on ATmega32L
 
-    Copyright (c) 2014 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

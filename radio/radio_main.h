@@ -1,4 +1,4 @@
-/* Using ATmega32L on MMR-70
+/* Firmware for MMR-70 FM radio
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef MMR70_MAIN_H
-#define MMR70_MAIN_H
+#ifndef RADIO_MAIN_H
+#define RADIO_MAIN_H
 
 #include <stdint.h>
 #include <avr/eeprom.h>
@@ -76,6 +76,8 @@ extern uint32_t sw_clock;
 #define ADC_MASK (ADC_PA4 | ADC_PA3)
 
 void get_tx_pwr(char *buf); // get current NS741 tx power
+
+int8_t cli_radio(char *buf, void *rht);
 
 #ifdef __cplusplus
 }
