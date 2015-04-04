@@ -198,7 +198,7 @@ int main(void)
 
 	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 	rfm12_set_txpwr(txpwr);
-	rd.vbat = rfm12_battery(RFM_MODE_SLEEP, 14);
+	rd.stat = rfm12_battery(RFM_MODE_SLEEP, 14);
 
 	mmr_led_off();
 	// try to get RTC time from the base
@@ -242,7 +242,7 @@ int main(void)
 				awake();
 				if (active & OLED_ACTIVE)
 					ossd_sleep(0);
-				rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
+				rd.stat = rfm12_battery(RFM_MODE_IDLE, 14);
 				uart_puts_p(PSTR("\n> "));
 				active |= UART_ACTIVE;
 			}
@@ -272,13 +272,13 @@ int main(void)
 				rd.nid = SET_NID(nid,ZONE_T1);
 				if (tsync == SYNC_SPAN) {
 					rd.nid |= NODE_TSYNC;
-					rd.vbat = rfm12_battery(RFM_MODE_IDLE, 14);
+					rd.stat = rfm12_battery(RFM_MODE_IDLE, 14);
 				}
-				rd.vbat &= ~(VBAT_LED | VBAT_SLEEP);
+				rd.stat &= ~(STAT_LED | STAT_SLEEP);
 				if (active & DLED_ACTIVE)
-					rd.vbat |= VBAT_LED;
+					rd.stat |= STAT_LED;
 				if (!(active & UART_ACTIVE))
-					rd.vbat |= VBAT_SLEEP;
+					rd.stat |= STAT_SLEEP;
 				rd.val = bmp.t;
 				rd.dec = bmp.tdec;
 				rfm12_send(&rd, sizeof(rd));
@@ -327,7 +327,7 @@ void get_rtc_time(char *buf)
 
 void get_vbat(char *buf)
 {
-	uint16_t vbat = 230 + rd.vbat*10;
+	uint16_t vbat = 230 + rd.stat*10;
 	sprintf_P(buf, PSTR("Vbat %d.%d"), vbat/100, vbat %100);
 }
 

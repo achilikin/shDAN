@@ -43,9 +43,9 @@ extern "C" {
 #define SENS_DIGIT  0x05 // digital, 16bit mask
 #define SENS_COUNT  0x06 // counter, u16 value
 
-#define VBAT_MASK  0x0F // Vbat mask
-#define VBAT_SLEEP 0x80 // node is in sleep mode
-#define VBAT_LED   0x40 // poll led is on
+#define STAT_SLEEP 0x80 // node is in sleep mode
+#define STAT_LED   0x40 // poll led is on
+#define STAT_VBAT  0x0F // Vbat mask
 
 /*
  nid bits: tsssnnnn
@@ -60,7 +60,7 @@ extern "C" {
  so node 1 transmit first zone data at 00 sec of every minute,
  node 2 at 05 sec of every minute and so one
 
- vbat bits: sl00vvvv
+ stat bits: sl00vvvv
  s: sleep mode is on
  l: led indication is on
  vvvv: Vbat=2.30 + vvvv*0.1
@@ -70,7 +70,7 @@ typedef struct dnode_s
 	uint8_t nid;
 	union {
 		struct {
-			int8_t  vbat; // Vbat = ((vbat & 0x0F)*10 + 230)/100.0
+			int8_t  stat; // Vbat = ((stat & STAT_VBAT)*10 + 230)/100.0
 			union {
 				struct {
 					int8_t  val; // value

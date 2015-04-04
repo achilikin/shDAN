@@ -240,13 +240,13 @@ int main(void)
 			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
 				tsync.nid = 0;
-				pcf2127_get_time((pcf_td_t *)&tsync.vbat, sw_clock);
+				pcf2127_get_time((pcf_td_t *)&tsync.stat, sw_clock);
 
 				rfm12_set_mode(RFM_MODE_TX);
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
 				if (rt_flags & RND_ECHO)
-					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.vbat, tsync.val, tsync.dec, rd.nid);
+					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.stat, tsync.val, tsync.dec, rd.nid);
 			}
 			
 			// we should have at least 6 ARSSI reads in our areads array
@@ -282,8 +282,8 @@ int main(void)
 				ossd_putlx(4, -1, fm_freq, 0);
 				// overwrite NS741 status
 				rd_bv = 0;
-				if (rd.vbat != -1)
-					rd_bv = 230 + (rd.vbat & VBAT_MASK)* 10;
+				if (rd.stat != -1)
+					rd_bv = 230 + (rd.stat & STAT_VBAT)* 10;
 				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
 				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 				ossd_putlx(7, -1, status, 0);
@@ -339,6 +339,6 @@ void print_rd(void)
 	printf_P(PSTR("%02d:%02d:%02d Node %u Zone %u V %d S %u L %u T % 3d.%d ARSSI %u %3d%%\n"),
 		rd_ts[0], rd_ts[1], rd_ts[2],
 		rd.nid & NID_MASK, (rd.nid & SENS_MASK) >> 4,
-		rd_bv, !!(rd.vbat & VBAT_SLEEP), !!(rd.vbat & VBAT_LED), rd.val, rd.dec,
+		rd_bv, !!(rd.stat & STAT_SLEEP), !!(rd.stat & STAT_LED), rd.val, rd.dec,
 		rd_arssi, rd_signal);
 }

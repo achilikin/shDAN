@@ -11,11 +11,15 @@ Includes different projects:
 **FM Radio with RDS support firmware**
 [RADIO](https://github.com/achilikin/mmr70mod/blob/master/radio) - Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
 
-**Data Acquisition Network**
+**hDAN: small house Data Acquisition Network**
 [BASE](https://github.com/achilikin/mmr70mod/blob/master/base) - Base Station for data acquisition network
 [NODE](https://github.com/achilikin/mmr70mod/blob/master/node) - Data Node for data acquisition network
 
 **At the moment all projects under major re-factoring/code clean-up**
+
+hDAN (small house Data Acquisition Network) protocol
+----------------------------------------------------
+![hDAN Protocol Diagram](https://github.com/achilikin/mmr70mod/blob/master/protocol.svg)
 
 Avrdude on Raspberry Pi
 -----------------------
