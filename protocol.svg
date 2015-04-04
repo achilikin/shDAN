@@ -336,8 +336,8 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="0.98994949"
-     inkscape:cx="355.10965"
-     inkscape:cy="323.28038"
+     inkscape:cx="466.3482"
+     inkscape:cy="315.90819"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -1302,15 +1302,18 @@
          sodipodi:role="line"
          id="tspan4336"
          x="60.403843"
-         y="464.03763">t: timesync request/reply</tspan><tspan
+         y="464.03763"
+         style="-inkscape-font-specification:'Calibri, Normal';font-family:Calibri;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:15px;text-anchor:start;text-align:start;writing-mode:lr;line-height:125%">t: timesync request/reply</tspan><tspan
          sodipodi:role="line"
          x="60.403843"
          y="482.78763"
-         id="tspan4338">s: sensor id (0:TX power, 7:sensors list</tspan><tspan
+         id="tspan4338"
+         style="-inkscape-font-specification:'Calibri, Normal';font-family:Calibri;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:15px;text-anchor:start;text-align:start;writing-mode:lr;line-height:125%">s: sensor id (0:TX power, 7:sensors list</tspan><tspan
          sodipodi:role="line"
          x="60.403843"
          y="501.53763"
-         id="tspan4340">n: source node id (0-base)</tspan></text>
+         id="tspan4340"
+         style="-inkscape-font-specification:'Calibri, Normal';font-family:Calibri;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:15px;text-anchor:start;text-align:start;writing-mode:lr;line-height:125%">n: source node id (0-base)</tspan></text>
     <text
        inkscape:transform-center-y="-1.2626905"
        sodipodi:linespacing="125%"
@@ -1377,7 +1380,7 @@
          y="725.02594"
          x="532.01825"
          id="tspan4355"
-         sodipodi:role="line">DATA</tspan></text>
+         sodipodi:role="line">CVAL</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
@@ -1388,7 +1391,7 @@
          sodipodi:role="line"
          id="tspan4359"
          x="611.82025"
-         y="725.02594">DATA</tspan></text>
+         y="725.02594">CVAL</tspan></text>
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.51769263px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        id="rect4363"
