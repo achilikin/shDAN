@@ -236,16 +236,17 @@ int main(void)
 		
 		if (rfm12_receive_data(&rd, sizeof(rd), ARSSI_ADC) == sizeof(rd)) {
 			analogStop(); // stop any pending ARSSI conversion
-			
+			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+
 			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
-				tsync.nid = 0;
+				tsync.nid = NODE_TSYNC;
 				pcf2127_get_time((pcf_td_t *)&tsync.stat, sw_clock);
 
 				rfm12_set_mode(RFM_MODE_TX);
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
-				if (rt_flags & RND_ECHO)
+				if (rt_flags & DAN_ECHO)
 					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.stat, tsync.val, tsync.dec, rd.nid);
 			}
 			
@@ -272,9 +273,10 @@ int main(void)
 					rd_signal = 100;
 			}
 
+			if (rt_flags & DAN_ECHO)
+				print_rd();
+
 			if ((rd.nid & SENS_MASK) != SENS_LIST) {
-				rt_flags |= RDATA_VALID;
-				pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 				// overwrite FM frequency on the screen
 				sprintf_P(fm_freq, PSTR("%02d:%02d:%02d"), rd_ts[0], rd_ts[1], rd_ts[2]);
 				ossd_putlx(0, -1, fm_freq, 0);
@@ -288,9 +290,6 @@ int main(void)
 				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 				ossd_putlx(7, -1, status, 0);
 				ossd_select_font(font);
-
-				if (rt_flags & RND_ECHO)
-					print_rd();
 			}
 		}
 
@@ -333,12 +332,23 @@ int main(void)
 
 void print_rd(void)
 {
-	if (!(rt_flags & RDATA_VALID))
-		return;
+	printf_P(PSTR("%02d:%02d:%02d | "), rd_ts[0], rd_ts[1], rd_ts[2]);
+	for(uint8_t i = 0; i < 4; i++) {
+		uint8_t *pu8 = (uint8_t *)&rd;
+		printf_P(PSTR("%02X "), pu8[i]);
+	}
+	printf_P(PSTR("| NID %u SID %u "), rd.nid & NID_MASK, (rd.nid & SENS_MASK) >> 4);
 
-	printf_P(PSTR("%02d:%02d:%02d Node %u Zone %u V %d S %u L %u T % 3d.%d ARSSI %u %3d%%\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2],
-		rd.nid & NID_MASK, (rd.nid & SENS_MASK) >> 4,
-		rd_bv, !!(rd.stat & STAT_SLEEP), !!(rd.stat & STAT_LED), rd.val, rd.dec,
-		rd_arssi, rd_signal);
+	if ((rd.nid & SENS_MASK) == SENS_LIST) {
+		for(uint8_t i = 1; i <= MAX_SENSORS; i++)
+			printf_P(PSTR("%02u "), get_sens_type(&rd, i));
+	}
+	else {
+		printf_P(PSTR("S%u L%u A%u E%u V %u T%+2d.%d ARSSI %u %3d%%"),
+			!!(rd.stat & STAT_SLEEP), !!(rd.stat & STAT_LED),
+			!!(rd.stat & STAT_ACK), !!(rd.stat & STAT_EOS),
+			rd_bv, rd.val, rd.dec,
+			rd_arssi, rd_signal);
+	}
+	printf_P(PSTR("\n"));
 }

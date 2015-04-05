@@ -74,7 +74,7 @@ Using different clock speed for ATmega32:
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 **Current code size**
-Version 2015-04-03
+Version 2015-04-05
 ```
 > Creating Symbol Table: radio_main.sym
 > avr-nm -n radio_main.elf > radio_main.sym

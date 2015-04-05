@@ -56,7 +56,7 @@ extern char status[17];   // TxPwr status
 #define ADC_ECHO     0x10
 #define RHT_ECHO     0x20
 #define RHT_LOG      0x40
-#define RND_ECHO     0x80 // remote node data log
+#define DAN_ECHO     0x80 // data acquisition node log
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;

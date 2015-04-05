@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <avr/eeprom.h>
 
+#include "dnode.h"
+
 #ifdef __cplusplus
 extern "C" {
 #if 0 // to trick VisualAssist
@@ -36,12 +38,11 @@ extern "C" {
 #define DATA_POLL    0x10
 #define DATA_INIT    0x20
 #define LSD_ECHO     0x40 // local sensor data log
-#define RSD_ECHO     0x80 // remote sensor data log
 
 // active components
-#define OLED_ACTIVE  0x20
-#define DLED_ACTIVE  0x40
 #define UART_ACTIVE  0x80
+#define OLED_ACTIVE  0x40
+#define DLED_ACTIVE  0x20
 
 extern uint8_t EEMEM em_nid;
 extern uint8_t EEMEM em_txpwr;
@@ -55,12 +56,11 @@ extern uint8_t active;
 
 extern uint32_t uptime;
 
-void print_lsd(void); // print local sensor data
-void print_rsd(void); // print remote sensor data
-void print_status(void);
-
-void get_vbat(char *buf);
 void get_rtc_time(char *buf); // fill buffer with rtc time
+
+void print_dval(dnode_t *dval);
+void print_status(dnode_t *val);
+void get_vbat(dnode_t *val, char *buf);
 
 int8_t cli_node(char *buf, void *ptr);
 

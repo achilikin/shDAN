@@ -32,7 +32,7 @@
 
 #include "radio_main.h"
 
-static const char version[] PROGMEM = "2015-04-03";
+static const char version[] PROGMEM = "2015-04-05";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM =

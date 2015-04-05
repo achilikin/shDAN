@@ -32,7 +32,7 @@
 
 #include "node_main.h"
 
-static const char version[] PROGMEM = "2015-04-03";
+static const char version[] PROGMEM = "2015-04-05";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -56,7 +56,6 @@ int8_t cli_node(char *buf, void *ptr)
 	char *arg;
 	char cmd[CMD_LEN + 1];
 
-	ptr = ptr; // unused
 	memcpy(cmd, buf, sizeof(cmd));
 	arg = get_arg(cmd);
 
@@ -199,7 +198,7 @@ int8_t cli_node(char *buf, void *ptr)
 	}
 
 	if (str_is(cmd, PSTR("status"))) {
-		print_status();
+		print_status(ptr);
 		return 0;
 	}
 

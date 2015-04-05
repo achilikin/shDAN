@@ -34,7 +34,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-04-03";
+static const char version[] PROGMEM = "2015-04-05";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -48,7 +48,7 @@ const char cmd_list[] PROGMEM =
 	"  date\n"
 	"  set time HH:MM:SS\n"
 	"  set date YY/MM/DD\n"
-	"  echo rht|rds|remote|off\n"
+	"  echo rht|rds|dan|off\n"
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
@@ -242,9 +242,9 @@ int8_t cli_base(char *buf, void *rht)
 			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RHT_ECHO));
 			return 0;
 		}
-		if (str_is(arg, PSTR("remote"))) {
-			rt_flags ^= RND_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RND_ECHO));
+		if (str_is(arg, PSTR("dan"))) {
+			rt_flags ^= DAN_ECHO;
+			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & DAN_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("rds"))) {
@@ -252,7 +252,7 @@ int8_t cli_base(char *buf, void *rht)
 			return 0;
 		}
 		if (str_is(arg, PSTR("off"))) {
-			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG | RND_ECHO);
+			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG | DAN_ECHO);
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}

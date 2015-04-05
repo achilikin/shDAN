@@ -58,25 +58,24 @@ uint8_t EEMEM em_flags = LOAD_OSCCAL; // runtime flags
 // I/O pins
 #define PIN_INTERACTIVE PB0 // on port B
 
-#define ZONE_T1 1
-
 #define SYNC_SPAN     20 // request time sync every 20 transmissions
 #define REPLY_TIMEOUT 60 // time sync reply timeout, must be less than 127 msec
 
-#define TIME_TO_POLL(x) (rtc_sec == (((nid - 1)*5) + (x - 1)))
+#define TIME_TO_POLL(x) (rtc_sec == ((x - 1)*5))
 
 uint8_t  flags;
 uint8_t  active;
 uint32_t uptime;
 bmp180_t bmp;
 
-dnode_t  rd;
 uint8_t  nid;   // node id
 uint8_t  txpwr; // RFM12 TX power
 
-uint16_t rd_bv;     // battery voltage
-uint8_t  rd_ts[3];  // last session time
+// List all attached sensors here
+int8_t poll_bmp180(dnode_t *dval, void *ptr);
+dsens_t sens[] = { {SET_SENS(1,SENS_TEMPER), poll_bmp180, &bmp} };
 
+// power save functions
 #define power_twi_disable() (TWCR &= ~_BV(TWEN))
 #define power_adc_disable() (ADCSRA &= ~_BV(ADEN))
 #define power_timer1_disable() (TIMSK &= ~_BV(OCIE1A))
@@ -127,25 +126,19 @@ static inline uint8_t is_interactive(void)
 }
 
 // returns -1 in case of error, or reply interval in ms (<60)
-int8_t sync_time(uint8_t send)
+int8_t sync_time(dnode_t *dval)
 {
-	dnode_t tsync;
-
-	if (send) {
-		tsync.nid = nid | NODE_TSYNC | SENS_LIST;
-		tsync.data[0] = SENS_TEMPER;
-		tsync.data[1] = 0;
-		tsync.data[2] = 0;
-		rfm12_send(&tsync, sizeof(tsync));
-	}
+	if (dval)
+		rfm12_send(dval, sizeof(dnode_t));
 
 	rfm12_set_mode(RFM_MODE_RX);
 	rfm12_reset_fifo();
 	rfm12_cmdrw(RFM12CMD_STATUS); // clear any interrupts
-
+	
+	dnode_t tsync;
 	uint8_t msec = mill8();
 	for(uint8_t dt = 0; dt < REPLY_TIMEOUT; dt = mill8() - msec) {
-		if (rfm12_receive_data(&tsync, sizeof(tsync), 0) == sizeof(tsync)) {
+		if (rfm12_receive_data(&tsync, sizeof(dnode_t), 0) == sizeof(dnode_t)) {
 			ATOMIC_BLOCK(ATOMIC_FORCEON) {
 			rtc_hour = tsync.hour;
 			rtc_min  = tsync.min;
@@ -161,6 +154,7 @@ int8_t sync_time(uint8_t send)
 int main(void)
 {
 	char buf[16];
+	dnode_t dval; // data node value
 	uint8_t tsync = 0;
 
 	mmr_led_on(); // turn on LED while booting
@@ -198,17 +192,26 @@ int main(void)
 
 	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 	rfm12_set_txpwr(txpwr);
-	rd.stat = rfm12_battery(RFM_MODE_SLEEP, 14);
-
 	mmr_led_off();
+
+	// create "List of Sensors" message
+	dval.nid = nid | NODE_TSYNC | SENS_LIST;
+	dval.data[0] = 0;
+	dval.data[1] = 0;
+	dval.data[2] = 0;
+
+	for(uint8_t n = 0; n < sizeof(sens)/sizeof(sens[0]); n++) {
+		set_sens_type(&dval, sens[n].tos_sid & 0x0F, sens[n].tos_sid >> 4);
+	}
+
 	// try to get RTC time from the base
 	for(uint8_t i = 0; i < 5; i++) {
-		if (sync_time(1) != -1)
+		if (sync_time(&dval) != -1)
 			break;
 		delay(217);
 	}
-	mmr_led_on();
 
+	mmr_led_on();
 	i2c_init(); // needed for ossd* and bmp180*
 	// try to init oled display
 	if (ossd_init(OSSD_UPDOWN) == 0) {
@@ -222,11 +225,12 @@ int main(void)
 	bmp180_init(&bmp);
 	cli_init();
 	flags |= DATA_INIT;
+	dval.stat = rfm12_battery(RFM_MODE_IDLE, 14);
 	mmr_led_off();
 
 	if (is_interactive()) {
 		active |= UART_ACTIVE;
-		print_status();
+		print_status(&dval);
 	}
 	else {
 		if (active & OLED_ACTIVE)
@@ -242,11 +246,11 @@ int main(void)
 				awake();
 				if (active & OLED_ACTIVE)
 					ossd_sleep(0);
-				rd.stat = rfm12_battery(RFM_MODE_IDLE, 14);
+				dval.stat = rfm12_battery(RFM_MODE_IDLE, 14);
 				uart_puts_p(PSTR("\n> "));
 				active |= UART_ACTIVE;
 			}
-			cli_interact(cli_node, &rd);
+			cli_interact(cli_node, &dval);
 		}
 
 		// once-a-second checks
@@ -255,48 +259,54 @@ int main(void)
 			uptime++;
 		}
 
-		// poll bmp180 for temperature only every 1 minute
-		if ((flags & (DATA_POLL | DATA_INIT)) || (TIME_TO_POLL(ZONE_T1) && !(flags & DATA_SENT))) {
+		// poll attached sensors once a minute depending on Node ID
+		if ((flags & (DATA_POLL | DATA_INIT)) || (TIME_TO_POLL(nid) && !(flags & DATA_SENT))) {
 			awake();
+			dval.stat &= ~(STAT_LED | STAT_SLEEP);
 			if (active & DLED_ACTIVE)
-				mmr_led_on();
-			bmp180_poll(&bmp, BMP180_T_MODE);
-			if (active & DLED_ACTIVE)
-				mmr_led_off();
+				dval.stat |= STAT_LED;
+			if (!(active & UART_ACTIVE))
+				dval.stat |= STAT_SLEEP;
 
-			// Local Sensor Data log
-			if ((flags & (LSD_ECHO | DATA_POLL)) && (active & UART_ACTIVE))
-				print_lsd();
-
-			if (bmp.valid & BMP180_T_VALID) {
-				rd.nid = SET_NID(nid,ZONE_T1);
-				if (tsync == SYNC_SPAN) {
-					rd.nid |= NODE_TSYNC;
-					rd.stat = rfm12_battery(RFM_MODE_IDLE, 14);
-				}
-				rd.stat &= ~(STAT_LED | STAT_SLEEP);
+			for(uint8_t n = 0; n < sizeof(sens)/sizeof(sens[0]); n++) {
 				if (active & DLED_ACTIVE)
-					rd.stat |= STAT_LED;
-				if (!(active & UART_ACTIVE))
-					rd.stat |= STAT_SLEEP;
-				rd.val = bmp.t;
-				rd.dec = bmp.tdec;
-				rfm12_send(&rd, sizeof(rd));
+					mmr_led_on();
+
+				if (sens[n].poll(&dval, sens[n].data) == 0)
+					dval.nid = SET_NID(nid, n+1);
+
+				if (active & DLED_ACTIVE)
+					mmr_led_off();
+
+				// Local Sensor Data log
+				if ((flags & (LSD_ECHO | DATA_POLL)) && (active & UART_ACTIVE))
+					print_dval(&dval);
+
+				if (n == (sizeof(sens)/sizeof(sens[0]) - 1)) {
+					dval.stat |= STAT_EOS;
+					if (tsync == SYNC_SPAN) {
+						dval.nid |= NODE_TSYNC; // request time sync
+						dval.stat &= ~STAT_VBAT; // update battery voltage
+						dval.stat |= rfm12_battery(RFM_MODE_IDLE, 14) & STAT_VBAT;
+					}
+				}
+
+				rfm12_send(&dval, sizeof(dval));
 
 				// get time sync reply
 				if (tsync == SYNC_SPAN) {
-					sync_time(0);
+					sync_time(NULL);
 					tsync = 0;
 				}
-
-				rfm12_set_mode(RFM_MODE_SLEEP);
-				flags |= DATA_SENT;
-				tsync++;
 			}
+
+			rfm12_set_mode(RFM_MODE_SLEEP);
+			flags |= DATA_SENT;
+			tsync++;
 
 			if (is_interactive() && (active & OLED_ACTIVE)) {
 				show_time(buf);
-				get_vbat(buf);
+				get_vbat(&dval, buf);
 				ossd_putlx(6, -1, buf, 0);
 			}
 
@@ -304,7 +314,7 @@ int main(void)
 			flags &= ~(DATA_POLL | DATA_INIT);
 		}
 
-		if (!TIME_TO_POLL(ZONE_T1))
+		if (!TIME_TO_POLL(nid))
 			flags &= ~DATA_SENT;
 
 		if (!is_interactive()) {
@@ -325,28 +335,19 @@ void get_rtc_time(char *buf)
 	sprintf_P(buf, PSTR("%02d:%02d:%02d"), ts[2], ts[1], ts[0]);
 }
 
-void get_vbat(char *buf)
+void get_vbat(dnode_t *val, char *buf)
 {
-	uint16_t vbat = 230 + rd.stat*10;
+	uint16_t vbat = 230 + (val->stat & STAT_VBAT)*10;
 	sprintf_P(buf, PSTR("Vbat %d.%d"), vbat/100, vbat %100);
 }
 
-void print_lsd(void)
+void print_dval(dnode_t *dval)
 {
 	char buf[16];
 	get_rtc_time(buf);
 
 	uint32_t msec = millis();
-	printf_P(PSTR("%s %lu %d.%d\n"), buf, msec, bmp.t, bmp.tdec);
-}
-
-void print_rsd(void)
-{
-	if (!(flags & RDATA_VALID))
-		return;
-
-	printf_P(PSTR("%02d:%02d:%02d V %d T %d.%d\n"),
-		rd_ts[0], rd_ts[1], rd_ts[2], rd_bv, rd.val, rd.dec);
+	printf_P(PSTR("%s %lu %d.%d\n"), buf, msec, dval->val, dval->dec);
 }
 
 void show_time(char *buf)
@@ -357,14 +358,26 @@ void show_time(char *buf)
 	ossd_putlx(4, -1, buf, OSSD_TEXT_UNDERLINE);
 }
 
-void print_status(void)
+void print_status(dnode_t *val)
 {
 	char buf[16];
 
-	get_vbat(buf);
+	get_vbat(val, buf);
 	printf_P(PSTR("Sensor ID %d, txpwr %ddB, %s\n"), nid, -3*txpwr, buf);
 	get_rtc_time(buf);
 	printf_P(PSTR("RTC time %s "), buf);
 	printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
-	print_rsd();
+}
+
+int8_t poll_bmp180(dnode_t *dval, void *ptr)
+{
+	bmp180_t *bmp = ptr;
+	bmp180_poll(bmp, BMP180_T_MODE);
+
+	if (bmp->valid & BMP180_T_VALID) {
+		dval->val = bmp->t;
+		dval->dec = bmp->tdec;
+		return 0;
+	}
+	return -1;
 }
