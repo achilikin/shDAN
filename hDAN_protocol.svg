@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
-   sodipodi:docname="protocol.svg">
+   sodipodi:docname="hDAN_protocol.svg">
   <title
      id="title4342">hDAN Protocol Frame Format</title>
   <defs
@@ -335,9 +335,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="466.3482"
-     inkscape:cy="315.90819"
+     inkscape:zoom="2.8"
+     inkscape:cx="318.37"
+     inkscape:cy="668.64507"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -364,7 +364,7 @@
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
         <dc:title>hDAN Protocol Frame Format</dc:title>
         <cc:license
-           rdf:resource="https://www.gnu.org/copyleft/gpl.html" />
+           rdf:resource="http://opensource.org/licenses/BSD-3-Clause" />
         <dc:creator>
           <cc:Agent>
             <dc:title>Andrey Chilikin</dc:title>
@@ -886,7 +886,7 @@
          sodipodi:role="line"
          id="tspan3092"
          x="302.53989"
-         y="639.62317">r</tspan></text>
+         y="639.62317">a</tspan></text>
     <text
        sodipodi:linespacing="125%"
        id="text3094"
@@ -897,7 +897,7 @@
          y="639.62317"
          x="342.94604"
          id="tspan3096"
-         sodipodi:role="line">r</tspan></text>
+         sodipodi:role="line">e</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
@@ -1213,11 +1213,11 @@
        sodipodi:linespacing="125%"
        id="text3140"
        y="116.96874"
-       x="312.11279"
+       x="271.3985"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
        xml:space="preserve"><tspan
          y="116.96874"
-         x="312.11279"
+         x="271.3985"
          id="tspan3142"
          sodipodi:role="line">sync</tspan></text>
     <text
@@ -1333,9 +1333,13 @@
          y="707.11609"
          x="206.18568"
          sodipodi:role="line"
-         id="tspan4870">r: reserved</tspan><tspan
-         id="tspan4348"
+         id="tspan4870">a: acknowledgement</tspan><tspan
          y="725.86609"
+         x="206.18568"
+         sodipodi:role="line"
+         id="tspan5794">e: end of session</tspan><tspan
+         id="tspan4348"
+         y="744.61609"
          x="206.18568"
          sodipodi:role="line">v: Vbat=2.30 + vvvv*0.1</tspan></text>
     <rect
@@ -1609,5 +1613,16 @@
          id="tspan17538"
          x="411.85754"
          y="769.95483">Cmd (8 bits)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+       x="339.96994"
+       y="116.96874"
+       id="text4393"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4395"
+         x="339.96994"
+         y="116.96874">subnet</tspan></text>
   </g>
 </svg>
