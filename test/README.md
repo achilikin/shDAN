@@ -31,11 +31,11 @@ Supported commands
 For more information see [Readme](https://github.com/achilikin/mmr70mod/) in the project root directory.
 
 **Current code size**
-Version 2015-04-03
+Version 2015-04-05
 ```
 > Creating Symbol Table: test_main.sym
 > avr-nm -n test_main.elf > test_main.sym
-> Program:    7718 bytes (23.6% Full)
+> Program:    7714 bytes (23.5% Full)
 > Data:        394 bytes (19.2% Full)
 > EEPROM:        2 bytes (0.2% Full)
 ```

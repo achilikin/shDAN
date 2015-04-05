@@ -32,7 +32,7 @@
 
 #include "radio_main.h"
 
-static const char version[] PROGMEM = "2015-04-05";
+static const char version[] PROGMEM = "2015-04-05\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM =
@@ -70,7 +70,8 @@ int8_t cli_radio(char *buf, void *rht)
 	arg = get_arg(cmd);
 
 	if (str_is(cmd, PSTR("help"))) {
-		printf_P(PSTR("version: %s\n"), version);
+		uart_puts_p(PSTR("  version: "));
+		uart_puts_p(version);
 		uart_puts_p(cmd_list);
 		return 0;
 	}

@@ -78,7 +78,7 @@ Version 2015-04-05
 ```
 > Creating Symbol Table: radio_main.sym
 > avr-nm -n radio_main.elf > radio_main.sym
-> Program:   19910 bytes (60.8% Full)
+> Program:   19898 bytes (60.7% Full)
 > Data:        807 bytes (39.4% Full)
 > EEPROM:       18 bytes (1.8% Full)
 ```
