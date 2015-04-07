@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
-   sodipodi:docname="hDAN_structure.svg">
+   sodipodi:docname="hDAN_topology.svg">
   <title
      id="title4342">hDAN Protocol Frame Format</title>
   <defs
@@ -27,7 +27,7 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="0.98994949"
-     inkscape:cx="390.47369"
+     inkscape:cx="157.63353"
      inkscape:cy="305.92337"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
@@ -182,7 +182,7 @@
          sodipodi:role="line"
          id="tspan4866"
          x="173.16646"
-         y="26.757496">hDAN diagram</tspan></text>
+         y="26.757496">hDAN topology</tspan></text>
     <circle
        style="fill:none;fill-opacity:0.07843137;stroke:#000000;stroke-width:1.01949883;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="path4576"
