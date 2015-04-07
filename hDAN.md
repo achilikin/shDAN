@@ -22,9 +22,9 @@ hDAN main components
 
 See SVG pictures below for details. 
 
-hDAN diagram
-------------
-![hDAN diagram](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_structure.svg)
+hDAN topology
+-------------
+![hDAN topology](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_topology.svg)
 
 hDAN protocol
 -------------
