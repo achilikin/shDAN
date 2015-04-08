@@ -32,7 +32,7 @@
 
 #include "node_main.h"
 
-static const char version[] PROGMEM = "2015-04-08\n";
+static const char version[] PROGMEM = "2015-04-09\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -41,7 +41,7 @@ const char cmd_list[] PROGMEM =
 	"  status\n"
 	"  calibrate\n"
 	"  set nid N\n"
-	"  set isync N\n"
+	"  set tsync N\n"
 	"  set osccal X\n"
 	"  set txpwr pwr\n"
 	"  set led on|off\n"

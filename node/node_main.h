@@ -31,17 +31,21 @@ extern "C" {
 #endif
 
 // runtime flags
-#define LOAD_OSCCAL  0x01
-#define RT_DATA_SENT 0x02
-#define RT_DATA_POLL 0x10
-#define RT_DATA_INIT 0x20
-#define RT_LSD_ECHO  0x40 // local sensor data log
-#define RT_RX_ECHO   0x80
+#define RT_LOAD_OSCCAL 0x01
+#define RT_DATA_SENT   0x02
+#define RT_DATA_POLL   0x04
+#define RT_DATA_INIT   0x08
+#define RT_LSD_ECHO    0x10 // local sensor data log
+#define RT_OLED_ECHO   0x20 // output data to oled
+#define RT_RX_ECHO     0x80
 
 // active components
-#define UART_ACTIVE  0x80
-#define OLED_ACTIVE  0x40
-#define DLED_ACTIVE  0x20
+#define NODE_ACTIVE  0x80 // activated by local switch
+#define FORCE_ACTIVE 0x40 // forced to be active by remote command
+#define OLED_ACTIVE  0x20 // oled screen detected
+#define DLED_ACTIVE  0x10 // use LED to indicate sensors polling
+
+#define ACTIVE_MODE (NODE_ACTIVE | FORCE_ACTIVE)
 
 extern uint8_t EEMEM em_nid;
 extern uint8_t EEMEM em_tsync;
