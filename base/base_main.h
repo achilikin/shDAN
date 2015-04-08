@@ -50,13 +50,11 @@ extern char status[17];   // TxPwr status
 #define NS741_STEREO 0x04
 
 // runtime flags
-#define RDATA_VALID  0x01 // remote node data valid
-#define LOAD_OSCCAL  0x02
-// echo flags
-#define ADC_ECHO     0x10
-#define RHT_ECHO     0x20
-#define RHT_LOG      0x40
-#define DAN_ECHO     0x80 // data acquisition node log
+#define RT_LOAD_OSCCAL  0x01
+#define RT_DAN_ECHO  0x10 // data acquisition node log
+#define RT_RHT_ECHO  0x20
+#define RT_RHT_LOG   0x40
+#define RT_RX_ECHO   0x80
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;

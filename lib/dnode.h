@@ -81,9 +81,9 @@ extern "C" {
  e: end of session, no more message till next session
  vvvv: Vbat=2.30 + vvvv*0.1
 
- cmd bits: ccccdddd
- c: command
+ cmd bits: ddddcccc
  d: destination node id
+ c: command
 */
 typedef struct dnode_s
 {
@@ -106,7 +106,7 @@ typedef struct dnode_s
 			uint8_t sec;
 		};
 		struct {
-			int8_t  cmd; // ccccdddd
+			int8_t  cmd; // ddddcccc
 			union {
 				uint8_t cval[2]; // command value
 				uint16_t cval16; // 16bit command value
@@ -147,6 +147,9 @@ static inline uint8_t get_sens_type(dnode_t *dval, uint8_t sid)
 		type >>= 4;
 	return type;
 }
+
+uint8_t ts_unpack(dnode_t *tsync);
+void ts_pack(dnode_t *tsync, uint8_t nid);
 
 #ifdef __cplusplus
 }

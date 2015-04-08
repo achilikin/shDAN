@@ -56,7 +56,11 @@ uint8_t EEMEM em_osccal = 181;
 uint8_t EEMEM em_ns_rt_flags = (NS741_STEREO | NS741_RDS);
 uint8_t EEMEM em_ns_pwr_flags = NS741_TXPWR0;
 
-uint8_t EEMEM em_rt_flags = LOAD_OSCCAL;
+// RFM12B sync pattern, better keep it to default 0xD4
+// as previous versions of RFM12 do not support anything else
+uint8_t EEMEM em_rfm_sync = 0xD4;
+
+uint8_t EEMEM em_rt_flags = RT_LOAD_OSCCAL;
 
 char rds_name[9];  // RDS PS name
 char fm_freq[17];  // FM frequency
@@ -90,6 +94,9 @@ uint8_t rd_arssi;
 static const char *s_pwr[4] = {
 	"0.5", "0.8", "1.0", "2.0"
 };
+
+// avr-gcc does not do string pooling for PROGMEM
+static const char form_time[] PROGMEM = "%02d:%02d:%02d";
 
 void get_tx_pwr(char *buf)
 {
@@ -139,7 +146,7 @@ int main(void)
 
 	sei();
 	serial_init(UART_BAUD_RATE);
-	if (rt_flags & LOAD_OSCCAL) {
+	if (rt_flags & RT_LOAD_OSCCAL) {
 		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
 		serial_set_osccal(new_osccal);
 	}
@@ -147,8 +154,8 @@ int main(void)
 	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
 	analogReference(VREF_AVCC); // enable ADC with Vcc reference
 	analogRead(ARSSI_ADC); // dummy read to start ADC
-
-	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+	uint8_t sync = eeprom_read_byte(&em_rfm_sync);
+	rfm12_init(sync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 	rfm12_set_mode(RFM_MODE_RX);
 
 	rht_init();
@@ -193,13 +200,12 @@ int main(void)
 		printf_P(PSTR("delay(1000) = %u\n"), ms);
 	}
 #endif
-
 	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 	printf_P(PSTR("ID '%s', %s Radio %s, TX Power %d\n"),
 		rds_name, fm_freq,
 		is_on(ns_pwr_flags & NS741_POWER), ns_pwr_flags & NS741_TXPWR);
 
-	rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
+	rht_read(&rht, rt_flags & RT_RHT_ECHO, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
 	ossd_select_font(OSSD_FONT_6x8);
@@ -233,21 +239,28 @@ int main(void)
 		// RDSPIN is low when NS741 is ready to transmit next RDS frame
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
-		
-		if (rfm12_receive_data(&rd, sizeof(rd), ARSSI_ADC) == sizeof(rd)) {
+		uint8_t rx_flags = ARSSI_ADC;
+		if (rt_flags & RT_RX_ECHO)
+			rx_flags |= RFM_RX_DEBUG;
+
+		if (rfm12_receive_data(&rd, sizeof(rd), rx_flags) == sizeof(rd)) {
 			analogStop(); // stop any pending ARSSI conversion
 			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 
 			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
+				tsync.data[0] = rd_ts[0];
+				tsync.data[1] = rd_ts[1];
+				tsync.data[2] = rd_ts[2];
 				tsync.nid = NODE_TSYNC;
-				pcf2127_get_time((pcf_td_t *)&tsync.stat, sw_clock);
+				ts_pack(&tsync, rd.nid & NID_MASK);
 
-				rfm12_set_mode(RFM_MODE_TX);
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
-				if (rt_flags & DAN_ECHO)
-					printf_P(PSTR("%02d:%02d:%02d sync %02X\n"), tsync.stat, tsync.val, tsync.dec, rd.nid);
+				if (rt_flags & RT_DAN_ECHO) {
+					printf_P(form_time, rd_ts[0], rd_ts[1], rd_ts[2]);
+					printf_P(PSTR(" sync %02X\n"), rd.nid);
+				}
 			}
 			
 			// we should have at least 6 ARSSI reads in our areads array
@@ -273,12 +286,12 @@ int main(void)
 					rd_signal = 100;
 			}
 
-			if (rt_flags & DAN_ECHO)
+			if (rt_flags & RT_DAN_ECHO)
 				print_rd();
 
 			if ((rd.nid & SENS_MASK) != SENS_LIST) {
 				// overwrite FM frequency on the screen
-				sprintf_P(fm_freq, PSTR("%02d:%02d:%02d"), rd_ts[0], rd_ts[1], rd_ts[2]);
+				sprintf_P(fm_freq, form_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 				ossd_putlx(0, -1, fm_freq, 0);
 				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
 				ossd_putlx(4, -1, fm_freq, 0);
@@ -315,13 +328,13 @@ int main(void)
 		if (poll_clock >= 5) {
 			poll_clock = 0;
 			ossd_putlx(2, 0, "*", 0);
-			rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
+			rht_read(&rht, rt_flags & RT_RHT_ECHO, rds_data);
 			ossd_putlx(2, -1, rds_data, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
-			if (rt_flags & RHT_LOG) {
+			if (rt_flags & RT_RHT_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
-				printf_P(PSTR("%02d:%02d:%02d %d.%d %d.%d %d.%02d\n"),
-					ts[0], ts[1], ts[2],
+				printf_P(form_time, ts[0], ts[1], ts[2]);
+				printf_P(PSTR(" %d.%d %d.%d %d.%02d\n"),
 					rht.temperature.val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec,
 					press.p, press.pdec);
@@ -332,7 +345,8 @@ int main(void)
 
 void print_rd(void)
 {
-	printf_P(PSTR("%02d:%02d:%02d | "), rd_ts[0], rd_ts[1], rd_ts[2]);
+	printf_P(form_time, rd_ts[0], rd_ts[1], rd_ts[2]);
+	uart_puts_p(PSTR(" | "));
 	for(uint8_t i = 0; i < 4; i++) {
 		uint8_t *pu8 = (uint8_t *)&rd;
 		printf_P(PSTR("%02X "), pu8[i]);

@@ -36,7 +36,7 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 
 **Debugging:**
 * _mem_ - show available memory
-* _echo rht|rds|dan|off_ - enable/disable data output to serial port
+* _echo rx|rht|rds|dan|off_ - enable/disable data output to serial port
 * _log on|off_ - enable/disable timestamped output of T/H readings
 
 
@@ -88,11 +88,11 @@ Using different clock speed for ATmega32:
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 **Current code size**
-Version 2015-04-05
+Version 2015-04-08
 ```
 > Creating Symbol Table: base_main.sym
 > avr-nm -n base_main.elf > base_main.sym
-> Program:   25636 bytes (78.2% Full)
-> Data:        899 bytes (43.9% Full)
-> EEPROM:       18 bytes (1.8% Full)
+> Program:   26068 bytes (79.6% Full)
+> Data:        900 bytes (43.9% Full)
+> EEPROM:       19 bytes (1.9% Full)
 ```
