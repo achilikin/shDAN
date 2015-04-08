@@ -34,7 +34,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-04-05\n";
+static const char version[] PROGMEM = "2015-04-08\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -48,7 +48,7 @@ const char cmd_list[] PROGMEM =
 	"  date\n"
 	"  set time HH:MM:SS\n"
 	"  set date YY/MM/DD\n"
-	"  echo rht|rds|dan|off\n"
+	"  echo rx|rht|rds|dan|off\n"
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
@@ -58,6 +58,8 @@ const char cmd_list[] PROGMEM =
 	"  freq nnnn\n"
 	"  txpwr 0-3\n"
 	"  radio on|off\n";
+
+static const char form_echo[] PROGMEM = "%s echo %s\n";
 
 static int8_t show_time(void)
 {
@@ -223,37 +225,42 @@ int8_t cli_base(char *buf, void *rht)
 
 	if (str_is(cmd, PSTR("poll"))) {
 		puts_P(PSTR("polling..."));
-		rht_read(rht, RHT_ECHO, rds_data);
+		rht_read(rht, RT_RHT_ECHO, rds_data);
 		ns741_rds_set_radiotext(rds_data);
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("log"))) {
 		if (str_is(arg, PSTR("on")))
-			rt_flags |= RHT_LOG;
+			rt_flags |= RT_RHT_LOG;
 		if (str_is(arg, PSTR("off")))
-			rt_flags &= ~RHT_LOG;
-		printf_P(PSTR("log is %s\n"), is_on(rt_flags & RHT_LOG));
+			rt_flags &= ~RT_RHT_LOG;
+		printf_P(PSTR("log is %s\n"), is_on(rt_flags & RT_RHT_LOG));
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("echo"))) {
 		if (str_is(arg, PSTR("rht"))) {
-			rt_flags ^= RHT_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RHT_ECHO));
+			rt_flags ^= RT_RHT_ECHO;
+			printf_P(form_echo, arg, is_on(rt_flags & RT_RHT_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("dan"))) {
-			rt_flags ^= DAN_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & DAN_ECHO));
+			rt_flags ^= RT_DAN_ECHO;
+			printf_P(form_echo, arg, is_on(rt_flags & RT_DAN_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("rds"))) {
 			ns741_rds_debug(1);
 			return 0;
 		}
+		if (str_is(arg, PSTR("rx"))) {
+			rt_flags ^= RT_RX_ECHO;
+			printf_P(form_echo, arg, is_on(rt_flags & RT_RX_ECHO));
+			return 0;
+		}
 		if (str_is(arg, PSTR("off"))) {
-			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG | DAN_ECHO);
+			rt_flags &= ~(RT_RHT_ECHO | RT_RHT_LOG | RT_DAN_ECHO | RT_RX_ECHO);
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}
