@@ -21,13 +21,14 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include <util/crc16.h>
+
+#include "uart.h"
 
 #include "pinio.h"
 #include "timer.h"
 #include "rfm12bs.h"
-
-#define RFM_DEBUG_RX 0
 
 #define VBAT_TIMEOUT 5 // Vbat interrupt timeout, msec
 
@@ -35,6 +36,7 @@ static uint8_t rfm_timeout = 50; // default TX timeout
 static uint8_t rfm_txctl;
 static uint8_t rfm_rxctl;
 static uint8_t rfm_band;
+static uint8_t rfm_sync;
 
 // waits timeout msecs for nIRQ pin to go to LOW state
 // returns -1 if timed out, or msec spent in the wait loop
@@ -185,6 +187,7 @@ int8_t rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate)
 	rfm12_cmdw(RFM12CMD_DFILT | RFM12_CR_ALC | RFM12_DQD4);
 	rfm12_cmdw(RFM12CMD_FIFO | RFM12_RXBIT8 | RFM12_SYNCFIFO | RFM12_DRESET);
 	rfm12_cmdw(RFM12CMD_SYNCPAT | syncpat);
+	rfm_sync = syncpat;
 	rfm12_cmdw(RFM12CMD_AFC | RFM12_AFC_MODE3 | RFM12_RANGELMT3 | RFM12_AFC_FI | RFM12_AFC_OE | RFM12_AFC_EN);
 	rfm_txctl = RFM12_FSK_45 | RFM12_OPWR_MAX;
 	rfm12_cmdw(RFM12CMD_TX_CTL | rfm_txctl);
@@ -322,6 +325,11 @@ static int8_t _rfm_send(uint8_t data, uint8_t timeout)
 	return -1;
 }
 
+static uint8_t rfm_crc8(uint8_t crc, uint8_t data)
+{
+	return _crc_ibutton_update(crc, data);
+}
+
 // transmit data stream in the following format:
 // data len - 1 byte
 // data     - "len" bytes
@@ -342,13 +350,13 @@ int8_t rfm12_send(void *buf, uint8_t len)
 	_rfm_send(0x2D, rfm_timeout); // two sync bytes
 	_rfm_send(0xD4, rfm_timeout);
 
-	uint8_t crc = _crc_ibutton_update(len, len);
+	uint8_t crc = rfm_crc8(rfm_sync, len);
 	_rfm_send(len, rfm_timeout);
 
 	for(uint8_t i = 0; i < len; i++) {
 		uint8_t byte = data ? data[i] : 'A' + i;
 		_rfm_send(byte ^ 0xA5, rfm_timeout); // ^ xA5 to minimize long run of '0' or '1'
-		crc = _crc_ibutton_update(byte, crc);
+		crc = rfm_crc8(crc, byte);
 	}
 	_rfm_send(crc, rfm_timeout);
 
@@ -365,41 +373,53 @@ int8_t rfm12_send(void *buf, uint8_t len)
 // receive data, use data len as packet start byte
 // if adc is no null then start ADC conversion to read ARSSI
 // (RFM12BS supplies analogue RSSI output on one of the capacitors)
-uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t adc)
+uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 {
 	static uint8_t ridx = 0;
 	uint8_t *buf = (uint8_t *)dbuf;
+	uint8_t adc = flags & 0x07;
+	uint8_t dbg = flags & RFM_RX_DEBUG;
 
 	uint16_t ch;
 	while(((ch = rfm12_receive(NULL)) & 0x8000)) {
 		if (adc)
 			analogStart();
 		uint8_t data = (uint8_t)ch;
+		if (dbg) {
+			uint8_t hex = (data >> 4) + '0';
+			if (hex > '9') hex += 7;
+			uart_putc(hex);
+			hex = (data & 0x0F) + '0';
+			if (hex > '9') hex += 7;
+			uart_putc(hex);
+			uart_putc(' ');
+		}
+
 		if (ridx == 0) {
 			if (data == len)
 				ridx++;
 			continue;
 		}
+
 		if (ridx == (len + 1)) { // data should contain CRC now
 			ridx = 0; // reset buffer index
 			rfm12_reset_fifo();
 
-			uint8_t crc = _crc_ibutton_update(len, len); //sht1x_crc(len, len);
-#if RFM_DEBUG
-			printf("len %d crc %02X\n", len, crc);
-#endif
+			uint8_t crc = rfm_crc8(rfm_sync, len);
+			if (dbg)
+				printf_P(PSTR("| len %d crc %02X\n"), len, crc);
+
 			for(uint8_t i = 0; i < len; i++) {
-				crc = _crc_ibutton_update(buf[i], crc);
-#if RFM_DEBUG
-				printf("data %02X %d %02X\n", buf[i], buf[i], crc);
-#endif
+				crc = rfm_crc8(crc, buf[i]);
+				if (dbg)
+					printf_P(PSTR("data %02X %3u %02X\n"), buf[i], buf[i], crc);
+
 			}
 			if (crc == data)
 				return len;
 			// wrong crc
-#if RFM_DEBUG
-			printf("len %d wrong crc %02X must be %02X\n", len, crc, data);
-#endif
+			if (dbg)
+				printf_P(PSTR("len %d wrong crc %02X must be %02X\n"), len, crc, data);
 			continue;
 		}
 		buf[ridx - 1] = data ^ 0xA5;

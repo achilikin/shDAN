@@ -32,7 +32,7 @@
 
 #include "node_main.h"
 
-static const char version[] PROGMEM = "2015-04-05\n";
+static const char version[] PROGMEM = "2015-04-08\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -41,6 +41,7 @@ const char cmd_list[] PROGMEM =
 	"  status\n"
 	"  calibrate\n"
 	"  set nid N\n"
+	"  set isync N\n"
 	"  set osccal X\n"
 	"  set txpwr pwr\n"
 	"  set led on|off\n"
@@ -49,7 +50,7 @@ const char cmd_list[] PROGMEM =
 	"  get pin (d3,b4,c2...)\n"
 	"  adc chan\n"
 	"  mem\n"
-	"  echo on|off\n";
+	"  echo rx|lsd|off\n";
 
 int8_t cli_node(char *buf, void *ptr)
 {
@@ -116,6 +117,15 @@ int8_t cli_node(char *buf, void *ptr)
 			return 0;
 		}
 
+		if (str_is(arg, PSTR("tsync"))) {
+			uint8_t val = atoi(sval);
+			if (!val) // sync interval cannot be  0 
+				return -1;
+			tsync = val;
+			eeprom_update_byte(&em_tsync, val);
+			return 0;
+		}
+
 		if (str_is(arg, PSTR("time"))) {
 			uint8_t hour, min, sec;
 			hour = strtoul(sval, &arg, 10);
@@ -149,18 +159,23 @@ int8_t cli_node(char *buf, void *ptr)
 
 	if (str_is(cmd, PSTR("poll"))) {
 		puts_P(PSTR("polling..."));
-		flags |= DATA_POLL;
+		rt_flags |= RT_DATA_POLL;
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("echo"))) {
-		if (str_is(arg, PSTR("on"))) {
-			flags ^= LSD_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(flags & LSD_ECHO));
+		if (str_is(arg, PSTR("rx"))) {
+			rt_flags ^= RT_RX_ECHO;
+			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RT_RX_ECHO));
+			return 0;
+		}
+		if (str_is(arg, PSTR("lsd"))) {
+			rt_flags ^= RT_LSD_ECHO;
+			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RT_LSD_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("off"))) {
-			flags = 0;
+			rt_flags = 0;
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}

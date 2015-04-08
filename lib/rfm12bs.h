@@ -235,6 +235,10 @@ extern "C" {
 
 #define RFM_SPI_MODE RFM_SPI_MODE_HW
 
+// flags for rfm12_receive_data()
+#define RFM_RX_ADC   0x07
+#define RFM_RX_DEBUG 0x80
+
 // initializes RFM12 and puts it to idle mode 
 int8_t   rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate);
 void     rfm12_cmdw(uint16_t cmd); // write RFM12 command
@@ -264,7 +268,8 @@ int16_t rfm12_poll(uint16_t *status);
 // check if data available (nIRQ is LOW) and read data byte
 uint16_t rfm12_receive(uint16_t *status);
 // receive data stream
-uint8_t rfm12_receive_data(void *buf, uint8_t len, uint8_t adc);
+uint8_t rfm12_receive_data(void *buf, uint8_t len, uint8_t flags);
+
 int8_t  rfm12_send(void *data, uint8_t len); // transmit data stream
 
 #ifdef __cplusplus

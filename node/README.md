@@ -34,6 +34,7 @@ Command line
 
 **Configuration:**
 * _set nid N_ - set Node ID to N, 1 to 15 range
+* _set tsync N_ - set time sync interval to every N data sessions
 * _set led on|off_ - enable/disable on-board LED to for data poll indication  
 * _set txpwr pwr_ - set RFN12BS transmit power, 0 to 7 range (0 - max, 7 - min)
 * _set time HH:MM:SS_ - set RTC time, 24H format
@@ -46,16 +47,16 @@ Command line
 
 **Debugging:**
 * _mem_ - show available memory
-* _echo on|off_ - enable/disable data output to serial port
+* _echo rx|lsd|off_ - enable/disable data output to serial port
 
 For more information see Readme in the project root directory.
 
 **Current code size**
-Version 2015-04-05
+Version 2015-04-08
 ```
 > Creating Symbol Table: node_main.sym
 > avr-nm -n node_main.elf > node_main.sym
-> Program:   16996 bytes (51.9% Full)
-> Data:        463 bytes (22.6% Full)
-> EEPROM:        4 bytes (0.4% Full)
+> Program:   17634 bytes (53.8% Full)
+> Data:        465 bytes (22.7% Full)
+> EEPROM:        6 bytes (0.6% Full)
 ```

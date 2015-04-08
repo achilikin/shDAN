@@ -32,12 +32,11 @@ extern "C" {
 
 // runtime flags
 #define LOAD_OSCCAL  0x01
-#define LDATA_VALID  0x02 // local sensor data valid
-#define RDATA_VALID  0x04 // remote sensor data valid
-#define DATA_SENT    0x08
-#define DATA_POLL    0x10
-#define DATA_INIT    0x20
-#define LSD_ECHO     0x40 // local sensor data log
+#define RT_DATA_SENT 0x02
+#define RT_DATA_POLL 0x10
+#define RT_DATA_INIT 0x20
+#define RT_LSD_ECHO  0x40 // local sensor data log
+#define RT_RX_ECHO   0x80
 
 // active components
 #define UART_ACTIVE  0x80
@@ -45,13 +44,15 @@ extern "C" {
 #define DLED_ACTIVE  0x20
 
 extern uint8_t EEMEM em_nid;
+extern uint8_t EEMEM em_tsync;
 extern uint8_t EEMEM em_txpwr;
 extern uint8_t EEMEM em_osccal;
-extern uint8_t EEMEM em_flags;
+extern uint8_t EEMEM em_rt_flags;
 
 extern uint8_t nid;
 extern uint8_t txpwr;
-extern uint8_t flags;
+extern uint8_t tsync;
+extern uint8_t rt_flags;
 extern uint8_t active;
 
 extern uint32_t uptime;

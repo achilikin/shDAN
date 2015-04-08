@@ -52,20 +52,24 @@
 uint8_t EEMEM em_nid = DEF_NID;
 uint8_t EEMEM em_txpwr = DEF_TXPWR;
 uint8_t EEMEM em_osccal = DEF_OSCCAL;
+uint8_t EEMEM em_tsync = 20; // time sync interval every 20 sessions
 
-uint8_t EEMEM em_flags = LOAD_OSCCAL; // runtime flags
+// RFM12B sync pattern, better keep it to default 0xD4
+// as previous versions of RFM12 do not support anything else
+uint8_t EEMEM em_rfm_sync = 0xD4;
+
+uint8_t EEMEM em_rt_flags = LOAD_OSCCAL; // runtime flags
 
 // I/O pins
 #define PIN_INTERACTIVE PB0 // on port B
-
-#define SYNC_SPAN     20 // request time sync every 20 transmissions
 #define REPLY_TIMEOUT 60 // time sync reply timeout, must be less than 127 msec
 
 #define TIME_TO_POLL(x) (rtc_sec == ((x - 1)*5))
 
-uint8_t  flags;
+uint8_t  rt_flags;
 uint8_t  active;
 uint32_t uptime;
+uint8_t  tsync;
 bmp180_t bmp;
 
 uint8_t  nid;   // node id
@@ -134,11 +138,12 @@ int8_t sync_time(dnode_t *dval)
 	rfm12_set_mode(RFM_MODE_RX);
 	rfm12_reset_fifo();
 	rfm12_cmdrw(RFM12CMD_STATUS); // clear any interrupts
-	
+
 	dnode_t tsync;
 	uint8_t msec = mill8();
 	for(uint8_t dt = 0; dt < REPLY_TIMEOUT; dt = mill8() - msec) {
-		if (rfm12_receive_data(&tsync, sizeof(dnode_t), 0) == sizeof(dnode_t)) {
+		if (rfm12_receive_data(&tsync, sizeof(dnode_t), rt_flags & RT_RX_ECHO) == sizeof(dnode_t)) {
+			ts_unpack(&tsync);
 			ATOMIC_BLOCK(ATOMIC_FORCEON) {
 			rtc_hour = tsync.hour;
 			rtc_min  = tsync.min;
@@ -155,7 +160,7 @@ int main(void)
 {
 	char buf[16];
 	dnode_t dval; // data node value
-	uint8_t tsync = 0;
+	uint8_t isync;
 
 	mmr_led_on(); // turn on LED while booting
 
@@ -166,8 +171,9 @@ int main(void)
 	sei();
 
 	nid = eeprom_read_byte(&em_nid); // our node id
+	tsync = eeprom_read_byte(&em_tsync);
 	txpwr = eeprom_read_byte(&em_txpwr);
-	flags = eeprom_read_byte(&em_flags);
+	rt_flags = eeprom_read_byte(&em_rt_flags);
 
 	// RFM12 nIRQ pin
 	_pin_mode(&DDRD, _BV(nIRQ), INPUT_HIGHZ);
@@ -185,12 +191,14 @@ int main(void)
 	// turn LED on during initialization stage
 	mmr_led_on();
 	serial_init(UART_BAUD_RATE);
-	if (flags & LOAD_OSCCAL) {
+	if (rt_flags & LOAD_OSCCAL) {
 		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
 		serial_set_osccal(new_osccal);
 	}
-
-	rfm12_init(0xD4, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+	
+	isync = eeprom_read_byte(&em_rfm_sync);
+	rfm12_init(isync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+	isync = 0;
 	rfm12_set_txpwr(txpwr);
 	mmr_led_off();
 
@@ -224,7 +232,7 @@ int main(void)
 
 	bmp180_init(&bmp);
 	cli_init();
-	flags |= DATA_INIT;
+	rt_flags |= RT_DATA_INIT;
 	dval.stat = rfm12_battery(RFM_MODE_IDLE, 14);
 	mmr_led_off();
 
@@ -260,7 +268,7 @@ int main(void)
 		}
 
 		// poll attached sensors once a minute depending on Node ID
-		if ((flags & (DATA_POLL | DATA_INIT)) || (TIME_TO_POLL(nid) && !(flags & DATA_SENT))) {
+		if ((rt_flags & (RT_DATA_POLL | RT_DATA_INIT)) || (TIME_TO_POLL(nid) && !(rt_flags & RT_DATA_SENT))) {
 			awake();
 			dval.stat &= ~(STAT_LED | STAT_SLEEP);
 			if (active & DLED_ACTIVE)
@@ -279,12 +287,12 @@ int main(void)
 					mmr_led_off();
 
 				// Local Sensor Data log
-				if ((flags & (LSD_ECHO | DATA_POLL)) && (active & UART_ACTIVE))
+				if ((rt_flags & (RT_LSD_ECHO | RT_DATA_POLL)) && (active & UART_ACTIVE))
 					print_dval(&dval);
 
 				if (n == (sizeof(sens)/sizeof(sens[0]) - 1)) {
 					dval.stat |= STAT_EOS;
-					if (tsync == SYNC_SPAN) {
+					if (isync == tsync) {
 						dval.nid |= NODE_TSYNC; // request time sync
 						dval.stat &= ~STAT_VBAT; // update battery voltage
 						dval.stat |= rfm12_battery(RFM_MODE_IDLE, 14) & STAT_VBAT;
@@ -294,15 +302,15 @@ int main(void)
 				rfm12_send(&dval, sizeof(dval));
 
 				// get time sync reply
-				if (tsync == SYNC_SPAN) {
+				if (isync == tsync) {
 					sync_time(NULL);
-					tsync = 0;
+					isync = 0;
 				}
 			}
 
 			rfm12_set_mode(RFM_MODE_SLEEP);
-			flags |= DATA_SENT;
-			tsync++;
+			rt_flags |= RT_DATA_SENT;
+			isync++;
 
 			if (is_interactive() && (active & OLED_ACTIVE)) {
 				show_time(buf);
@@ -311,19 +319,19 @@ int main(void)
 			}
 
 			serial_wait_sending();
-			flags &= ~(DATA_POLL | DATA_INIT);
+			rt_flags &= ~(RT_DATA_POLL | RT_DATA_INIT);
 		}
 
 		if (!TIME_TO_POLL(nid))
-			flags &= ~DATA_SENT;
+			rt_flags &= ~RT_DATA_SENT;
 
 		if (!is_interactive()) {
-			sleep(SLEEP_MODE_PWR_SAVE);
 			if (active & UART_ACTIVE) {
 				active &= ~UART_ACTIVE;
 				if (active & OLED_ACTIVE)
 					ossd_sleep(1);
 			}
+			sleep(SLEEP_MODE_PWR_SAVE);
 		}
 	}
 }
