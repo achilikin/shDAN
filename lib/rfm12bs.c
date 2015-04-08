@@ -377,7 +377,7 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 {
 	static uint8_t ridx = 0;
 	uint8_t *buf = (uint8_t *)dbuf;
-	uint8_t adc = flags & 0x07;
+	uint8_t adc = flags & RFM_RX_ADC_MASK;
 	uint8_t dbg = flags & RFM_RX_DEBUG;
 
 	uint16_t ch;

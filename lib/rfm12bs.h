@@ -236,8 +236,8 @@ extern "C" {
 #define RFM_SPI_MODE RFM_SPI_MODE_HW
 
 // flags for rfm12_receive_data()
-#define RFM_RX_ADC   0x07
-#define RFM_RX_DEBUG 0x80
+#define RFM_RX_ADC_MASK 0x07
+#define RFM_RX_DEBUG    0x80
 
 // initializes RFM12 and puts it to idle mode 
 int8_t   rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate);
