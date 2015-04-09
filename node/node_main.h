@@ -32,11 +32,12 @@ extern "C" {
 
 // runtime flags
 #define RT_LOAD_OSCCAL 0x01
-#define RT_DATA_SENT   0x02
-#define RT_DATA_POLL   0x04
-#define RT_DATA_INIT   0x08
-#define RT_LSD_ECHO    0x10 // local sensor data log
-#define RT_OLED_ECHO   0x20 // output data to oled
+#define RT_TSYNCED     0x02
+#define RT_DATA_SENT   0x04
+#define RT_DATA_POLL   0x08
+#define RT_DATA_INIT   0x10
+#define RT_LSD_ECHO    0x20 // local sensor data log
+#define RT_OLED_ECHO   0x40 // output data to oled
 #define RT_RX_ECHO     0x80
 
 // active components
