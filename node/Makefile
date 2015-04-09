@@ -113,7 +113,13 @@ EXTRAINCDIRS =
 CSTANDARD = -std=gnu99
 
 # Place -D or -U options here
-CDEFS = -DF_CPU=$(F_CPU)UL -D_DEBUG=1
+CDEFS = -DF_CPU=$(F_CPU)UL
+
+# Debug on/off
+CDEFS += -D_DEBUG=1
+
+# Replace default length of 128 byte of command-line buffer
+CDEFS += -DCMD_LEN=0x1F
 
 # Peter's' Fleury UART library parameters
 # uncomment and adapt these line if you want different UART library buffer size
