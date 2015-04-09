@@ -409,10 +409,8 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 		if (ridx == (len + 2)) { // data should contain tail (0x55) now
 			ridx = 0; // reset buffer index
 			if (data != 0x55) {
-				if (dbg) {
-					puts_hex(data);
-					uart_puts(PSTR(" - wrong tail marker\n"));
-				}
+				if (dbg)
+					uart_puts_p(PSTR(" - wrong tail marker\n"));
 				continue;
 			}
 

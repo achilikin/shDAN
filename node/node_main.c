@@ -144,6 +144,7 @@ static int8_t rf_receive(dnode_t *msg, uint8_t flags)
 static inline void sync_time(dnode_t *dval)
 {
 	ts_unpack(dval);
+	rt_flags |= RT_TSYNCED;
 	ATOMIC_BLOCK(ATOMIC_FORCEON) {
 		rtc_hour = dval->hour;
 		rtc_min  = dval->min;
@@ -339,7 +340,7 @@ int main(void)
 
 				if (n == (sizeof(sens)/sizeof(sens[0]) - 1)) {
 					dval.stat |= STAT_EOS;
-					if (isync == tsync) {
+					if (isync >= tsync || !(rt_flags & RT_TSYNCED)) {
 						dval.nid |= NODE_TSYNC; // request time sync
 						dval.stat &= ~STAT_VBAT; // update battery voltage
 						dval.stat |= rfm12_battery(RFM_MODE_IDLE, 14) & STAT_VBAT;
@@ -441,8 +442,11 @@ void print_status(dnode_t *val)
 	get_vbat(val, buf);
 	printf_P(PSTR("Sensor ID %d, txpwr %ddB, %s\n"), nid, -3*txpwr, buf);
 	get_rtc_time(buf);
-	printf_P(PSTR("RTC time %s "), buf);
-	printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
+	uart_puts_p(PSTR("RTC time "));
+	if (rt_flags & RT_TSYNCED)
+		uart_puts_p(PSTR("(is not set) "));
+	uart_puts(buf);
+	printf_P(PSTR(" Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
 }
 
 int8_t poll_bmp180(dnode_t *dval, void *ptr)

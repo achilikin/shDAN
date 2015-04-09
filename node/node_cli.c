@@ -33,6 +33,12 @@
 #include "node_main.h"
 
 static const char version[] PROGMEM = "2015-04-09\n";
+static const char *pstr_eol = version + 10;
+
+// some PROGMEM strings pooling
+static const char pstr_on[] PROGMEM = "on";
+static const char pstr_off[] PROGMEM = "off";
+static const char pstr_echo[] PROGMEM = "%s echo %s\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -69,14 +75,15 @@ int8_t cli_node(char *buf, void *ptr)
 
 	// SW reset
 	if (str_is(cmd, PSTR("reset"))) {
-		puts_P(PSTR("\nresetting..."));
+		uart_puts_p(PSTR("\nresetting..."));
 		wdt_enable(WDTO_15MS);
 		while(1);
 	}
 
 	if (str_is(cmd, PSTR("time"))) {
 		get_rtc_time(cmd);
-		printf_P(PSTR("%s\n"), cmd);
+		uart_puts(cmd);
+		uart_puts_p(pstr_eol);
 		return 0;
 	}
 
@@ -93,11 +100,14 @@ int8_t cli_node(char *buf, void *ptr)
 		}
 
 		if (str_is(arg, PSTR("led"))) {
-			if (str_is(sval, PSTR("on")))
+			if (str_is(sval, pstr_on))
 				active |= DLED_ACTIVE;
-			if (str_is(sval, PSTR("off")))
+			if (str_is(sval, pstr_off))
 				active &= ~DLED_ACTIVE;
-			printf_P(PSTR("%s is %s\n"), arg, is_on(active & DLED_ACTIVE));
+			uart_puts(arg);
+			uart_puts_p(PSTR(" is "));
+			uart_puts(is_on(active & DLED_ACTIVE));
+			uart_puts_p(pstr_eol);
 			return 0;
 		}
 
@@ -149,7 +159,7 @@ int8_t cli_node(char *buf, void *ptr)
 	}
 
 	if (str_is(cmd, PSTR("calibrate"))) {
-		puts_P(PSTR("\ncalibrating..."));
+		uart_puts_p(PSTR("\ncalibrating..."));
 		if (str_is(arg, PSTR("default")))
 			serial_calibrate(osccal_def);
 		else
@@ -158,7 +168,7 @@ int8_t cli_node(char *buf, void *ptr)
 	}
 
 	if (str_is(cmd, PSTR("poll"))) {
-		puts_P(PSTR("polling..."));
+		uart_puts_p(PSTR("polling..."));
 		rt_flags |= RT_DATA_POLL;
 		return 0;
 	}
@@ -166,17 +176,17 @@ int8_t cli_node(char *buf, void *ptr)
 	if (str_is(cmd, PSTR("echo"))) {
 		if (str_is(arg, PSTR("rx"))) {
 			rt_flags ^= RT_RX_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RT_RX_ECHO));
+			printf_P(pstr_echo, arg, is_on(rt_flags & RT_RX_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("lsd"))) {
 			rt_flags ^= RT_LSD_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RT_LSD_ECHO));
+			printf_P(pstr_echo, arg, is_on(rt_flags & RT_LSD_ECHO));
 			return 0;
 		}
-		if (str_is(arg, PSTR("off"))) {
+		if (str_is(arg, pstr_off)) {
 			rt_flags = 0;
-			printf_P(PSTR("echo OFF\n"));
+			uart_puts_p(PSTR("echo OFF\n"));
 			return 0;
 		}
 		return -1;
@@ -218,6 +228,5 @@ int8_t cli_node(char *buf, void *ptr)
 		return 0;
 	}
 
-	printf_P(PSTR("Unknown command '%s'\n"), cmd);
 	return -2;
 }

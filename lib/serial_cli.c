@@ -106,9 +106,9 @@ int8_t cli_interact(cli_processor *process, void *ptr)
 			if (ret == 0)
 				memcpy(hist, cmd, sizeof(cmd));
 			else if (ret == -1)
-				puts_P(PSTR("Invalid format"));
+				uart_puts_p(PSTR("Invalid format\n"));
 			else if (ret == -2)
-				printf_P(PSTR("Unknown command '%s'\n"), cmd);
+				uart_puts_p(PSTR("Unknown command\n"));
 		}
 		for(uint8_t i = 0; i < cursor; i++)
 			cmd[i] = '\0';

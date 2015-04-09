@@ -25,7 +25,9 @@ extern "C" {
 #endif
 #endif
 
-#define CMD_LEN 0x07F // big enough for our needs
+#ifndef CMD_LEN
+#define CMD_LEN 0x7F // big enough for our needs
+#endif
 
 // command line processing, retuns:
 //  0 - success

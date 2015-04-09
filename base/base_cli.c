@@ -381,6 +381,5 @@ int8_t cli_base(char *buf, void *rht)
 		return 0;
 	}
 
-	printf_P(PSTR("Unknown command '%s'\n"), cmd);
-	return -1;
+	return -2; // unknown command
 }
