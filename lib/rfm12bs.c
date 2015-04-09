@@ -410,7 +410,7 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 			ridx = 0; // reset buffer index
 			if (data != 0x55) {
 				if (dbg)
-					uart_puts_p(PSTR(" - wrong tail marker\n"));
+					uart_puts_p(PSTR("- wrong tail marker\n"));
 				continue;
 			}
 
