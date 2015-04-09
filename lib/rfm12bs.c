@@ -370,12 +370,24 @@ int8_t rfm12_send(void *buf, uint8_t len)
 	return 0;
 }
 
+static inline void puts_hex(uint8_t data)
+{
+	uint8_t hex = (data >> 4) + '0';
+	if (hex > '9') hex += 7;
+	uart_putc(hex);
+	hex = (data & 0x0F) + '0';
+	if (hex > '9') hex += 7;
+	uart_putc(hex);
+	uart_putc(' ');
+}
+
 // receive data, use data len as packet start byte
 // if adc is no null then start ADC conversion to read ARSSI
 // (RFM12BS supplies analogue RSSI output on one of the capacitors)
 uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 {
 	static uint8_t ridx = 0;
+	static uint8_t rcrc = 0;
 	uint8_t *buf = (uint8_t *)dbuf;
 	uint8_t adc = flags & RFM_RX_ADC_MASK;
 	uint8_t dbg = flags & RFM_RX_DEBUG;
@@ -385,15 +397,8 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 		if (adc)
 			analogStart();
 		uint8_t data = (uint8_t)ch;
-		if (dbg) {
-			uint8_t hex = (data >> 4) + '0';
-			if (hex > '9') hex += 7;
-			uart_putc(hex);
-			hex = (data & 0x0F) + '0';
-			if (hex > '9') hex += 7;
-			uart_putc(hex);
-			uart_putc(' ');
-		}
+		if (dbg)
+			puts_hex(data);
 
 		if (ridx == 0) {
 			if (data == len)
@@ -401,9 +406,15 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 			continue;
 		}
 
-		if (ridx == (len + 1)) { // data should contain CRC now
+		if (ridx == (len + 2)) { // data should contain tail (0x55) now
 			ridx = 0; // reset buffer index
-			rfm12_reset_fifo();
+			if (data != 0x55) {
+				if (dbg) {
+					puts_hex(data);
+					uart_puts(PSTR(" - wrong tail marker\n"));
+				}
+				continue;
+			}
 
 			uint8_t crc = rfm_crc8(rfm_sync, len);
 			if (dbg)
@@ -415,14 +426,19 @@ uint8_t rfm12_receive_data(void *dbuf, uint8_t len, uint8_t flags)
 					printf_P(PSTR("data %02X %3u %02X\n"), buf[i], buf[i], crc);
 
 			}
-			if (crc == data)
+			if (crc == rcrc) {
+				rfm12_reset_fifo();
 				return len;
+			}
 			// wrong crc
 			if (dbg)
-				printf_P(PSTR("len %d wrong crc %02X must be %02X\n"), len, crc, data);
+				printf_P(PSTR("wrong crc %02X must be %02X\n"), crc, rcrc);
 			continue;
 		}
-		buf[ridx - 1] = data ^ 0xA5;
+		if (ridx <= len)
+			buf[ridx - 1] = data ^ 0xA5;
+		else
+			rcrc = data;
 		ridx++;
 	}
 
