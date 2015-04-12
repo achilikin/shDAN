@@ -59,21 +59,11 @@ const char cmd_list[] PROGMEM =
 	"  txpwr 0-3\n"
 	"  radio on|off\n";
 
-static const char form_echo[] PROGMEM = "%s echo %s\n";
-
-static int8_t show_time(void)
-{
-	uint8_t ts[3];
-	if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
-		// reset our sw clock
-		sw_clock = ts[2];
-		sw_clock += ts[1] * 60;
-		sw_clock += ts[0] * 3600;
-		printf_P(PSTR("%02d:%02d:%02d\n"), ts[0], ts[1], ts[2]);
-		return 0;
-	}
-	return -1;
-}
+extern const char pstr_time[];
+static const char pstr_on[] PROGMEM = "on";
+static const char pstr_off[] PROGMEM = "off";
+static const char pstr_echo[] PROGMEM = "%s echo %s\n";
+static const char pstr_set_to[] PROGMEM = "%s set to %d\n";
 
 int8_t cli_base(char *buf, void *rht)
 {
@@ -91,13 +81,14 @@ int8_t cli_base(char *buf, void *rht)
 	}
 
 	if (str_is(cmd, PSTR("time")))
-		return show_time();
+		return print_rtc_time();
 	
 	if (str_is(cmd, PSTR("date"))) {
 		pcf_td_t td;
 		if (pcf2127_get_date(&td) == 0) {
-			printf_P(PSTR("20%02d/%02d/%02d %02d:%02d:%02d\n"),
-				td.year, td.month, td.day, td.hour, td.min, td.sec);
+			printf_P(PSTR("20%02d/%02d/%02d "), td.year, td.month, td.day);
+			printf_P(pstr_time, td.hour, td.min, td.sec);
+			uart_puts_p("\n");
 		}
 		return 0;
 	}
@@ -124,7 +115,7 @@ int8_t cli_base(char *buf, void *rht)
 					printf_P(PSTR("%3u | "), i*16);
 					for(int8_t n = 0; n < 16; n++)
 						printf("%02X ", cmd[n]);
-					printf("\n");
+					uart_puts("\n");
 				}
 				return 0;
 			}
@@ -133,11 +124,11 @@ int8_t cli_base(char *buf, void *rht)
 				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
 					printf("%02X ", i);
 				}
-				printf("\n");
+				uart_puts("\n");
 				for(int8_t i = 0; i < PCF_MAX_REG; i++) {
 					printf("%02X ", cmd[i]);
 				}
-				printf("\n");
+				uart_puts("\n");
 			}
 			return 0;
 		}
@@ -145,21 +136,21 @@ int8_t cli_base(char *buf, void *rht)
 		if (str_is(arg, PSTR("dst"))) {
 			uint8_t ts[3];
 			pcf2127_get_time((pcf_td_t *)ts, 0);
-			if (str_is(sval, PSTR("on"))) {
+			if (str_is(sval, pstr_on)) {
 				uint8_t hour = ts[0] + 1;
 				if (hour > 23)
 					hour = 0;
 				ts[0] = hour;
 				pcf2127_set_time((pcf_td_t *)ts);
-				return show_time();
+				return print_rtc_time();
 			}
-			if (str_is(sval, PSTR("off"))) {
+			if (str_is(sval, pstr_off)) {
 				if (ts[0] != 0)
 					ts[0] -= 1;
 				else
 					ts[0] = 23;
 				pcf2127_set_time((pcf_td_t *)ts);
-				return show_time();
+				return print_rtc_time();
 			}
 			return -1;
 		}
@@ -209,13 +200,13 @@ int8_t cli_base(char *buf, void *rht)
 	}
 
 	if (str_is(cmd, PSTR("reset"))) {
-		puts_P(PSTR("\nresetting..."));
+		uart_puts_p(PSTR("\nresetting..."));
 		wdt_enable(WDTO_15MS);
 		while(1);
 	}
 
 	if (str_is(cmd, PSTR("calibrate"))) {
-		puts_P(PSTR("\ncalibrating..."));
+		uart_puts_p(PSTR("\ncalibrating..."));
 		if (str_is(arg, PSTR("default")))
 			serial_calibrate(osccal_def);
 		else
@@ -224,16 +215,16 @@ int8_t cli_base(char *buf, void *rht)
 	}
 
 	if (str_is(cmd, PSTR("poll"))) {
-		puts_P(PSTR("polling..."));
+		uart_puts_p(PSTR("polling..."));
 		rht_read(rht, RT_RHT_ECHO, rds_data);
 		ns741_rds_set_radiotext(rds_data);
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("log"))) {
-		if (str_is(arg, PSTR("on")))
+		if (str_is(arg, pstr_on))
 			rt_flags |= RT_RHT_LOG;
-		if (str_is(arg, PSTR("off")))
+		if (str_is(arg, pstr_off))
 			rt_flags &= ~RT_RHT_LOG;
 		printf_P(PSTR("log is %s\n"), is_on(rt_flags & RT_RHT_LOG));
 		return 0;
@@ -242,12 +233,12 @@ int8_t cli_base(char *buf, void *rht)
 	if (str_is(cmd, PSTR("echo"))) {
 		if (str_is(arg, PSTR("rht"))) {
 			rt_flags ^= RT_RHT_ECHO;
-			printf_P(form_echo, arg, is_on(rt_flags & RT_RHT_ECHO));
+			printf_P(pstr_echo, arg, is_on(rt_flags & RT_RHT_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("dan"))) {
 			rt_flags ^= RT_DAN_ECHO;
-			printf_P(form_echo, arg, is_on(rt_flags & RT_DAN_ECHO));
+			printf_P(pstr_echo, arg, is_on(rt_flags & RT_DAN_ECHO));
 			return 0;
 		}
 		if (str_is(arg, PSTR("rds"))) {
@@ -256,10 +247,10 @@ int8_t cli_base(char *buf, void *rht)
 		}
 		if (str_is(arg, PSTR("rx"))) {
 			rt_flags ^= RT_RX_ECHO;
-			printf_P(form_echo, arg, is_on(rt_flags & RT_RX_ECHO));
+			printf_P(pstr_echo, arg, is_on(rt_flags & RT_RX_ECHO));
 			return 0;
 		}
-		if (str_is(arg, PSTR("off"))) {
+		if (str_is(arg, pstr_off)) {
 			rt_flags &= ~(RT_RHT_ECHO | RT_RHT_LOG | RT_DAN_ECHO | RT_RX_ECHO);
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
@@ -320,20 +311,14 @@ int8_t cli_base(char *buf, void *rht)
 	}
 
 	if (str_is(cmd, PSTR("status"))) {
-		printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
-		printf_P(PSTR("RDSID %s, %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
-			rds_name, fm_freq,
-			is_on(ns_pwr_flags & NS741_POWER), is_on(ns_rt_flags & NS741_STEREO),
-			ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
-		printf_P(PSTR("%s %s\n"), rds_data, hpa);
-		print_rd();
+		print_status(1);
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("freq"))) {
 		uint16_t freq = atoi((const char *)arg);
 		if (freq < NS741_MIN_FREQ || freq > NS741_MAX_FREQ) {
-			puts_P(PSTR("Frequency is out of band\n"));
+			uart_puts_p(PSTR("Frequency is out of band\n"));
 			return -1;
 		}
 		freq = NS741_FREQ_STEP*(freq / NS741_FREQ_STEP);
@@ -342,8 +327,8 @@ int8_t cli_base(char *buf, void *rht)
 			ns741_set_frequency(radio_freq);
 			eeprom_update_word(&em_radio_freq, radio_freq);
 		}
-		printf_P(PSTR("%s set to %u\n"), cmd, radio_freq);
-		sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
+		printf_P(pstr_set_to, cmd, radio_freq);
+		get_fm_freq(fm_freq);
 		ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
 		return 0;
 	}
@@ -351,13 +336,13 @@ int8_t cli_base(char *buf, void *rht)
 	if (str_is(cmd, PSTR("txpwr"))) {
 		uint8_t pwr = atoi((const char *)arg);
 		if (pwr > 3) {
-			puts_P(PSTR("Invalid TX power level\n"));
+			uart_puts_p(PSTR("Invalid TX power level\n"));
 			return -1;
 		}
 		ns_pwr_flags &= ~NS741_TXPWR;
 		ns_pwr_flags |= pwr;
 		ns741_txpwr(pwr);
-		printf_P(PSTR("%s set to %d\n"), cmd, pwr);
+		printf_P(pstr_set_to, cmd, pwr);
 		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
 
 		get_tx_pwr(status);
@@ -368,9 +353,9 @@ int8_t cli_base(char *buf, void *rht)
 	}
 
 	if (str_is(cmd, PSTR("radio"))) {
-		if (str_is(arg, PSTR("on")))
+		if (str_is(arg, pstr_on))
 			ns_pwr_flags |= NS741_POWER;
-		else if (str_is(arg, PSTR("off")))
+		else if (str_is(arg, pstr_off))
 			ns_pwr_flags &= ~NS741_POWER;
 		ns741_radio_power(ns_pwr_flags & NS741_POWER);
 		printf_P(PSTR("radio %s\n"), is_on(ns_pwr_flags & NS741_POWER));

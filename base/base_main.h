@@ -73,8 +73,11 @@ extern uint32_t sw_clock;
 
 #define ADC_MASK (ADC_PA4 | ADC_PA3)
 
-void get_tx_pwr(char *buf); // get current NS741 tx power
+void get_tx_pwr(char *buf);  // get current NS741 tx power
+void get_fm_freq(char *buf); // get current NS741 FM frequency
 void print_rd(void); // print remote sensor data
+int8_t print_rtc_time(void);
+void print_status(uint8_t verbose);
 
 int8_t cli_base(char *buf, void *rht);
 

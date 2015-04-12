@@ -78,10 +78,13 @@ uint32_t sw_clock;
 
 bmp180_t press;
 
+// the latest message from a data node and corresponding information
 dnode_t  rd;
 uint16_t rd_bv;     // battery voltage
 uint8_t  rd_ts[3];  // last session time
 uint8_t  rd_signal; // session signal
+
+uint16_t dans; // mask of detected DANs
 
 // adc channel ARSSI connected to (> 0)
 #define ARSSI_ADC 5
@@ -96,12 +99,17 @@ static const char *s_pwr[4] = {
 };
 
 // avr-gcc does not do string pooling for PROGMEM
-static const char form_time[] PROGMEM = "%02d:%02d:%02d";
+const char pstr_time[] PROGMEM = "%02d:%02d:%02d";
 
 void get_tx_pwr(char *buf)
 {
 	sprintf_P(buf, PSTR("TxPwr %smW %s"), s_pwr[ns_pwr_flags & NS741_TXPWR], 
 		ns_pwr_flags & NS741_POWER ? "on" : "off");
+}
+
+void get_fm_freq(char *buf)
+{
+	sprintf_P(buf, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
 }
 
 // simple bubble sort for uint8 arrays
@@ -134,6 +142,7 @@ int main(void)
 
 	mmr_led_on(); // turn on LED while booting
 
+	dans = 0;
 	rht.valid = 0;
 	rht.errors = 0;
 
@@ -183,6 +192,7 @@ int main(void)
 	radio_freq = eeprom_read_word(&em_radio_freq);
 	if (radio_freq < NS741_MIN_FREQ) radio_freq = NS741_MIN_FREQ;
 	if (radio_freq > NS741_MAX_FREQ) radio_freq = NS741_MAX_FREQ;
+	get_fm_freq(fm_freq);
 	ns741_set_frequency(radio_freq);
 	ns741_txpwr(ns_pwr_flags & NS741_TXPWR);
 	ns741_stereo(NS741_STEREO);
@@ -200,11 +210,6 @@ int main(void)
 		printf_P(PSTR("delay(1000) = %u\n"), ms);
 	}
 #endif
-	sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
-	printf_P(PSTR("ID '%s', %s Radio %s, TX Power %d\n"),
-		rds_name, fm_freq,
-		is_on(ns_pwr_flags & NS741_POWER), ns_pwr_flags & NS741_TXPWR);
-
 	rht_read(&rht, rt_flags & RT_RHT_ECHO, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
@@ -224,8 +229,10 @@ int main(void)
 	sw_clock = 0;
 	
 	mmr_led_off();
+	print_status(0);
 	cli_init();
 
+	rd.nid = 0;
 	// initialize ADC interrupt data
 	aidx = 0;
 	for(uint8_t i = 0; i < 8; i++)
@@ -258,7 +265,7 @@ int main(void)
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
 				if (rt_flags & RT_DAN_ECHO) {
-					printf_P(form_time, rd_ts[0], rd_ts[1], rd_ts[2]);
+					printf_P(pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 					printf_P(PSTR(" sync %02X\n"), rd.nid);
 				}
 			}
@@ -289,9 +296,12 @@ int main(void)
 			if (rt_flags & RT_DAN_ECHO)
 				print_rd();
 
-			if ((rd.nid & SENS_MASK) != SENS_LIST) {
+			if ((rd.nid & SENS_MASK) == SENS_LIST) {
+				dans |= 1 << (rd.nid & NID_MASK); // add this DAN to the list
+			}
+			else {
 				// overwrite FM frequency on the screen
-				sprintf_P(fm_freq, form_time, rd_ts[0], rd_ts[1], rd_ts[2]);
+				sprintf_P(fm_freq, pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 				ossd_putlx(0, -1, fm_freq, 0);
 				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
 				ossd_putlx(4, -1, fm_freq, 0);
@@ -333,7 +343,7 @@ int main(void)
 			if (rt_flags & RT_RHT_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
-				printf_P(form_time, ts[0], ts[1], ts[2]);
+				printf_P(pstr_time, ts[0], ts[1], ts[2]);
 				printf_P(PSTR(" %d.%d %d.%d %d.%02d\n"),
 					rht.temperature.val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec,
@@ -345,7 +355,10 @@ int main(void)
 
 void print_rd(void)
 {
-	printf_P(form_time, rd_ts[0], rd_ts[1], rd_ts[2]);
+	if (rd.nid == 0)
+		return;
+
+	printf_P(pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 	uart_puts_p(PSTR(" | "));
 	for(uint8_t i = 0; i < 4; i++) {
 		uint8_t *pu8 = (uint8_t *)&rd;
@@ -364,5 +377,49 @@ void print_rd(void)
 			rd_bv, rd.val, rd.dec,
 			rd_arssi, rd_signal);
 	}
-	printf_P(PSTR("\n"));
+	uart_puts("\n");
+}
+
+int8_t print_rtc_time(void)
+{
+	uint8_t ts[3];
+	if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
+		// reset our sw clock
+		sw_clock = ts[2];
+		sw_clock += ts[1] * 60;
+		sw_clock += ts[0] * 3600;
+		printf_P(pstr_time, ts[0], ts[1], ts[2]);
+		uart_puts("\n");
+		return 0;
+	}
+	return -1;
+}
+
+void print_status(uint8_t verbose)
+{
+	if (verbose) {
+		uart_puts_p(PSTR("RTC time: "));
+		print_rtc_time();
+		printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"),
+			uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
+	}
+	get_fm_freq(fm_freq);
+	printf_P(PSTR("RDSID '%s', %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
+		rds_name, fm_freq,
+		is_on(ns_pwr_flags & NS741_POWER), is_on(ns_rt_flags & NS741_STEREO),
+		ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
+	if (verbose) {
+		printf_P(PSTR("%s %s\n"), rds_data, hpa);
+		uart_puts_p(PSTR("Active nodes:"));
+		if (dans) {
+			for(uint8_t n = 1; n < 15; n++) {
+				if (dans & (1 << n))
+					printf_P(PSTR(" %u"), n);
+			}
+		}
+		else
+			uart_puts_p(PSTR(" none"));
+		uart_puts("\n");
+		print_rd();
+	}
 }
