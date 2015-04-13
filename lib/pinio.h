@@ -48,32 +48,32 @@
 #define EXINT1  PD3 // an extra pin soldered to INT1 (PD3)
 #define LED1	PD7 // LED1
 
-#define PNB0	0  // TP4, T0
-#define PNB1	1  // TP5, T1
-#define PNB2	2  // NC
-#define PNB3	3  // NC
-#define PNB4	4  // SPI SS, if soldered 
-#define PNB5	5  // TP7, MOSI
-#define PNB6	6  // TP3, MISO
-#define PNB7	7  // TP10, SCK
+#define PNB0	0x00  // TP4, T0
+#define PNB1	0x01  // TP5, T1
+#define PNB2	0x02  // NC
+#define PNB3	0x03  // NC
+#define PNB4	0x04  // SPI SS, if soldered 
+#define PNB5	0x05  // TP7, MOSI
+#define PNB6	0x06  // TP3, MISO
+#define PNB7	0x07  // TP10, SCK
 
-#define PND0	8  // RXD
-#define PND1	9  // TXD
-#define PND2	10 // RDSINT
-#define PND3	11 // INT1, if soldered
-#define PND4	12 // NC
-#define PND5	13 // NC
-#define PND6	14 // NC
-#define PND7	15 // LED1
+#define PNC0	0x10 //
+#define PNC1	0x11 //
+#define PNC2	0x12 //
+#define PNC3	0x13 //
+#define PNC4	0x14 //
+#define PNC5	0x15 //
+#define PNC6	0x16 //
+#define PNC7	0x17 //
 
-#define PNC0	16 //
-#define PNC1	17 //
-#define PNC2	18 //
-#define PNC3	19 //
-#define PNC4	20 //
-#define PNC5	21 //
-#define PNC6	22 //
-#define PNC7	23 //
+#define PND0	0x20 // RXD
+#define PND1	0x21 // TXD
+#define PND2	0x22 // RDSINT
+#define PND3	0x23 // INT1, if soldered
+#define PND4	0x24 // NC
+#define PND5	0x25 // NC
+#define PND6	0x26 // NC
+#define PND7	0x27 // LED1
 
 #define ADC0 0
 #define ADC1 1
@@ -137,19 +137,20 @@ static inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
 	return (*port & mask);
 }
 
-// reads PINB register
-static inline uint8_t get_pinb(uint8_t pin)
-{
-	return (PINB & _BV(pin));
-}
+#define get_pinb(pin) (PINB & _BV(pin))
+#define get_pinc(pin) (PINC & _BV(pin))
+#define get_pind(pin) (PIND & _BV(pin))
 
 #define set_pinb(pin) (PORTB |= _BV(pin))
-#define set_pind(pin) (PORTD |= _BV(pin))
 #define set_pinc(pin) (PORTC |= _BV(pin))
+#define set_pind(pin) (PORTD |= _BV(pin))
 
 #define clear_pinb(pin) (PORTB &= ~_BV(pin))
-#define clear_pind(pin) (PORTD &= ~_BV(pin))
 #define clear_pinc(pin) (PORTC &= ~_BV(pin))
+#define clear_pind(pin) (PORTD &= ~_BV(pin))
+
+uint8_t digitalRead(uint8_t pin);
+void digitalWrite(uint8_t pin, uint8_t val);
 
 // Port access
 // *mode(INPUT_HIGHZ) or *mode(OUTPUT_LOW)
