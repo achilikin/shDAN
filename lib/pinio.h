@@ -21,6 +21,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+// defines for pinMode()
 #define INPUT 	    0
 #define INPUT_HIGHZ 0
 #define OUTPUT	    1
@@ -148,6 +149,9 @@ static inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
 #define clear_pinb(pin) (PORTB &= ~_BV(pin))
 #define clear_pinc(pin) (PORTC &= ~_BV(pin))
 #define clear_pind(pin) (PORTD &= ~_BV(pin))
+
+void pinDir(uint8_t pin, uint8_t dir);
+void pinMode(uint8_t pin, uint8_t mode);
 
 uint8_t digitalRead(uint8_t pin);
 void digitalWrite(uint8_t pin, uint8_t val);

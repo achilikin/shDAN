@@ -17,11 +17,30 @@
 */
 #include "pinio.h"
 
-volatile uint8_t *ports[3] = { &PORTB, &PORTC, &PORTD };
+static volatile uint8_t *ports[3] = { &PORTB, &PORTC, &PORTD };
+
+void pinDir(uint8_t pin, uint8_t dir)
+{
+	volatile uint8_t *port = ports[pin >> 4];
+	uint8_t mask = 1 << (pin & 0x07);
+	
+	_pin_dir(port - 2, mask, dir);
+}
+
+void pinMode(uint8_t pin, uint8_t mode)
+{
+	volatile uint8_t *port = ports[pin >> 4];
+	uint8_t mask = 1 << (pin & 0x07);
+	if (mode & 0x01)
+		*(port - 1) |= mask;
+	else
+		*(port - 1) &= ~mask;
+	_pin_set(port, mask, mode & 0x02);
+}
 
 uint8_t digitalRead(uint8_t pin)
 {
-	volatile uint8_t *port = ports[pin >> 4];
+	volatile uint8_t *port = ports[pin >> 4] - 2;
 	if (*port & (1 << (pin & 0x07)))
 		return 1;
 	return 0;
