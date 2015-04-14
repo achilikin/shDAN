@@ -351,8 +351,8 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="2.8"
-     inkscape:cx="231.71029"
-     inkscape:cy="255.01479"
+     inkscape:cx="479.76745"
+     inkscape:cy="469.3005"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -865,12 +865,12 @@
          id="tspan3156"
          sodipodi:role="line">CRC</tspan></text>
     <rect
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect3158"
        width="80.272881"
-       height="34.276356"
+       height="34.999996"
        x="92.06295"
-       y="127.98473" />
+       y="128.22812" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
@@ -883,12 +883,12 @@
          x="112.90557"
          y="152.23106">xAA</tspan></text>
     <rect
-       y="127.98473"
+       y="128.22812"
        x="172.37057"
-       height="34.276356"
-       width="80.272881"
+       height="34.999992"
+       width="79.191872"
        id="rect3164"
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:none;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        sodipodi:linespacing="125%"
        id="text3166"
@@ -901,19 +901,19 @@
          id="tspan3168"
          sodipodi:role="line">xAA</tspan></text>
     <rect
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;stroke:#000000;stroke-width:0.99999988;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect3170"
-       width="80.272881"
-       height="34.276356"
-       x="252.67821"
-       y="127.98473" />
+       width="80.918297"
+       height="34.999996"
+       x="251.56245"
+       y="128.22812" />
     <rect
-       y="127.98473"
+       y="128.22812"
        x="332.48074"
-       height="34.276356"
-       width="80.272881"
+       height="34.999996"
+       width="79.081703"
        id="rect3172"
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:none;stroke:#000000;stroke-width:0.99999982;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
@@ -937,12 +937,12 @@
          id="tspan3180"
          sodipodi:role="line">xD4</tspan></text>
     <rect
-       y="127.98473"
-       x="12.062457"
-       height="34.276356"
-       width="80.272881"
+       y="128.22812"
+       x="11.562458"
+       height="34.999996"
+       width="80.772881"
        id="rect3182"
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:none;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        sodipodi:linespacing="125%"
        id="text3184"
@@ -955,12 +955,12 @@
          id="tspan3186"
          sodipodi:role="line">xAA</tspan></text>
     <rect
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect3188"
-       width="152.50198"
-       height="34.00811"
-       x="413.10132"
-       y="128.11885" />
+       width="155.00008"
+       height="35.000008"
+       x="411.56247"
+       y="128.22812" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
@@ -973,12 +973,12 @@
          x="439.26471"
          y="150.77538">... packet ...</tspan></text>
     <rect
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect3194"
-       width="80.272881"
-       height="34.276356"
-       x="565.23047"
-       y="127.98473" />
+       width="80"
+       height="35.000011"
+       x="566.56244"
+       y="128.22812" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
@@ -991,10 +991,10 @@
          x="587.92126"
          y="152.12669">x55</tspan></text>
     <rect
-       y="127.98473"
-       x="645.40955"
-       height="34.276356"
-       width="80.272881"
+       y="128.22812"
+       x="646.56244"
+       height="35.000011"
+       width="79.999992"
        id="rect3200"
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
@@ -1032,28 +1032,28 @@
          y="118.96093">preamble</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 252.618,127.31768 0.0297,-11.04665"
+       d="m 251.56246,128.22812 0.0297,-11.04665"
        id="path3130"
        inkscape:connector-curvature="0" />
     <path
        inkscape:connector-curvature="0"
        id="path3132"
-       d="m 12.169919,127.24465 0.0297,-11.04665"
+       d="m 11.562457,128.22812 0.0297,-11.04665"
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <path
        inkscape:connector-curvature="0"
        id="path3134"
-       d="m 412.79656,127.31768 0.0297,-11.04665"
+       d="m 411.53276,129.27477 0.0297,-11.04665"
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <path
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 565.2876,127.31768 0.0297,-11.04665"
+       d="m 566.53276,129.27477 0.0297,-11.04665"
        id="path3136"
        inkscape:connector-curvature="0" />
     <path
        inkscape:connector-curvature="0"
        id="path3138"
-       d="m 725.56896,127.31768 0.0297,-11.04665"
+       d="m 726.53276,129.27477 0.0297,-11.04665"
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        sodipodi:linespacing="125%"
@@ -1085,13 +1085,13 @@
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker6454)"
-       d="m 413.03571,162.09433 -87.32143,56.69643"
+       d="m 411.56246,163.22812 -85.84818,55.56264"
        id="path6882"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker6904)"
-       d="m 564.77679,162.00504 83.79463,56.07143"
+       d="m 566.56246,163.22812 82.00896,54.84835"
        id="path6896"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
