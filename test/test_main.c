@@ -88,19 +88,22 @@ int main(void)
 	_pin_mode(&DDRD, _BV(PD2), INPUT_UP);
 	_pin_mode(&DDRD, _BV(PD3), INPUT_UP);
 
-	mmr_led_off();
+	// alternative to mmr_led_off()
+	pinMode(PND7, OUTPUT_HIGH);
 
+	uint8_t led = 0;
 	for(;;) {
 		cli_interact(cli_test, NULL);
 		// once-a-second checks
 		if (tenth_clock >= 10) {
-			mmr_led_on();
+			led ^= 0x02;
+			// instead of mmr_led_on()/mmr_led_off() 
+			pinMode(PND7, OUTPUT | led);
 			tenth_clock = 0;
 			uptime++;
 			swtime++;
 			if (swtime == 86400)
 				swtime = 0;
-			mmr_led_off();
 		}
 	}
 }

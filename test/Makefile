@@ -73,8 +73,8 @@ TARGET = test_main
 # List C source files here. (C dependencies are automatically generated.)
 ###############################################################################
 
-SRC = $(TARGET).c test_cli.c ../lib/serial.c  ../lib/serial_cli.c ../lib/timer.c \
-	../lib/uart.c
+SRC = $(TARGET).c test_cli.c ../lib/pinio.c ../lib/serial.c  \
+	../lib/serial_cli.c ../lib/timer.c ../lib/uart.c
 SRCPP = 
 
 # List Assembler source files here.
