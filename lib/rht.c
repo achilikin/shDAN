@@ -17,6 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
+#include <avr/pgmspace.h>
 
 #include "rht.h"
 #include "timer.h"
@@ -29,7 +30,7 @@ int8_t rht_read(rht_t *rht, int8_t echo, char *dst)
 	if (ret == 0) {
 		rht_get_temperature(rht);
 		rht_get_humidity(rht);
-		sprintf(dst, "T %d.%d H %d.%d",
+		sprintf_P(dst, PSTR("T %d.%02d H %d.%02d"),
 			rht->temperature.val, rht->temperature.dec,
 			rht->humidity.val, rht->humidity.dec);
 	}
