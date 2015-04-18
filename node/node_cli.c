@@ -32,7 +32,7 @@
 
 #include "node_main.h"
 
-static const char version[] PROGMEM = "2015-04-09\n";
+static const char version[] PROGMEM = "2015-04-18\n";
 static const char *pstr_eol = version + 10;
 
 // some PROGMEM strings pooling

@@ -34,7 +34,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-04-08\n";
+static const char version[] PROGMEM = "2015-04-18\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -88,7 +88,7 @@ int8_t cli_base(char *buf, void *rht)
 		if (pcf2127_get_date(&td) == 0) {
 			printf_P(PSTR("20%02d/%02d/%02d "), td.year, td.month, td.day);
 			printf_P(pstr_time, td.hour, td.min, td.sec);
-			uart_puts_p("\n");
+			uart_puts("\n");
 		}
 		return 0;
 	}
@@ -111,7 +111,8 @@ int8_t cli_base(char *buf, void *rht)
 		if (str_is(arg, PSTR("dump"))) {
 			if (str_is(sval, PSTR("mem"))) {
 				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++) {
-					pcf2127_ram_read(i*16, (uint8_t *)cmd, 16);
+					if (pcf2127_ram_read(i*16, (uint8_t *)cmd, 16) != 0)
+						return -1;
 					printf_P(PSTR("%3u | "), i*16);
 					for(int8_t n = 0; n < 16; n++)
 						printf("%02X ", cmd[n]);
@@ -129,8 +130,9 @@ int8_t cli_base(char *buf, void *rht)
 					printf("%02X ", cmd[i]);
 				}
 				uart_puts("\n");
+				return 0;
 			}
-			return 0;
+			return -1;
 		}
 
 		if (str_is(arg, PSTR("dst"))) {
