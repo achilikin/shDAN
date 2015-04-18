@@ -216,7 +216,7 @@ static int8_t sht1x_parse_temperature(sht1x_t *psh)
 	sht.ft = ft;
 	int16_t tv = (int16_t)(ft*100.0);
 	sht.t.val = tv/100;
-	sht.t.dec = (tv%100)/10;
+	sht.t.dec = (tv%100);
 	sht.valid |= RHT_TVALID;
 	sht.dtype = 'T';
 	return 0;
@@ -238,7 +238,7 @@ static int8_t sht1x_parse_humidity(sht1x_t *psh)
 	sht.fh = ch;
 	uint16_t hv = (int16_t)(ch*100.0);
 	sht.h.val = hv/100;
-	sht.h.dec = (hv%100)/10;
+	sht.h.dec = (hv%100);
 	sht.valid |= RHT_HVALID;
 	sht.dtype = 'H';
 	

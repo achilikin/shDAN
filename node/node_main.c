@@ -57,8 +57,8 @@ uint8_t EEMEM em_tsync = 20; // time sync interval every 20 sessions
 // RFM12B sync pattern, better keep it to default 0xD4
 // as previous versions of RFM12 do not support anything else
 uint8_t EEMEM em_rfm_sync = 0xD4;
-
-uint8_t EEMEM em_rt_flags = RT_LOAD_OSCCAL; // runtime flags
+// runtime flags
+uint8_t EEMEM em_rt_flags = RT_LOAD_OSCCAL;
 
 // I/O pins
 #define PIN_INTERACTIVE PB0 // on port B
@@ -415,7 +415,7 @@ void get_rtc_time(char *buf)
 void get_vbat(dnode_t *val, char *buf)
 {
 	uint16_t vbat = 230 + (val->stat & STAT_VBAT)*10;
-	sprintf_P(buf, PSTR("Vbat %d.%d"), vbat/100, vbat %100);
+	sprintf_P(buf, PSTR("Vbat %d.%02d"), vbat/100, vbat %100);
 }
 
 void print_dval(dnode_t *dval)
@@ -424,14 +424,14 @@ void print_dval(dnode_t *dval)
 	get_rtc_time(buf);
 
 	uint32_t msec = millis();
-	printf_P(PSTR("%s %lu %d.%d\n"), buf, msec, dval->val, dval->dec);
+	printf_P(PSTR("%s %lu %d.%02d\n"), buf, msec, dval->val, dval->dec);
 }
 
 void show_time(char *buf)
 {
 	get_rtc_time(buf);
 	ossd_putlx(2, -1, buf, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
-	sprintf_P(buf, PSTR("T %d.%d"), bmp.t, bmp.tdec);
+	sprintf_P(buf, PSTR("T %d.%02d"), bmp.t, bmp.tdec);
 	ossd_putlx(4, -1, buf, OSSD_TEXT_UNDERLINE);
 }
 

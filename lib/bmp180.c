@@ -123,7 +123,7 @@ int8_t bmp180_poll(bmp180_t *pcc, uint8_t tmode)
 		pcc->b6 = b5 - 4000;
 		int16_t t = (int16_t)((b5 + 8) >> 4);
 		pcc->t = t / 10;
-		pcc->tdec = t % 10;
+		pcc->tdec = (t % 10)*10; // convert to 1/100
 		pcc->valid |= BMP180_T_VALID;
 		pcc->cmd = (tmode) ? BMP180_GET_T : BMP180_GET_P;
 	}

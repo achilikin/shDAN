@@ -83,6 +83,8 @@ dnode_t  rd;
 uint16_t rd_bv;     // battery voltage
 uint8_t  rd_ts[3];  // last session time
 uint8_t  rd_signal; // session signal
+uint16_t rd_sessions;
+uint16_t rd_errors;
 
 uint16_t dans; // mask of detected DANs
 
@@ -233,6 +235,8 @@ int main(void)
 	cli_init();
 
 	rd.nid = 0;
+	rd_errors = 0;
+	rd_sessions = 0;
 	// initialize ADC interrupt data
 	aidx = 0;
 	for(uint8_t i = 0; i < 8; i++)
@@ -253,6 +257,10 @@ int main(void)
 		if (rfm12_receive_data(&rd, sizeof(rd), rx_flags) == sizeof(rd)) {
 			analogStop(); // stop any pending ARSSI conversion
 			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+
+			rd_sessions++;
+			if (GET_NID(rd.nid) != 1)
+				rd_errors ++;
 
 			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
@@ -303,7 +311,7 @@ int main(void)
 				// overwrite FM frequency on the screen
 				sprintf_P(fm_freq, pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 				ossd_putlx(0, -1, fm_freq, 0);
-				sprintf_P(fm_freq, PSTR("s%02X T %d.%d "), rd.nid, rd.val, rd.dec);
+				sprintf_P(fm_freq, PSTR("s%02X T %d.%02d "), rd.nid, rd.val, rd.dec);
 				ossd_putlx(4, -1, fm_freq, 0);
 				// overwrite NS741 status
 				rd_bv = 0;
@@ -344,7 +352,7 @@ int main(void)
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
 				printf_P(pstr_time, ts[0], ts[1], ts[2]);
-				printf_P(PSTR(" %d.%d %d.%d %d.%02d\n"),
+				printf_P(PSTR(" %d.%02d %d.%02d %d.%02d\n"),
 					rht.temperature.val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec,
 					press.p, press.pdec);
@@ -371,7 +379,7 @@ void print_rd(void)
 			printf_P(PSTR("%02u "), get_sens_type(&rd, i));
 	}
 	else {
-		printf_P(PSTR("S%u L%u A%u E%u V %u T%+2d.%d ARSSI %u %3d%%"),
+		printf_P(PSTR("S%u L%u A%u E%u V %u T%+2d.%02d ARSSI %u %3d%%"),
 			!!(rd.stat & STAT_SLEEP), !!(rd.stat & STAT_LED),
 			!!(rd.stat & STAT_ACK), !!(rd.stat & STAT_EOS),
 			rd_bv, rd.val, rd.dec,
@@ -410,6 +418,7 @@ void print_status(uint8_t verbose)
 		ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
 	if (verbose) {
 		printf_P(PSTR("%s %s\n"), rds_data, hpa);
+		printf_P(PSTR("NID sessions %u errors %u\n"), rd_sessions, rd_errors);
 		uart_puts_p(PSTR("Active nodes:"));
 		if (dans) {
 			for(uint8_t n = 1; n < 15; n++) {

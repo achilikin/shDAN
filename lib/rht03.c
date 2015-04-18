@@ -123,7 +123,7 @@ int8_t rht03_get_temperature(rht_t *prht)
 	temperature = (int16_t)(rht03.data[2] & 0x7F);
     temperature <<= 8;
     temperature |= rht03.data[3];
-	prht->temperature.dec = temperature % 10;
+	prht->temperature.dec = (temperature % 10)*10;
     temperature /= 10;
     if (rht03.data[2] & 0x80)
         temperature *= -1;
@@ -144,7 +144,7 @@ int8_t rht03_get_humidity(rht_t *prht)
     humidity = rht03.data[0];
     humidity <<= 8;
     humidity |= rht03.data[1];
-	prht->humidity.dec = humidity % 10;
+	prht->humidity.dec = (humidity % 10)*10;
     humidity /= 10;
 	prht->humidity.val = humidity;
 	prht->valid |= RHT_HVALID;
