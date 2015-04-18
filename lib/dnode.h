@@ -32,7 +32,10 @@ extern "C" {
 #define SENS_MASK  0x70 // sensor index mask
 
 #define SET_NID(nid,sens) ((((sens) << 4) & SENS_MASK) | ((nid) & NID_MASK))
+#define GET_NID(nid) ((nid) & NID_MASK)
+
 #define SET_SENS(sens,type) (((type) << 4) | ((sens) & 0x0F))
+#define GET_SENS(nid) (((nid) & SENS_MASK) >> 4)
 
 // reserved sensor indexes
 #define SENS_TXPWR 0x00 // radio TX power
