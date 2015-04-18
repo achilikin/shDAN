@@ -138,6 +138,9 @@ CFLAGS += -Wa,-adhlns=$(<:.c=.lst)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += -Wstrict-prototypes
 CFLAGS += $(CSTANDARD)
+CFLAGS += -mcall-prologues
+CFLAGS += -ffunction-sections -fdata-sections
+CFLAGS += -Wl,--relax,--gc-sections
 
 CPPFLAGS = -g$(DEBUG)
 CPPFLAGS += $(CDEFS) $(CINCS)
@@ -146,6 +149,9 @@ CPPFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CPPFLAGS += -Wall -Wextra -Werror
 CPPFLAGS += -Wa,-adhlns=$(<:.cpp=.lst)
 CPPFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
+CPPFLAGS += -mcall-prologues
+CPPFLAGS += -ffunction-sections -fdata-sections
+CPPFLAGS += -Wl,--relax,--gc-sections
 
 #---------------- Assembler Options ----------------
 #  -Wa,...:   tell GCC to pass this to the assembler.
