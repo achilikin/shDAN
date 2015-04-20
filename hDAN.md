@@ -5,7 +5,7 @@ shDAN stands for "small/smart house Data Acquisition Network". And "small" not n
 Why "small"? Because of the following limitations:
 * No more than 12 Data Acquisition Nodes (DAN) per subnet
 * No more than 6 sensors (zones) per Data Acquisition Node
-* Messages between Base Station and Data Nodes are quite small - 13 bytes only
+* Messages between Base Station and Data Nodes are quite small - 13 bytes only, with fixed payload's length of 4 bytes.
 
 shDAN main components
 --------------------
@@ -29,6 +29,7 @@ shDAN topology
 shDAN protocol
 -------------
 ![hDAN diagram](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_protocol.svg)
+For some reason I'm getting a lot of noise on my base station receivers. So packet detection algorithm uses length of a packet as a start byte (4 bytes for now) then receives 5 bytes (4 bytes payload + 1 byte CRC) and checks for 0x55 as packet's stop byte. If 0x55 is found then CRC is calculated and checked as well. If 0x55 not found then algorithm resets its state and waits for start byte 0x04. 
 
 shDAN messages examples
 ----------------------

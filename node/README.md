@@ -51,6 +51,12 @@ Command line
 
 For more information see Readme in the project root directory.
 
+**Makefile parameters**
+To select Node ID pass _NID_ parameter when running make:
+```
+$make NID=5
+```
+
 **Current code size**
 Version 2015-04-18
 ```
