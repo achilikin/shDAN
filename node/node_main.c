@@ -44,7 +44,9 @@
 #endif
 
 // default configuration
-#define DEF_NID		1   // node id
+#ifndef DEF_NID
+#define DEF_NID		5   // node id
+#endif
 #define DEF_TXPWR	0   // by default RFM12 uses max TX power
 #define DEF_OSCCAL	178 // average value from serial_calibrate()
 

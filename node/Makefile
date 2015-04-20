@@ -121,6 +121,11 @@ CDEFS += -D_DEBUG=1
 # Replace default length of 128 byte of command-line buffer
 CDEFS += -DCMD_LEN=0x1F
 
+# Default node id
+NID = 1
+
+CDEFS += -DDEF_NID=$(NID)
+
 # Peter's' Fleury UART library parameters
 # uncomment and adapt these line if you want different UART library buffer size
 #CDEFS += -DUART_RX_BUFFER_SIZE=128
