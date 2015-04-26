@@ -224,11 +224,11 @@ extern "C" {
 
 // RFM12B interface pins
 // by default standard SPI pins are used
-#define RF_SCK PB7 // SPI clock
-#define RF_SDO PB6 // MISO
-#define RF_SDI PB5 // MOSI
-#define RF_SS  PB4 // SPI SS (slave select)
-#define nIRQ   PD3 // interrupt request
+#define RF_SCK  PB7 // SPI clock
+#define RF_SDO  PB6 // MISO
+#define RF_SDI  PB5 // MOSI
+#define RF_SS   PB4 // SPI SS (slave select)
+#define RF_nIRQ PD3 // interrupt request
 
 #define RFM_SPI_MODE_SW 0
 #define RFM_SPI_MODE_HW 1

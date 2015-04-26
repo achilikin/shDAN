@@ -45,7 +45,7 @@ static int8_t rfm_wait_irq(uint8_t timeout)
 	uint8_t dt, ts;
 	dt = ts = mill8();
 
-	while(_pin_get(&PIND, _BV(nIRQ))) {
+	while(_pin_get(&PIND, _BV(RF_nIRQ))) {
 		dt = mill8() - ts;
 		if (dt > timeout)
 			return -1;
@@ -167,7 +167,7 @@ int8_t rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate)
 	_pin_dir(&DDRB, _BV(RF_SDI), OUTPUT);
 	_pin_dir(&DDRB, _BV(RF_SCK), OUTPUT);
 	_pin_dir(&DDRB, _BV(RF_SDO), INPUT);
-	_pin_dir(&DDRD, _BV(nIRQ), INPUT);
+	_pin_dir(&DDRD, _BV(RF_nIRQ), INPUT);
 
 #if (RFM_SPI_MODE == RFM_SPI_MODE_HW)
 	SPCR = _BV(SPE) | _BV(MSTR); // SPI2X=SPR1=SPR0=0, so SPI speed is Fosc/4, or 2MHz
@@ -294,7 +294,7 @@ uint16_t rfm12_receive(uint16_t *status)
 {
 	uint16_t data = 0;
 
-	if (_pin_get(&PIND, _BV(nIRQ)) == 0) {
+	if (_pin_get(&PIND, _BV(RF_nIRQ)) == 0) {
 		// return IRQ status is required
 		if (status)
 			*status = rfm12_cmdrw(RFM12CMD_STATUS);
