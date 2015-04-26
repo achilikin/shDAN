@@ -25,6 +25,7 @@ extern "C" {
 #endif
 #endif
 
+#define MAX_DNODES  12
 #define MAX_SENSORS 6
 
 #define NID_MASK   0x0F // node index mask
@@ -54,6 +55,11 @@ extern "C" {
 #define STAT_ACK   0x20 // cmd acknowledgment
 #define STAT_EOS   0x10 // end of session (last message)
 #define STAT_VBAT  0x0F // Vbat mask
+
+// extra flags for dnode_status
+#define STAT_ACTIVE 0x01
+#define STAT_SLIST  0x02
+#define STAT_TSYNC  0x04
 
 // command to be applied for .nid sensor id
 #define CMD_GVAL   0x10 // get value
@@ -121,6 +127,13 @@ typedef struct dnode_s
 } dnode_t;
 
 typedef int8_t sens_poll(dnode_t *dval, void *ptr);
+
+typedef struct dnode_status_s {
+	uint8_t flags;
+	uint8_t ts[3]; // last session time stamp
+	uint8_t vbat;
+	uint8_t ssi; // signal strength indicator 0-100%
+}dnode_status_t;
 
 typedef struct dsens_s
 {
