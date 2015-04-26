@@ -235,9 +235,9 @@ static inline void analogStart(void)
 
 static inline void analogStop(void)
 {
-	// Stop conversion by reseting ADEN
-	ADCSRA &= ~_BV(ADEN);
-	ADCSRA |= _BV(ADEN);
+	// Stop conversion interrupt by reseting ADIF
+	ADCSRA &= ~_BV(ADIE);
+	ADCSRA |= _BV(ADIE);
 }
 
 // Arduino-type analogRead(): synchronous ADC conversion
