@@ -117,9 +117,10 @@ void get_fm_freq(char *buf)
 // simple bubble sort for uint8 arrays
 static void bsort(uint8_t *data, int8_t len)
 {
-	for(int8_t i = 0; i < (len - 1); i++) {
-		for(int8_t j = 0; j < (len-(i+1)); j++) {
-			if (data[j] > data[j+1]) {
+	len -= 1;
+	for(int8_t i = 0; i < len; i++) {
+		for(int8_t j = 0; j < (len - i); j++) {
+			if (data[j] < data[j+1]) {
 				register uint8_t t = data[j];
 				data[j] = data[j+1];
 				data[j+1] = t;
@@ -212,7 +213,7 @@ int main(void)
 		printf_P(PSTR("delay(1000) = %u\n"), ms);
 	}
 #endif
-	rht_read(&rht, rt_flags & RT_RHT_ECHO, rds_data);
+	rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
 	ossd_select_font(OSSD_FONT_6x8);
@@ -251,16 +252,13 @@ int main(void)
 		if (mmr_rdsint_get() == LOW)
 			ns741_rds_isr();
 		uint8_t rx_flags = ARSSI_ADC;
-		if (rt_flags & RT_RX_ECHO)
+		if (rt_flags & RT_ECHO_RX)
 			rx_flags |= RFM_RX_DEBUG;
 
 		if (rfm12_receive_data(&rd, sizeof(rd), rx_flags) == sizeof(rd)) {
+			rd_sessions++;
 			analogStop(); // stop any pending ARSSI conversion
 			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
-
-			rd_sessions++;
-			if (GET_NID(rd.nid) != 1)
-				rd_errors ++;
 
 			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
@@ -272,23 +270,29 @@ int main(void)
 
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
-				if (rt_flags & RT_DAN_ECHO) {
+				if (rt_flags & RT_ECHO_DAN) {
 					printf_P(pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 					printf_P(PSTR(" sync %02X\n"), rd.nid);
 				}
 			}
 			
-			// we should have at least 6 ARSSI reads in our areads array
+			// we should have at least 7 ARSSI reads in our areads array
 			bsort(areads, 8);
 			rd_arssi  = 0;
 			rd_signal = 0;
 			// use two reads from the middle and reset ARSSI array
 			uint16_t average = 0;
+			if (rt_flags & RT_ECHO_RX)
+				uart_puts_p(PSTR("ARSSI"));
 			for(uint8_t i = 0; i < 8; i++) {
+				if (rt_flags & RT_ECHO_RX)
+					printf_P(PSTR(" %u"), areads[i]);
 				if (i == 3 || i == 4)
 					average += areads[i];
 				areads[i] = 0;
 			}
+			if (rt_flags & RT_ECHO_RX)
+				uart_puts("\n");
 			rd_arssi = average / 2;
 			aidx = 0;
 
@@ -301,11 +305,11 @@ int main(void)
 					rd_signal = 100;
 			}
 
-			if (rt_flags & RT_DAN_ECHO)
+			if (rt_flags & RT_ECHO_DAN)
 				print_rd();
 
 			if ((rd.nid & SENS_MASK) == SENS_LIST) {
-				dans |= 1 << (rd.nid & NID_MASK); // add this DAN to the list
+				dans |= 1 << GET_NID(rd.nid); // add this DAN to the list
 			}
 			else {
 				// overwrite FM frequency on the screen
@@ -322,6 +326,9 @@ int main(void)
 				ossd_putlx(7, -1, status, 0);
 				ossd_select_font(font);
 			}
+
+			if (!(dans & (1 << GET_NID(rd.nid))))
+				rd_errors ++;
 		}
 
 		// process serial port commands
@@ -346,9 +353,9 @@ int main(void)
 		if (poll_clock >= 5) {
 			poll_clock = 0;
 			ossd_putlx(2, 0, "*", 0);
-			rht_read(&rht, rt_flags & RT_RHT_ECHO, rds_data);
+			rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
 			ossd_putlx(2, -1, rds_data, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
-			if (rt_flags & RT_RHT_LOG) {
+			if (rt_flags & RT_ECHO_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
 				printf_P(pstr_time, ts[0], ts[1], ts[2]);
@@ -400,7 +407,7 @@ int8_t print_rtc_time(void)
 		uart_puts("\n");
 		return 0;
 	}
-	return -1;
+	return CLI_ENODEV;
 }
 
 void print_status(uint8_t verbose)
@@ -408,8 +415,12 @@ void print_status(uint8_t verbose)
 	if (verbose) {
 		uart_puts_p(PSTR("RTC time: "));
 		print_rtc_time();
-		printf_P(PSTR("Uptime %lu sec or %lu:%02ld:%02ld\n"),
-			uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
+		printf_P(PSTR("Uptime %lu sec or "), uptime);
+		if (uptime > 86400)
+			printf_P(PSTR("%lu days "), uptime/86400l);
+		uint32_t utime = uptime % 86400l;
+		printf_P(PSTR("%02ld:%02ld:%02ld\n"),
+			utime / 3600, (utime / 60) % 60, utime % 60);
 	}
 	get_fm_freq(fm_freq);
 	printf_P(PSTR("RDSID '%s', %s\nRadio %s, Stereo %s, TX Power %d, Volume %d, Audio Gain %ddB\n"),
@@ -418,7 +429,6 @@ void print_status(uint8_t verbose)
 		ns_pwr_flags & NS741_TXPWR, (ns_pwr_flags & NS741_VOLUME) >> 8, (ns_pwr_flags & NS741_GAIN) ? -9 : 0);
 	if (verbose) {
 		printf_P(PSTR("%s %s\n"), rds_data, hpa);
-		printf_P(PSTR("NID sessions %u errors %u\n"), rd_sessions, rd_errors);
 		uart_puts_p(PSTR("Active nodes:"));
 		if (dans) {
 			for(uint8_t n = 1; n < 15; n++) {
@@ -429,6 +439,7 @@ void print_status(uint8_t verbose)
 		else
 			uart_puts_p(PSTR(" none"));
 		uart_puts("\n");
+		printf_P(PSTR("DAN sessions %u errors %u\n"), rd_sessions, rd_errors);
 		print_rd();
 	}
 }
