@@ -85,7 +85,7 @@ Version 2015-04-26
 ```
 > Creating Symbol Table: base_main.sym
 > avr-nm -n base_main.elf > base_main.sym
-> Program:   23220 bytes (70.9% Full)
-> Data:        813 bytes (39.7% Full)
+> Program:   23360 bytes (71.3% Full)
+> Data:        879 bytes (42.9% Full)
 > EEPROM:       17 bytes (1.7% Full)
 ```
