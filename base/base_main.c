@@ -82,19 +82,16 @@ bmp180_t press;
 dnode_t  rd;
 uint16_t rd_bv;     // battery voltage
 uint8_t  rd_ts[3];  // last session time
-uint8_t  rd_signal; // session signal
-uint16_t rd_sessions;
-uint16_t rd_errors;
+uint8_t  rd_arssi;  // last session arssi
+uint8_t  rd_signal; // last session signal
 
-uint16_t dans; // mask of detected DANs
+dnode_status_t dans[MAX_DNODES];
 
 // adc channel ARSSI connected to (> 0)
 #define ARSSI_ADC 5
 // ARSSI limits
 #define ARSSI_IDLE (110 >> 2)
 #define ARSSI_MAX  (340 >> 2)
-
-uint8_t rd_arssi;
 
 static const char *s_pwr[4] = {
 	"0.5", "0.8", "1.0", "2.0"
@@ -145,7 +142,7 @@ int main(void)
 
 	mmr_led_on(); // turn on LED while booting
 
-	dans = 0;
+	memset(dans, 0, sizeof(dans));
 	rht.valid = 0;
 	rht.errors = 0;
 
@@ -236,8 +233,6 @@ int main(void)
 	cli_init();
 
 	rd.nid = 0;
-	rd_errors = 0;
-	rd_sessions = 0;
 	// initialize ADC interrupt data
 	aidx = 0;
 	for(uint8_t i = 0; i < 8; i++)
@@ -256,9 +251,17 @@ int main(void)
 			rx_flags |= RFM_RX_DEBUG;
 
 		if (rfm12_receive_data(&rd, sizeof(rd), rx_flags) == sizeof(rd)) {
-			rd_sessions++;
+			uint8_t dan = GET_NID(rd.nid);
+			if (!dan || dan > MAX_DNODES)
+				goto nodan;
+			dan -= 1;
 			analogStop(); // stop any pending ARSSI conversion
 			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+			dans[dan].flags &= 0x0F;
+			dans[dan].flags |= STAT_ACTIVE;
+			dans[dan].ts[0] = rd_ts[0];
+			dans[dan].ts[1] = rd_ts[1];
+			dans[dan].ts[2] = rd_ts[2];
 
 			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 				dnode_t tsync;
@@ -266,7 +269,8 @@ int main(void)
 				tsync.data[1] = rd_ts[1];
 				tsync.data[2] = rd_ts[2];
 				tsync.nid = NODE_TSYNC;
-				ts_pack(&tsync, rd.nid & NID_MASK);
+				ts_pack(&tsync, dan);
+				dans[dan].flags |= STAT_TSYNC;
 
 				rfm12_send(&tsync, sizeof(tsync));
 				rfm12_set_mode(RFM_MODE_RX);
@@ -293,9 +297,9 @@ int main(void)
 			}
 			if (rt_flags & RT_ECHO_RX)
 				uart_puts("\n");
+
 			rd_arssi = average / 2;
 			aidx = 0;
-
 			if (rd_arssi) {
 				uint8_t arssi = rd_arssi;
 				if (arssi < ARSSI_IDLE)
@@ -304,33 +308,33 @@ int main(void)
 				if (rd_signal > 100)
 					rd_signal = 100;
 			}
+			dans[dan].ssi = rd_signal;
 
 			if (rt_flags & RT_ECHO_DAN)
 				print_rd();
 
 			if ((rd.nid & SENS_MASK) == SENS_LIST) {
-				dans |= 1 << GET_NID(rd.nid); // add this DAN to the list
+				dans[dan].flags |= STAT_SLIST;
 			}
 			else {
+				rd_bv = (rd.stat & STAT_VBAT)* 10;
+				dans[dan].flags |= rd.stat & ~STAT_VBAT;
+				dans[dan].vbat = rd_bv;
+				rd_bv += 230;
+
 				// overwrite FM frequency on the screen
 				sprintf_P(fm_freq, pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 				ossd_putlx(0, -1, fm_freq, 0);
 				sprintf_P(fm_freq, PSTR("s%02X T %d.%02d "), rd.nid, rd.val, rd.dec);
 				ossd_putlx(4, -1, fm_freq, 0);
 				// overwrite NS741 status
-				rd_bv = 0;
-				if (rd.stat != -1)
-					rd_bv = 230 + (rd.stat & STAT_VBAT)* 10;
 				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
 				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
 				ossd_putlx(7, -1, status, 0);
 				ossd_select_font(font);
 			}
-
-			if (!(dans & (1 << GET_NID(rd.nid))))
-				rd_errors ++;
 		}
-
+nodan:
 		// process serial port commands
 		cli_interact(cli_base, &rht);
 
@@ -430,16 +434,30 @@ void print_status(uint8_t verbose)
 	if (verbose) {
 		printf_P(PSTR("%s %s\n"), rds_data, hpa);
 		uart_puts_p(PSTR("Active nodes:"));
-		if (dans) {
-			for(uint8_t n = 1; n < 15; n++) {
-				if (dans & (1 << n))
-					printf_P(PSTR(" %u"), n);
+		uint8_t ndan = 0;
+		for(uint8_t n = 0; n < MAX_DNODES; n++) {
+			uint8_t flags = dans[n].flags;
+			if (flags) {
+				ndan++;
+				uint16_t vbat = dans[n].vbat + 230;
+				uart_puts("\n");
+				printf_P(pstr_time, dans[n].ts[0], dans[n].ts[1], dans[n].ts[2]);
+				printf_P(PSTR(" NID %u Vbat %u ARSSI %3d%%"), n + 1, vbat, dans[n].ssi);
+				uart_puts_p(PSTR(" Tsync "));
+				uart_puts(is_on(flags & STAT_TSYNC));
+				uart_puts_p(PSTR(" Slist "));
+				uart_puts(is_on(flags & STAT_SLIST));
+				uart_puts_p(PSTR(" Sleep "));
+				uart_puts(is_on(flags & STAT_SLEEP));
+				uart_puts_p(PSTR(" Led "));
+				uart_puts(is_on(flags & STAT_LED));
 			}
 		}
-		else
+		if (!ndan)
 			uart_puts_p(PSTR(" none"));
 		uart_puts("\n");
-		printf_P(PSTR("DAN sessions %u errors %u\n"), rd_sessions, rd_errors);
+		uart_puts_p(PSTR("Last session:\n"));
 		print_rd();
 	}
 }
+
