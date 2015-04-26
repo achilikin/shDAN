@@ -51,10 +51,10 @@ extern char status[17];   // TxPwr status
 
 // runtime flags
 #define RT_LOAD_OSCCAL  0x01
-#define RT_DAN_ECHO  0x10 // data acquisition node log
-#define RT_RHT_ECHO  0x20
-#define RT_RHT_LOG   0x40
-#define RT_RX_ECHO   0x80
+#define RT_ECHO_DAN  0x10 // data acquisition node log
+#define RT_ECHO_RHT  0x20
+#define RT_ECHO_LOG  0x40
+#define RT_ECHO_RX   0x80
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;
@@ -70,8 +70,6 @@ extern uint8_t  rt_flags;
 
 extern uint32_t uptime;
 extern uint32_t sw_clock;
-
-#define ADC_MASK (ADC_PA4 | ADC_PA3)
 
 void get_tx_pwr(char *buf);  // get current NS741 tx power
 void get_fm_freq(char *buf); // get current NS741 FM frequency
