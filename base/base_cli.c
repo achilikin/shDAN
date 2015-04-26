@@ -34,7 +34,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-04-18\n";
+static const char version[] PROGMEM = "2015-04-26\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -48,7 +48,7 @@ const char cmd_list[] PROGMEM =
 	"  date\n"
 	"  set time HH:MM:SS\n"
 	"  set date YY/MM/DD\n"
-	"  echo rx|rht|rds|dan|off\n"
+	"  echo rx|dan|rht|log|rds [on|off]\n"
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
@@ -62,8 +62,18 @@ const char cmd_list[] PROGMEM =
 extern const char pstr_time[];
 static const char pstr_on[] PROGMEM = "on";
 static const char pstr_off[] PROGMEM = "off";
-static const char pstr_echo[] PROGMEM = "%s echo %s\n";
+static const char pstr_echo[] PROGMEM = " echo %s\n";
 static const char pstr_set_to[] PROGMEM = "%s set to %d\n";
+
+static void set_echo(char *name, uint8_t flag, int8_t echo)
+{
+	if (echo == 1)
+		rt_flags |= flag;
+	else if (echo == 0)
+		rt_flags &= ~flag;
+	uart_puts(name);
+	printf_P(pstr_echo, is_on(rt_flags & flag));
+}
 
 int8_t cli_base(char *buf, void *rht)
 {
@@ -89,8 +99,9 @@ int8_t cli_base(char *buf, void *rht)
 			printf_P(PSTR("20%02d/%02d/%02d "), td.year, td.month, td.day);
 			printf_P(pstr_time, td.hour, td.min, td.sec);
 			uart_puts("\n");
+			return 0;
 		}
-		return 0;
+		return CLI_ENODEV;
 	}
 
 	if (str_is(cmd, PSTR("rtc"))) {
@@ -218,43 +229,51 @@ int8_t cli_base(char *buf, void *rht)
 
 	if (str_is(cmd, PSTR("poll"))) {
 		uart_puts_p(PSTR("polling..."));
-		rht_read(rht, RT_RHT_ECHO, rds_data);
+		rht_read(rht, RT_ECHO_RHT, rds_data);
 		ns741_rds_set_radiotext(rds_data);
 		return 0;
 	}
 
-	if (str_is(cmd, PSTR("log"))) {
-		if (str_is(arg, pstr_on))
-			rt_flags |= RT_RHT_LOG;
-		if (str_is(arg, pstr_off))
-			rt_flags &= ~RT_RHT_LOG;
-		printf_P(PSTR("log is %s\n"), is_on(rt_flags & RT_RHT_LOG));
-		return 0;
-	}
-
 	if (str_is(cmd, PSTR("echo"))) {
-		if (str_is(arg, PSTR("rht"))) {
-			rt_flags ^= RT_RHT_ECHO;
-			printf_P(pstr_echo, arg, is_on(rt_flags & RT_RHT_ECHO));
+		int8_t echo = -1;
+		char *sval = get_arg(arg);
+		if (str_is(sval, pstr_on))
+			echo = 1;
+		else if (str_is(sval, pstr_off))
+			echo = 0;
+		if (str_is(arg, PSTR("rx"))) {
+			set_echo(arg, RT_ECHO_RX, echo);
 			return 0;
 		}
 		if (str_is(arg, PSTR("dan"))) {
-			rt_flags ^= RT_DAN_ECHO;
-			printf_P(pstr_echo, arg, is_on(rt_flags & RT_DAN_ECHO));
+			set_echo(arg, RT_ECHO_DAN, echo);
+			return 0;
+		}
+		if (str_is(arg, PSTR("rht"))) {
+			set_echo(arg, RT_ECHO_RHT, echo);
+			return 0;
+		}
+		if (str_is(arg, PSTR("log"))) {
+			set_echo(arg, RT_ECHO_LOG, echo);
 			return 0;
 		}
 		if (str_is(arg, PSTR("rds"))) {
-			ns741_rds_debug(1);
+			if (echo >= 0)
+				ns741_rds_debug(echo);
 			return 0;
 		}
-		if (str_is(arg, PSTR("rx"))) {
-			rt_flags ^= RT_RX_ECHO;
-			printf_P(pstr_echo, arg, is_on(rt_flags & RT_RX_ECHO));
-			return 0;
-		}
+
 		if (str_is(arg, pstr_off)) {
-			rt_flags &= ~(RT_RHT_ECHO | RT_RHT_LOG | RT_DAN_ECHO | RT_RX_ECHO);
-			printf_P(PSTR("echo OFF\n"));
+			rt_flags &= ~(RT_ECHO_RX | RT_ECHO_DAN | RT_ECHO_RHT | RT_ECHO_LOG );
+			ns741_rds_debug(0);
+			uart_puts_p(PSTR("echo OFF\n"));
+			return 0;
+		}
+		if (*arg == 0) {
+			set_echo("rx ", RT_ECHO_RX, -1);
+			set_echo("dan", RT_ECHO_DAN, -1);
+			set_echo("rht", RT_ECHO_RHT, -1);
+			set_echo("log", RT_ECHO_LOG, -1);
 			return 0;
 		}
 		return -1;
@@ -368,5 +387,5 @@ int8_t cli_base(char *buf, void *rht)
 		return 0;
 	}
 
-	return -2; // unknown command
+	return CLI_EARG;
 }
