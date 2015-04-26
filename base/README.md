@@ -36,9 +36,8 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 
 **Debugging:**
 * _mem_ - show available memory
-* _echo rx|rht|rds|dan|off_ - enable/disable data output to serial port
-* _log on|off_ - enable/disable timestamped output of T/H readings
-
+* _echo rx|dan|rht|log|rds [on|off]_ - enable/disable data output to serial port
+* _echo off_ - disable all output to serial port
 
 **Radio specific commands:**
 * _radio on|off_
@@ -73,12 +72,6 @@ or
 
 For new versions of UART/I2C libraries check [Peter Fleury's page](http://homepage.hispeed.ch/peterfleury/avr-software.html)
 
-If you managed to solder some wires to Analogue Inputs then define populated ADCs using **ADC_MASK**.
-For example, if ADC 4 to 7 populated, then define:
-```
-#define ADC_MASK 0xF0
-```
-
 If you experience unstable communication try to calibrate **OSCCAL** value and then change ```uint8_t EEMEM em_osccal``` in the *main.c*
 
 Using different clock speed for ATmega32:
@@ -88,11 +81,11 @@ Using different clock speed for ATmega32:
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 **Current code size**
-Version 2015-04-18
+Version 2015-04-26
 ```
 > Creating Symbol Table: base_main.sym
 > avr-nm -n base_main.elf > base_main.sym
-> Program:   22804 bytes (69.6% Full)
-> Data:        621 bytes (30.3% Full)
+> Program:   23220 bytes (70.9% Full)
+> Data:        813 bytes (39.7% Full)
 > EEPROM:       17 bytes (1.7% Full)
 ```
