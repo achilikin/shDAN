@@ -105,10 +105,12 @@ int8_t cli_interact(cli_processor *process, void *ptr)
 			int8_t ret = process(cmd, ptr);
 			if (ret == 0)
 				memcpy(hist, cmd, sizeof(cmd));
-			else if (ret == -1)
+			else if (ret == CLI_EARG)
 				uart_puts_p(PSTR("Invalid format\n"));
-			else if (ret == -2)
+			else if (ret == CLI_ENOTSUP)
 				uart_puts_p(PSTR("Unknown command\n"));
+			else if (ret == CLI_ENODEV)
+				uart_puts_p(PSTR("Device error\n"));
 		}
 		for(uint8_t i = 0; i < cursor; i++)
 			cmd[i] = '\0';

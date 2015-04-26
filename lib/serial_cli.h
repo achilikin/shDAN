@@ -29,10 +29,12 @@ extern "C" {
 #define CMD_LEN 0x7F // big enough for our needs
 #endif
 
-// command line processing, retuns:
-//  0 - success
-// -1 - invalid argument
-// -2 - unknown command
+#define CLI_EOK      0 // success
+#define CLI_EARG    -1 // invalid argument
+#define CLI_ENOTSUP -2 // command not supported
+#define CLI_ENODEV  -3 // device communication error
+
+// command line processing, returns CLI_E* above
 typedef int8_t cli_processor(char *buf, void *ptr);
 
 void   cli_init(void);
