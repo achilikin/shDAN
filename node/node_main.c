@@ -215,7 +215,7 @@ int main(void)
 	rt_flags = eeprom_read_byte(&em_rt_flags);
 
 	// RFM12 nIRQ pin
-	_pin_mode(&DDRD, _BV(nIRQ), INPUT_HIGHZ);
+	_pin_mode(&DDRD, _BV(RF_nIRQ), INPUT_HIGHZ);
 	// interactive mode pin, if grounded then MCU will not enter sleep state
 	// and will read serial port for commands and display data on oled screen
 	_pin_mode(&DDRB, _BV(PIN_INTERACTIVE), INPUT_UP);
