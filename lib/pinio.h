@@ -58,6 +58,11 @@
 #define PNB6	0x06  // TP3, MISO
 #define PNB7	0x07  // TP10, SCK
 
+#define SPI_SS  PNB4
+#define SPI_SCK PNB7
+#define SPI_SDI PNB5
+#define SPI_SDO PNB6
+
 #define PNC0	0x10 //
 #define PNC1	0x11 //
 #define PNC2	0x12 //

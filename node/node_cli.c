@@ -32,7 +32,7 @@
 
 #include "node_main.h"
 
-static const char version[] PROGMEM = "2015-04-18\n";
+static const char version[] PROGMEM = "2015-04-28\n";
 static const char *pstr_eol = version + 10;
 
 // some PROGMEM strings pooling
@@ -228,5 +228,5 @@ int8_t cli_node(char *buf, void *ptr)
 		return 0;
 	}
 
-	return -2;
+	return CLI_ENOTSUP;
 }

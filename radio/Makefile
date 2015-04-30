@@ -74,7 +74,7 @@ TARGET = radio_main
 SRC = $(TARGET).c radio_cli.c ../lib/serial.c ../lib/serial_cli.c ../lib/timer.c\
 		../lib/rht03.c ../lib/sht1x.c ../lib/rht.c ../lib/ossd_i2c.c\
 		../lib/ns741.c ../lib/pcf2127.c ../lib/bmp180.c ../lib/rfm12bs.c\
-		../lib/twimaster.c ../lib/uart.c
+		../lib/twimaster.c ../lib/uart.c ../lib/bmfont.c
 SRCPP = 
 
 # List Assembler source files here.

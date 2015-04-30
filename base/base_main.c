@@ -32,6 +32,7 @@
 #include "ns741.h"
 #include "timer.h"
 #include "bmp180.h"
+#include "bmfont.h"
 #include "serial.h"
 #include "rfm12bs.h"
 #include "pcf2127.h"
@@ -213,12 +214,12 @@ int main(void)
 	rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
-	ossd_select_font(OSSD_FONT_6x8);
+	bmfont_select(BMFONT_6x8);
 	get_tx_pwr(status);
 	ossd_putlx(7, -1, status, 0);
-	ossd_select_font(OSSD_FONT_8x16);
+	bmfont_select(BMFONT_8x16);
 	ossd_putlx(0, -1, rds_name, 0);
-	ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+	ossd_putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 
 	// turn on RDS
 	ns741_rds(1);
@@ -329,9 +330,9 @@ int main(void)
 				ossd_putlx(4, -1, fm_freq, 0);
 				// overwrite NS741 status
 				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
-				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+				uint8_t font = bmfont_select(BMFONT_6x8);
 				ossd_putlx(7, -1, status, 0);
-				ossd_select_font(font);
+				bmfont_select(font);
 			}
 		}
 nodan:
@@ -347,9 +348,9 @@ nodan:
 
 			if ((bmp180_poll(&press, 0) == 0) && (press.valid & BMP180_P_VALID)) {
 				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
-				uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+				uint8_t font = bmfont_select(BMFONT_6x8);
 				ossd_putlx(6, -1, hpa, 0);
-				ossd_select_font(font);
+				bmfont_select(font);
 			}
 		}
 
@@ -358,7 +359,7 @@ nodan:
 			poll_clock = 0;
 			ossd_putlx(2, 0, "*", 0);
 			rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
-			ossd_putlx(2, -1, rds_data, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+			ossd_putlx(2, -1, rds_data, TEXT_OVERLINE | TEXT_UNDERLINE);
 			if (rt_flags & RT_ECHO_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
@@ -456,8 +457,10 @@ void print_status(uint8_t verbose)
 		if (!ndan)
 			uart_puts_p(PSTR(" none"));
 		uart_puts("\n");
-		uart_puts_p(PSTR("Last session:\n"));
-		print_rd();
+		if (rd.nid) {
+			uart_puts_p(PSTR("Last session:\n"));
+			print_rd();
+		}
 	}
 }
 

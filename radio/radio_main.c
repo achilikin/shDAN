@@ -32,6 +32,7 @@
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
+#include "bmfont.h"
 #include "ossd_i2c.h"
 #include "serial_cli.h"
 
@@ -117,7 +118,7 @@ int main(void)
 	i2c_init(); // needed for ns741* and ossd*
 	rht_init();
 	ossd_init(OSSD_UPDOWN);
-	ossd_select_font(OSSD_FONT_6x8);
+	bmfont_select(BMFONT_6x8);
 #if ADC_MASK
 	analogReference(VREF_AVCC); // enable ADC with Vcc reference
 #endif
@@ -164,9 +165,9 @@ int main(void)
 	get_tx_pwr(status);
 	ossd_putlx(7, -1, status, 0);
 
-	ossd_select_font(OSSD_FONT_8x16);
+	bmfont_select(BMFONT_8x16);
 	ossd_putlx(0, -1, rds_name, 0);
-	ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+	ossd_putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 
 	// turn on RDS
 	ns741_rds(1);

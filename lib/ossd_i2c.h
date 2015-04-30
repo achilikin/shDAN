@@ -47,21 +47,6 @@ extern "C" {
 	#include <stdint.h>
 #endif
 
-#define OSSD_FONT_6x8  0
-#define OSSD_FONT_8x8  1
-#define OSSD_FONT_8x16 2
-#define OSSD_FONT_USER 3
-#define OSSD_FONT_MAX  OSSD_FONT_USER
-
-typedef struct ossd_font_s
-{
-	uint8_t gw; /*< glyph width  */
-	uint8_t gh; /*< glyph height */
-	uint8_t go; /*< font offset, first glyph index */
-	uint8_t gn; /*< number of glyphs presented */
-	const uint8_t *font;
-} ossd_font_t;
-
 /** 
   flat cable connected at the top
   use ossd_init(OSSD_UPDOWN) to rotate screen
@@ -79,20 +64,6 @@ void ossd_sleep(uint8_t on_off);
 
 /** set display contrast */
 void ossd_set_contrast(uint8_t val);
-
-/** select one of three fonts for following ossd_putlx() calls */
-uint8_t ossd_select_font(uint8_t font);
-
-/** 
- set user font selectable by OSSD_FONT_USER to nfont
- store current user font in ofont (if not NULL)
- */
-void ossd_set_user_font(ossd_font_t *nfont, ossd_font_t *ofont);
-
-/** text attributes */
-#define OSSD_TEXT_REVERSE   0x01
-#define OSSD_TEXT_UNDERLINE 0x02
-#define OSSD_TEXT_OVERLINE  0x04
 
 /**
  output string up to 64 chars in length

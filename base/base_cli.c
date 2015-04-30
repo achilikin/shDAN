@@ -27,6 +27,7 @@
 #include "sht1x.h"
 #include "ns741.h"
 #include "timer.h"
+#include "bmfont.h"
 #include "serial.h"
 #include "pcf2127.h"
 #include "ossd_i2c.h"
@@ -350,7 +351,7 @@ int8_t cli_base(char *buf, void *rht)
 		}
 		printf_P(pstr_set_to, cmd, radio_freq);
 		get_fm_freq(fm_freq);
-		ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+		ossd_putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 		return 0;
 	}
 
@@ -367,9 +368,9 @@ int8_t cli_base(char *buf, void *rht)
 		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
 
 		get_tx_pwr(status);
-		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+		uint8_t font = bmfont_select(BMFONT_6x8);
 		ossd_putlx(7, -1, status, 0);
-		ossd_select_font(font);
+		bmfont_select(font);
 		return 0;
 	}
 
@@ -381,11 +382,11 @@ int8_t cli_base(char *buf, void *rht)
 		ns741_radio_power(ns_pwr_flags & NS741_POWER);
 		printf_P(PSTR("radio %s\n"), is_on(ns_pwr_flags & NS741_POWER));
 		get_tx_pwr(status);
-		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+		uint8_t font = bmfont_select(BMFONT_6x8);
 		ossd_putlx(7, -1, status, 0);
-		ossd_select_font(font);
+		bmfont_select(font);
 		return 0;
 	}
 
-	return CLI_EARG;
+	return CLI_ENOTSUP;
 }

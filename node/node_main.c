@@ -33,6 +33,7 @@
 #include "timer.h"
 #include "bmp180.h"
 #include "serial.h"
+#include "bmfont.h"
 #include "rfm12bs.h"
 #include "ossd_i2c.h"
 #include "serial_cli.h"
@@ -273,7 +274,7 @@ int main(void)
 	i2c_init(); // needed for ossd* and bmp180*
 	// try to init oled display
 	if (ossd_init(OSSD_UPDOWN) == 0) {
-		ossd_select_font(OSSD_FONT_8x16);
+		bmfont_select(BMFONT_8x16);
 		sprintf_P(buf, PSTR("Node %d"), nid);
 		ossd_putlx(0, -1, buf, 0);
 		show_time(buf);
@@ -432,9 +433,9 @@ void print_dval(dnode_t *dval)
 void show_time(char *buf)
 {
 	get_rtc_time(buf);
-	ossd_putlx(2, -1, buf, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+	ossd_putlx(2, -1, buf, TEXT_OVERLINE | TEXT_UNDERLINE);
 	sprintf_P(buf, PSTR("T %d.%02d"), bmp.t, bmp.tdec);
-	ossd_putlx(4, -1, buf, OSSD_TEXT_UNDERLINE);
+	ossd_putlx(4, -1, buf, TEXT_UNDERLINE);
 }
 
 void print_status(dnode_t *val)

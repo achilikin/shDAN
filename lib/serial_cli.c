@@ -103,9 +103,8 @@ int8_t cli_interact(cli_processor *process, void *ptr)
 		serial_putc(ch);
 		if (*cmd) {
 			int8_t ret = process(cmd, ptr);
-			if (ret == 0)
-				memcpy(hist, cmd, sizeof(cmd));
-			else if (ret == CLI_EARG)
+			memcpy(hist, cmd, sizeof(cmd));
+			if (ret == CLI_EARG)
 				uart_puts_p(PSTR("Invalid format\n"));
 			else if (ret == CLI_ENOTSUP)
 				uart_puts_p(PSTR("Unknown command\n"));

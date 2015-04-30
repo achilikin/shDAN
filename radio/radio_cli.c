@@ -27,12 +27,13 @@
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"
+#include "bmfont.h"
 #include "ossd_i2c.h"
 #include "serial_cli.h"
 
 #include "radio_main.h"
 
-static const char version[] PROGMEM = "2015-04-18\n";
+static const char version[] PROGMEM = "2015-04-28\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM =
@@ -249,7 +250,7 @@ int8_t cli_radio(char *buf, void *rht)
 		}
 		printf_P(PSTR("%s set to %u\n"), cmd, radio_freq);
 		sprintf_P(fm_freq, PSTR("FM %u.%02uMHz"), radio_freq/100, radio_freq%100);
-		ossd_putlx(2, -1, fm_freq, OSSD_TEXT_OVERLINE | OSSD_TEXT_UNDERLINE);
+		ossd_putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 		return 0;
 	}
 
@@ -266,9 +267,9 @@ int8_t cli_radio(char *buf, void *rht)
 		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
 
 		get_tx_pwr(status);
-		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+		uint8_t font = bmfont_select(BMFONT_6x8);
 		ossd_putlx(7, -1, status, 0);
-		ossd_select_font(font);
+		bmfont_select(font);
 		return 0;
 	}
 
@@ -335,11 +336,11 @@ int8_t cli_radio(char *buf, void *rht)
 		ns741_radio_power(ns_pwr_flags & NS741_POWER);
 		printf_P(PSTR("radio %s\n"), is_on(ns_pwr_flags & NS741_POWER));
 		get_tx_pwr(status);
-		uint8_t font = ossd_select_font(OSSD_FONT_6x8);
+		uint8_t font = bmfont_select(BMFONT_6x8);
 		ossd_putlx(7, -1, status, 0);
-		ossd_select_font(font);
+		bmfont_select(font);
 		return 0;
 	}
 
-	return -2;
+	return CLI_ENOTSUP;
 }

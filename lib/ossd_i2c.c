@@ -41,6 +41,8 @@
 #endif
 #endif
 
+#include "bmfont.h"
+
 #define OSSD_CMD  0x00
 #define OSSD_DATA 0x40
 
@@ -95,51 +97,7 @@
 #define OSSD_CHARGE_PUMP_ON  0x14
 #define OSSD_CHARGE_PUMP_OFF 0x10
 
-static const uint8_t font68[] PROGMEM = {
-#include "font6x8.h"
-};
-
-static const uint8_t font88[] PROGMEM = {
-#include "font88.h"
-};
-
-static const uint8_t font816[] PROGMEM = {
-#include "font816.h"
-};
-
-static ossd_font_t _ofont[OSSD_FONT_MAX+1] = {
-	{  6,  8, 32, 127-32, font68 },	
-	{  8,  8, 32, 127-32, font88 },
-	{  8, 16, 32, 127-32, font816 },
-	{  0,  0, 0,       0, NULL }
-};
-
-static uint8_t _cfont;
 static uint8_t _mode;
-
-uint8_t ossd_select_font(uint8_t font)
-{
-	uint8_t fret = _cfont;
-	if (font <= OSSD_FONT_MAX)
-		_cfont = font;
-	return fret;
-}
-
-void ossd_set_user_font(ossd_font_t *nfont, ossd_font_t *ofont)
-{
-	if (ofont) {
-		ofont->gw = _ofont[OSSD_FONT_USER].gw;
-		ofont->gh = _ofont[OSSD_FONT_USER].gh;
-		ofont->go = _ofont[OSSD_FONT_USER].go;
-		ofont->gn = _ofont[OSSD_FONT_USER].gn;
-		ofont->font = _ofont[OSSD_FONT_USER].font;
-	}
-	_ofont[OSSD_FONT_USER].gw = nfont->gw;
-	_ofont[OSSD_FONT_USER].gh = nfont->gh; 
-	_ofont[OSSD_FONT_USER].go = nfont->go;
-	_ofont[OSSD_FONT_USER].gn = nfont->gn;
-	_ofont[OSSD_FONT_USER].font = nfont->font;
-}
 
 #if (OSSD_TARGET == OSSD_AVR)
 
@@ -259,7 +217,7 @@ void ossd_goto(uint8_t line, uint8_t x)
 		ossd_cmd(OSSD_SET_START_HCOL | (x >> 4));
 	}
 	else {
-		uint8_t gw = _ofont[_cfont].gw;
+		uint8_t gw = bmfont_get()->gw;
 		// in OSSD_ADDR_MODE_HOR/VER mode we set output region (gw x 16)
 		ossd_cmd_arg2(OSSD_SET_COL_ADDR, x, x + gw - 1);
 		ossd_cmd_arg2(OSSD_SET_PAGE_ADDR, line, line+1);
@@ -292,8 +250,9 @@ static void ossd_put_centre(uint8_t line, const char *str, uint8_t atr)
 {
 	uint16_t len;
 	uint8_t x = 0;
-	uint8_t gw = _ofont[_cfont].gw;
-	uint8_t gh = _ofont[_cfont].gh;
+	bmfont_t *font = bmfont_get();
+	uint8_t gw = font->gw;
+	uint8_t gh = font->gh;
 	for(len = 0; str[x]; len+=gw, x++);
 	if (len > 128)
 		x = 0;
@@ -336,18 +295,19 @@ void ossd_putlx(uint8_t line, int8_t x, const char *str, uint8_t atr)
 	uint8_t rev = 0;
 	uint8_t over = 0;
 	uint8_t under = 0;
-	if (atr & OSSD_TEXT_REVERSE)
+	if (atr & TEXT_REVERSE)
 		rev = ~rev;
-	if (atr & OSSD_TEXT_OVERLINE)
+	if (atr & TEXT_OVERLINE)
 		over = 0x01;
-	if (atr & OSSD_TEXT_UNDERLINE)
+	if (atr & TEXT_UNDERLINE)
 		under = 0x80;
-	
-	uint8_t gw = _ofont[_cfont].gw;
-	uint8_t gh = _ofont[_cfont].gh;
-	uint8_t go = _ofont[_cfont].go;
+
+	bmfont_t *pfont = bmfont_get();
+	uint8_t gw = pfont->gw;
+	uint8_t gh = pfont->gh;
+	uint8_t go = pfont->go;
 	uint8_t gb = gw*(gh / 8); // bytes per glyph
-	const uint8_t *font = _ofont[_cfont].font;
+	const uint8_t *font = pfont->font;
 	uint8_t cmode = ossd_set_addr_mode(OSSD_ADDR_MODE_HOR);
 	for(; *str != '\0'; str++, x += gw) {
 		uint16_t idx = (*str - go) * gb;
