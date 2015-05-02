@@ -222,55 +222,56 @@ extern "C" {
 #define RFM_MODE_RX    RFM12_ERXCHAIN
 #define RFM_MODE_TX    RFM12_ETXSTART
 
-// RFM12B interface pins
-// by default standard SPI pins are used
-#define RF_SCK  PB7 // SPI clock
-#define RF_SDO  PB6 // MISO
-#define RF_SDI  PB5 // MOSI
-#define RF_SS   PB4 // SPI SS (slave select)
-#define RF_nIRQ PD3 // interrupt request
+// RFM12B spi interface mode
+#define RFM_SPI_MODE_SW  0
+#define RFM_SPI_MODE_HW  1
+#define RFM_SPI_SELECTED 2
 
-#define RFM_SPI_MODE_SW 0
-#define RFM_SPI_MODE_HW 1
-
-#define RFM_SPI_MODE RFM_SPI_MODE_HW
+typedef struct rfm12_s
+{
+	uint8_t mode; // spi mode sw or hw
+	uint8_t cs;   // chip select pin
+	uint8_t sck;  // clock pin
+	uint8_t sdi;  // chip input pin (MOSI)
+	uint8_t sdo;  // chip output pin (MISO)
+	uint8_t irq;  // irq request pin
+} rfm12_t;
 
 // flags for rfm12_receive_data()
 #define RFM_RX_ADC_MASK 0x07
 #define RFM_RX_DEBUG    0x80
 
 // initializes RFM12 and puts it to idle mode 
-int8_t   rfm12_init(uint8_t syncpat, uint8_t band, double freq, uint8_t rate);
-void     rfm12_cmdw(uint16_t cmd); // write RFM12 command
-uint16_t rfm12_cmdrw(uint16_t cmd); // write RFM12 command and read reply
+int8_t rfm12_init(rfm12_t *rfm, uint8_t syncpat, uint8_t band, double freq, uint8_t rate);
+
+// write command to RFM and read return value
+uint16_t rfm12_cmdrw(rfm12_t *rfm, uint16_t cmd);
 
 // some of 'set' functions
-void    rfm12_set_mode(uint8_t mode); // set working mode RFM_MODE_* above
-int16_t rfm12_set_freq(uint8_t band, double freq); // set band and frequency
-int8_t  rfm12_set_txpwr(uint8_t pwr); // set output power, RFM12_OPWR_* (0-7)
-int8_t  rfm12_set_fsk(uint8_t fsk); // set FSK modulation, RFM12_FSK_* above
+void    rfm12_set_mode(rfm12_t *rfm, uint8_t mode); // set working mode RFM_MODE_* above
+int16_t rfm12_set_freq(rfm12_t *rfm, uint8_t band, double freq); // set band and frequency
+int8_t  rfm12_set_txpwr(rfm12_t *rfm, uint8_t pwr); // set output power, RFM12_OPWR_* (0-7)
+int8_t  rfm12_set_fsk(rfm12_t *rfm, uint8_t fsk); // set FSK modulation, RFM12_FSK_* above
 // set receiver baseband bandwidth, one of RFM12_BW_* above
-int8_t  rfm12_set_rxbw(uint8_t bw);
+int8_t  rfm12_set_rxbw(rfm12_t *rfm, uint8_t bw);
+
 // rate - one of RFM12_BPS_* above
-static inline void rfm12_set_rate(uint8_t rate)
-{
-	rfm12_cmdw(RFM12CMD_DRATE | rate);
-}
+void rfm12_set_rate(rfm12_t *rfm, uint8_t rate);
 
 // very rough battery voltage measurement using Low Battery Detector
-int8_t rfm12_battery(uint8_t mode, uint8_t level);
+int8_t rfm12_battery(rfm12_t *rfm, uint8_t mode, uint8_t level);
 
-void   rfm12_reset_fifo(void); // reset RX FIF buffer
+void   rfm12_reset_fifo(rfm12_t *rfm); // reset RX FIF buffer
 // poll RX FIFO (does no use nIRQ)
 // get status register and returns data byte if available
-int16_t rfm12_poll(uint16_t *status);
+int16_t rfm12_poll(rfm12_t *rfm, uint16_t *status);
 
 // check if data available (nIRQ is LOW) and read data byte
-uint16_t rfm12_receive(uint16_t *status);
+uint16_t rfm12_receive(rfm12_t *rfm, uint16_t *status);
 // receive data stream
-uint8_t rfm12_receive_data(void *buf, uint8_t len, uint8_t flags);
+uint8_t rfm12_receive_data(rfm12_t *rfm, void *buf, uint8_t len, uint8_t flags);
 
-int8_t  rfm12_send(void *data, uint8_t len); // transmit data stream
+int8_t  rfm12_send(rfm12_t *rfm, void *data, uint8_t len); // transmit data stream
 
 #ifdef __cplusplus
 }
