@@ -263,9 +263,8 @@ int8_t cli_base(char *buf, void *rht)
 				ns741_rds_debug(echo);
 			return 0;
 		}
-
 		if (str_is(arg, pstr_off)) {
-			rt_flags &= ~(RT_ECHO_RX | RT_ECHO_DAN | RT_ECHO_RHT | RT_ECHO_LOG );
+			rt_flags &= ~(RT_ECHO_RX | RT_ECHO_DAN | RT_ECHO_RHT | RT_ECHO_LOG);
 			ns741_rds_debug(0);
 			uart_puts_p(PSTR("echo OFF\n"));
 			return 0;
