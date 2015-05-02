@@ -34,10 +34,14 @@
 #error F_CPU must be defined in Makefile, use -DF_CPU=xxxUL
 #endif
 
+#ifndef DEF_OSCCAL
+#define DEF_OSCCAL 182 // average value from serial_calibrate()
+#endif
+
 // some default variables we want to store in EEPROM
 // average value from serial_calibrate()
 // for MMR70 I'm running this code on it is 168 for 115200, 181 for 38400
-uint8_t EEMEM em_osccal = 178;
+uint8_t EEMEM em_osccal = DEF_OSCCAL;
 
 // runtime flags
 uint8_t EEMEM em_flags = LOAD_OSCCAL;
