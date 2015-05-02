@@ -56,13 +56,21 @@ To select Node ID pass _NID_ parameter when running make:
 ```
 $make NID=5
 ```
+To select RFM12 TX power pass _TXPWR_ parameter when running make:
+```
+$make TXPWR=1
+```
+To select OSCCAL power pass _OSCCAL_ parameter when running make:
+```
+$make OSCCAL=176
+```
 
 **Current code size**
-Version 2015-04-18
+Version 2015-05-02
 ```
 > Creating Symbol Table: node_main.sym
 > avr-nm -n node_main.elf > node_main.sym
-> Program:   15688 bytes (47.9% Full)
-> Data:        268 bytes (13.1% Full)
+> Program:   16656 bytes (50.8% Full)
+> Data:        474 bytes (23.1% Full)
 > EEPROM:        6 bytes (0.6% Full)
 ```
