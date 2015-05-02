@@ -75,7 +75,7 @@ TARGET = node_main
 
 SRC = $(TARGET).c node_cli.c ../lib/serial.c ../lib/serial_cli.c ../lib/timer.c\
 	 ../lib/ossd_i2c.c ../lib/bmp180.c ../lib/rfm12bs.c ../lib/twimaster.c\
-	 ../lib/dnode.c ../lib/uart.c ../lib/bmfont.c
+	 ../lib/dnode.c ../lib/uart.c ../lib/bmfont.c ../lib/pinio.c
 SRCPP = 
 
 # List Assembler source files here.
@@ -121,10 +121,12 @@ CDEFS += -D_DEBUG=1
 # Replace default length of 128 byte of command-line buffer
 CDEFS += -DCMD_LEN=0x1F
 
-# Default node id
+# Default values
 NID = 1
+TXPWR = 0
+OSCCAL = 176
 
-CDEFS += -DDEF_NID=$(NID)
+CDEFS += -DNODE_ID=$(NID) -DRF_TXPWR=$(TXPWR) -DDEF_OSCCAL=$(OSCCAL)
 
 # Peter's' Fleury UART library parameters
 # uncomment and adapt these line if you want different UART library buffer size
