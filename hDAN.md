@@ -1,5 +1,5 @@
 shDAN - small/smart house Data Acquisition Network
-=========================================
+--------------------------------------------------
 shDAN stands for "small/smart house Data Acquisition Network". And "small" not necessary relates to a small house, it could be just a small network in a big house :)
 
 Why "small"? Because of the following limitations:
