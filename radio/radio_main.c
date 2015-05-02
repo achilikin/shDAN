@@ -79,18 +79,6 @@ void get_tx_pwr(char *buf)
 		ns_pwr_flags & NS741_POWER ? "on" : "off");
 }
 
-// pretty accurate conversion to 3.3V without using floats 
-static uint8_t get_voltage(uint16_t adc, uint8_t *decimal)
-{
-	uint32_t v = adc * 323LL + 500LL;
-	uint32_t dec = (v % 100000LL) / 1000LL;
-	v = v / 100000LL;
-
-	*decimal = (uint8_t)dec;
-	return (uint8_t)v;
-}
-
-
 int main(void)
 {
 	rht_t rht;
@@ -119,9 +107,7 @@ int main(void)
 	rht_init();
 	ossd_init(OSSD_UPDOWN);
 	bmfont_select(BMFONT_6x8);
-#if ADC_MASK
-	analogReference(VREF_AVCC); // enable ADC with Vcc reference
-#endif
+
 	// initialize NS741 chip	
 	eeprom_read_block((void *)rds_name, (const void *)em_rds_name, 8);
 	ns741_rds_set_progname(rds_name);
@@ -204,20 +190,6 @@ int main(void)
 
 			if (!(ns_rt_flags & RDS_RT_SET))
 				ns741_rds_set_radiotext(rds_data);
-#if ADC_MASK
-			if (rt_flags & ADC_ECHO) {
-				// if you want to use floats enable PRINTF_LIB_FLOAT in the makefile
-				puts("");
-				for(uint8_t i = 0; i < 8; i++) {
-					if (ADC_MASK & (1 << i)) {
-						uint16_t val = analogRead(i);
-						uint8_t dec;
-						uint8_t v = get_voltage(val, &dec);
-						printf_P(PSTR("adc%d %4d %d.%02d\n"), i, val, v, dec);
-					}
-				}
-			}
-#endif
 		}
 
 		// poll RHT every 5 seconds

@@ -33,7 +33,7 @@
 
 #include "radio_main.h"
 
-static const char version[] PROGMEM = "2015-04-28\n";
+static const char version[] PROGMEM = "2015-05-02\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM =
@@ -45,12 +45,7 @@ const char cmd_list[] PROGMEM =
 	"  set osccal X\n"
 	"  time\n"
 	"  set time HH:MM:SS\n"
-#ifdef ADC_MASK
-	"  echo rht|adc|rds|off\n"
-	"  adc chan\n"
-#else
 	"  echo rht|rds|off\n"
-#endif
 	"  get pin (d3, b4,c2...)\n"
 	"  rdsid id\n"
 	"  rdstext text\n"
@@ -148,19 +143,12 @@ int8_t cli_radio(char *buf, void *rht)
 			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & RHT_ECHO));
 			return 0;
 		}
-#ifdef ADC_MASK
-		if (str_is(arg, PSTR("adc"))) {
-			rt_flags ^= ADC_ECHO;
-			printf_P(PSTR("%s echo %s\n"), arg, is_on(rt_flags & ADC_ECHO));
-			return 0;
-		}
-#endif
 		if (str_is(arg, PSTR("rds"))) {
 			ns741_rds_debug(1);
 			return 0;
 		}
 		if (str_is(arg, PSTR("off"))) {
-			rt_flags &= ~(ADC_ECHO | RHT_ECHO | RHT_LOG);
+			rt_flags &= ~(RHT_ECHO | RHT_LOG);
 			printf_P(PSTR("echo OFF\n"));
 			return 0;
 		}
@@ -171,19 +159,6 @@ int8_t cli_radio(char *buf, void *rht)
 		printf_P(PSTR("memory %d\n"), free_mem());
 		return 0;
 	}
-#ifdef ADC_MASK
-	if (str_is(cmd, PSTR("adc"))) {
-		uint8_t ai = atoi((const char *)arg);
-		if (ai < 8) {
-			uint8_t adc = analogGetChannel();
-			uint16_t val = analogRead(ai);
-			analogSetChannel(adc);
-			printf_P(PSTR("ADC %d %4d\n"), ai, val);
-			return 0;
-		}
-		return -1;
-	}
-#endif
 	if (str_is(cmd, PSTR("get"))) {
 		char   port = arg[0];
 		uint8_t idx = atoi(arg+1) & 0x07;

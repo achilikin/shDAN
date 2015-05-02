@@ -54,9 +54,8 @@ extern char status[17];   // TxPwr status
 #define RDATA_VALID  0x01 // remote node data valid
 #define LOAD_OSCCAL  0x02
 // echo flags
-#define ADC_ECHO     0x10
-#define RHT_ECHO     0x20
-#define RHT_LOG      0x40
+#define RHT_ECHO     0x10
+#define RHT_LOG      0x20
 
 extern uint8_t  EEMEM em_rds_name[8];
 extern uint16_t EEMEM em_radio_freq;
@@ -72,8 +71,6 @@ extern uint8_t  rt_flags;
 
 extern uint32_t uptime;
 extern uint32_t sw_clock;
-
-#define ADC_MASK (ADC_PA4 | ADC_PA3)
 
 void get_tx_pwr(char *buf); // get current NS741 tx power
 
