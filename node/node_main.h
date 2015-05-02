@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <avr/eeprom.h>
 
+#include "rfm12bs.h"
 #include "dnode.h"
 
 #ifdef __cplusplus
@@ -54,6 +55,7 @@ extern uint8_t EEMEM em_txpwr;
 extern uint8_t EEMEM em_osccal;
 extern uint8_t EEMEM em_rt_flags;
 
+extern rfm12_t rfm12;
 extern uint8_t nid;
 extern uint8_t txpwr;
 extern uint8_t tsync;

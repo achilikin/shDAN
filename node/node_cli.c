@@ -91,7 +91,7 @@ int8_t cli_node(char *buf, void *ptr)
 		char *sval = get_arg(arg);
 		if (str_is(arg, PSTR("txpwr"))) {
 			uint8_t pwr = atoi(sval);
-			if (rfm12_set_txpwr(pwr) == 0) {
+			if (rfm12_set_txpwr(&rfm12, pwr) == 0) {
 				txpwr = pwr;
 				eeprom_update_byte(&em_txpwr, txpwr);
 				return 0;

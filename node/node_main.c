@@ -28,6 +28,7 @@
 // http://homepage.hispeed.ch/peterfleury/avr-software.html
 #include "i2cmaster.h"
 
+#include "spi.h"
 #include "dnode.h"
 #include "pinio.h"
 #include "timer.h"
@@ -45,15 +46,21 @@
 #endif
 
 // default configuration
-#ifndef DEF_NID
-#define DEF_NID		5   // node id
+#ifndef NODE_ID
+#define NODE_ID	1   // node id
 #endif
-#define DEF_TXPWR	0   // by default RFM12 uses max TX power
-#define DEF_OSCCAL	178 // average value from serial_calibrate()
+
+#ifndef RF_TXPWR
+#define RF_TXPWR 0   // by default RFM12 uses max TX power
+#endif
+
+#ifndef DEF_OSCCAL
+#define DEF_OSCCAL 178 // average value from serial_calibrate()
+#endif
 
 // configuration variables stored in EEPROM
-uint8_t EEMEM em_nid = DEF_NID;
-uint8_t EEMEM em_txpwr = DEF_TXPWR;
+uint8_t EEMEM em_nid = NODE_ID;
+uint8_t EEMEM em_txpwr = RF_TXPWR;
 uint8_t EEMEM em_osccal = DEF_OSCCAL;
 uint8_t EEMEM em_tsync = 20; // time sync interval every 20 sessions
 
@@ -63,6 +70,14 @@ uint8_t EEMEM em_rfm_sync = 0xD4;
 // runtime flags
 uint8_t EEMEM em_rt_flags = RT_LOAD_OSCCAL;
 
+rfm12_t rfm12 = {
+	.mode = RFM_SPI_MODE_HW,
+	.cs  = SPI_SS,
+	.sck = SPI_SCK,
+	.sdi = SPI_SDI,
+	.sdo = SPI_SDO,
+	.irq = PND3
+};
 // I/O pins
 #define PIN_INTERACTIVE PB0 // on port B
 #define REPLY_TIMEOUT 60 // time sync reply timeout, must be less than 127 msec
@@ -88,14 +103,6 @@ dsens_t sens[] = { {SET_SENS(1,SENS_TEMPER), poll_bmp180, &bmp} };
 #define power_timer1_disable() (TIMSK &= ~_BV(OCIE1A))
 #define power_timer1_enable()  (TIMSK |= _BV(OCIE1A))
 #define power_twi_enable() (TWCR |= _BV(TWEN))
-
-#if (RFM_SPI_MODE == RFM_SPI_MODE_SW)
-#define power_spi_disable()
-#define power_spi_enable()
-#else
-#define power_spi_disable() (SPCR &= ~_BV(SPE))
-#define power_spi_enable() (SPCR |= _BV(SPE))
-#endif
 
 static void show_time(char *buf);
 
@@ -133,11 +140,11 @@ static inline uint8_t is_interactive(void)
 }
 
 // returns -1 in case of error, or reply interval in ms (<60)
-static int8_t rf_receive(dnode_t *msg, uint8_t flags)
+static int8_t rf_receive(rfm12_t *rfm, dnode_t *msg, uint8_t flags)
 {
 	uint8_t msec = mill8();
 	for(uint8_t dt = 0; dt < REPLY_TIMEOUT; dt = mill8() - msec) {
-		if (rfm12_receive_data(msg, sizeof(dnode_t), flags) == sizeof(dnode_t))
+		if (rfm12_receive_data(rfm, msg, sizeof(dnode_t), flags) == sizeof(dnode_t))
 			return dt;
 	}
 
@@ -155,7 +162,7 @@ static inline void sync_time(dnode_t *dval)
 	}
 }
 
-static int8_t process_cmd(dnode_t *msg)
+static int8_t process_cmd(rfm12_t *rfm, dnode_t *msg)
 {
 	if (msg->nid & NODE_TSYNC) {
 		sync_time(msg);
@@ -190,7 +197,7 @@ static int8_t process_cmd(dnode_t *msg)
 
 	// we send our TX power with the ACK for CMD_SLED or CMD_SNODE
 	ack.cval[0] = txpwr;
-	rfm12_send(&ack, sizeof(dnode_t));
+	rfm12_send(rfm, &ack, sizeof(dnode_t));
 
 	return 0;
 }
@@ -216,7 +223,7 @@ int main(void)
 	rt_flags = eeprom_read_byte(&em_rt_flags);
 
 	// RFM12 nIRQ pin
-	_pin_mode(&DDRD, _BV(RF_nIRQ), INPUT_HIGHZ);
+	pinMode(rfm12.irq, INPUT_HIGHZ);
 	// interactive mode pin, if grounded then MCU will not enter sleep state
 	// and will read serial port for commands and display data on oled screen
 	_pin_mode(&DDRB, _BV(PIN_INTERACTIVE), INPUT_UP);
@@ -238,11 +245,15 @@ int main(void)
 		uint8_t new_osccal = eeprom_read_byte(&em_osccal);
 		serial_set_osccal(new_osccal);
 	}
-	
+
+	rfm12.mode = RFM_SPI_MODE_HW;
+	rfm12_t *rfm = &rfm12;
+	spi_init(SPI_CLOCK_DIV4);
+
 	isync = eeprom_read_byte(&em_rfm_sync);
-	rfm12_init(isync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+	rfm12_init(rfm, isync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 	isync = tsync-1; // re-sync time at the first data poll
-	rfm12_set_txpwr(txpwr);
+	rfm12_set_txpwr(rfm, txpwr);
 	mmr_led_off();
 
 	// create "List of Sensors" message
@@ -257,11 +268,11 @@ int main(void)
 
 	// try to get RTC time from the base
 	for(uint8_t i = 0; i < 5; i++) {
-		rfm12_send(&dval, sizeof(dnode_t));
-		rfm12_cmdrw(RFM12CMD_STATUS);
-		rfm12_set_mode(RFM_MODE_RX);
-		rfm12_reset_fifo();
-		if (rf_receive(&rmsg, rt_flags & RT_RX_ECHO) != -1) {
+		rfm12_send(rfm, &dval, sizeof(dnode_t));
+		rfm12_cmdrw(rfm, RFM12CMD_STATUS);
+		rfm12_set_mode(rfm, RFM_MODE_RX);
+		rfm12_reset_fifo(rfm);
+		if (rf_receive(rfm, &rmsg, rt_flags & RT_RX_ECHO) != -1) {
 			if (rmsg.nid == NODE_TSYNC) {
 				sync_time(&rmsg);
 				break;
@@ -284,7 +295,7 @@ int main(void)
 	bmp180_init(&bmp);
 	cli_init();
 	rt_flags |= RT_DATA_INIT;
-	dval.stat = rfm12_battery(RFM_MODE_IDLE, 14);
+	dval.stat = rfm12_battery(rfm, RFM_MODE_IDLE, 14);
 	mmr_led_off();
 
 	if (is_interactive()) {
@@ -305,7 +316,7 @@ int main(void)
 				awake();
 				if (active & OLED_ACTIVE)
 					ossd_sleep(0);
-				dval.stat = rfm12_battery(RFM_MODE_IDLE, 14);
+				dval.stat = rfm12_battery(rfm, RFM_MODE_IDLE, 14);
 				uart_puts_p(PSTR("\n> "));
 				active |= NODE_ACTIVE;
 			}
@@ -346,21 +357,21 @@ int main(void)
 					if (isync >= tsync || !(rt_flags & RT_TSYNCED)) {
 						dval.nid |= NODE_TSYNC; // request time sync
 						dval.stat &= ~STAT_VBAT; // update battery voltage
-						dval.stat |= rfm12_battery(RFM_MODE_IDLE, 14) & STAT_VBAT;
+						dval.stat |= rfm12_battery(rfm, RFM_MODE_IDLE, 14) & STAT_VBAT;
 					}
 				}
 
-				rfm12_send(&dval, sizeof(dval));
+				rfm12_send(rfm, &dval, sizeof(dval));
 			}
 
 			// set RFM mode to RX if needed
 			if ((dval.nid & NODE_TSYNC) || (active & ACTIVE_MODE)) {
-				rfm12_cmdrw(RFM12CMD_STATUS); // clear any interrupts
-				rfm12_set_mode(RFM_MODE_RX);
-				rfm12_reset_fifo();
+				rfm12_cmdrw(rfm, RFM12CMD_STATUS); // clear any interrupts
+				rfm12_set_mode(rfm, RFM_MODE_RX);
+				rfm12_reset_fifo(rfm);
 			}
 			else
-				rfm12_set_mode(RFM_MODE_SLEEP);
+				rfm12_set_mode(rfm, RFM_MODE_SLEEP);
 
 			serial_wait_sending();
 			rt_flags &= ~(RT_DATA_POLL | RT_DATA_INIT);
@@ -371,9 +382,9 @@ int main(void)
 		// get time sync reply and process any commands
 		if ((dval.nid & NODE_TSYNC) || (active & ACTIVE_MODE)) {
 			do {
-				if (rf_receive(&rmsg, rt_flags & RT_RX_ECHO) < 0)
+				if (rf_receive(rfm, &rmsg, rt_flags & RT_RX_ECHO) < 0)
 					break;
-				process_cmd(&rmsg);
+				process_cmd(rfm, &rmsg);
 			} while(rmsg.nid != NODE_TSYNC);
 
 			if (dval.nid & NODE_TSYNC) {
@@ -382,7 +393,7 @@ int main(void)
 			}
 
 			if (!(active & ACTIVE_MODE))
-				rfm12_set_mode(RFM_MODE_SLEEP);
+				rfm12_set_mode(rfm, RFM_MODE_SLEEP);
 		}
 
 		if (rt_flags & RT_OLED_ECHO) {
@@ -446,7 +457,7 @@ void print_status(dnode_t *val)
 	printf_P(PSTR("Sensor ID %d, txpwr %ddB, %s\n"), nid, -3*txpwr, buf);
 	get_rtc_time(buf);
 	uart_puts_p(PSTR("RTC time "));
-	if (rt_flags & RT_TSYNCED)
+	if (!(rt_flags & RT_TSYNCED))
 		uart_puts_p(PSTR("(is not set) "));
 	uart_puts(buf);
 	printf_P(PSTR(" Uptime %lu sec or %lu:%02ld:%02ld\n"), uptime, uptime / 3600, (uptime / 60) % 60, uptime % 60);
