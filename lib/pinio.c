@@ -17,7 +17,7 @@
 */
 #include "pinio.h"
 
-static volatile uint8_t *ports[3] = { &PORTB, &PORTC, &PORTD };
+static volatile uint8_t *ports[4] = { &PORTA, &PORTB, &PORTC, &PORTD };
 
 void pinDir(uint8_t pin, uint8_t dir)
 {
