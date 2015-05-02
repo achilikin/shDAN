@@ -26,6 +26,7 @@
 // http://homepage.hispeed.ch/peterfleury/avr-software.html
 #include "i2cmaster.h"
 
+#include "spi.h"
 #include "rht.h"
 #include "dnode.h"
 #include "pinio.h"
@@ -78,6 +79,15 @@ uint32_t uptime;
 uint32_t sw_clock;
 
 bmp180_t press;
+
+rfm12_t rfm868 = {
+	.mode = RFM_SPI_MODE_HW,
+	.cs  = SPI_SS,
+	.sck = SPI_SCK,
+	.sdi = SPI_SDI,
+	.sdo = SPI_SDO,
+	.irq = PND3
+};
 
 // the latest message from a data node and corresponding information
 dnode_t  rd;
@@ -142,7 +152,6 @@ int main(void)
 	uint8_t poll_clock = 0;
 
 	mmr_led_on(); // turn on LED while booting
-
 	memset(dans, 0, sizeof(dans));
 	rht.valid = 0;
 	rht.errors = 0;
@@ -165,8 +174,13 @@ int main(void)
 	analogReference(VREF_AVCC); // enable ADC with Vcc reference
 	analogRead(ARSSI_ADC); // dummy read to start ADC
 	uint8_t sync = eeprom_read_byte(&em_rfm_sync);
-	rfm12_init(sync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
-	rfm12_set_mode(RFM_MODE_RX);
+
+	spi_init(SPI_CLOCK_DIV4); // RFM12 supports only < 2.5MHz
+
+	rfm868.mode = RFM_SPI_MODE_HW;
+	rfm12_t *rfm = &rfm868;
+	rfm12_init(rfm, sync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
+	rfm12_set_mode(rfm, RFM_MODE_RX);
 
 	rht_init();
 	bmp180_init(&press);
@@ -251,7 +265,7 @@ int main(void)
 		if (rt_flags & RT_ECHO_RX)
 			rx_flags |= RFM_RX_DEBUG;
 
-		if (rfm12_receive_data(&rd, sizeof(rd), rx_flags) == sizeof(rd)) {
+		if (rfm12_receive_data(rfm, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
 			uint8_t dan = GET_NID(rd.nid);
 			if (!dan || dan > MAX_DNODES)
 				goto nodan;
@@ -273,8 +287,8 @@ int main(void)
 				ts_pack(&tsync, dan);
 				dans[dan].flags |= STAT_TSYNC;
 
-				rfm12_send(&tsync, sizeof(tsync));
-				rfm12_set_mode(RFM_MODE_RX);
+				rfm12_send(rfm, &tsync, sizeof(tsync));
+				rfm12_set_mode(rfm, RFM_MODE_RX);
 				if (rt_flags & RT_ECHO_DAN) {
 					printf_P(pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
 					printf_P(PSTR(" sync %02X\n"), rd.nid);
@@ -311,14 +325,11 @@ int main(void)
 			}
 			dans[dan].ssi = rd_signal;
 
-			if (rt_flags & RT_ECHO_DAN)
-				print_rd();
-
 			if ((rd.nid & SENS_MASK) == SENS_LIST) {
 				dans[dan].flags |= STAT_SLIST;
 			}
 			else {
-				rd_bv = (rd.stat & STAT_VBAT)* 10;
+				rd_bv = (rd.stat & STAT_VBAT) * 10;
 				dans[dan].flags |= rd.stat & ~STAT_VBAT;
 				dans[dan].vbat = rd_bv;
 				rd_bv += 230;
@@ -333,6 +344,9 @@ int main(void)
 				uint8_t font = bmfont_select(BMFONT_6x8);
 				ossd_putlx(7, -1, status, 0);
 				bmfont_select(font);
+
+				if (rt_flags & RT_ECHO_DAN)
+					print_rd();
 			}
 		}
 nodan:
