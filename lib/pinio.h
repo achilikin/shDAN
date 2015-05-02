@@ -49,38 +49,34 @@
 #define EXINT1  PD3 // an extra pin soldered to INT1 (PD3)
 #define LED1	PD7 // LED1
 
-#define PNB0	0x00  // TP4, T0
-#define PNB1	0x01  // TP5, T1
-#define PNB2	0x02  // NC
-#define PNB3	0x03  // NC
-#define PNB4	0x04  // SPI SS, if soldered 
-#define PNB5	0x05  // TP7, MOSI
-#define PNB6	0x06  // TP3, MISO
-#define PNB7	0x07  // TP10, SCK
+#define PNB0	0x10  // TP4, T0
+#define PNB1	0x11  // TP5, T1
+#define PNB2	0x12  // NC
+#define PNB3	0x13  // NC
+#define PNB4	0x14  // SPI SS, if soldered 
+#define PNB5	0x15  // TP7, MOSI
+#define PNB6	0x16  // TP3, MISO
+#define PNB7	0x17  // TP10, SCK
 
-#define SPI_SS  PNB4
-#define SPI_SCK PNB7
-#define SPI_SDI PNB5
-#define SPI_SDO PNB6
+#define PNC0	0x20 //
+#define PNC1	0x21 //
+#define PNC2	0x22 //
+#define PNC3	0x23 //
+#define PNC4	0x24 //
+#define PNC5	0x25 //
+#define PNC6	0x26 //
+#define PNC7	0x27 //
 
-#define PNC0	0x10 //
-#define PNC1	0x11 //
-#define PNC2	0x12 //
-#define PNC3	0x13 //
-#define PNC4	0x14 //
-#define PNC5	0x15 //
-#define PNC6	0x16 //
-#define PNC7	0x17 //
+#define PND0	0x30 // RXD
+#define PND1	0x31 // TXD
+#define PND2	0x32 // RDSINT
+#define PND3	0x33 // INT1, if soldered
+#define PND4	0x34 // NC
+#define PND5	0x35 // NC
+#define PND6	0x36 // NC
+#define PND7	0x37 // LED1
 
-#define PND0	0x20 // RXD
-#define PND1	0x21 // TXD
-#define PND2	0x22 // RDSINT
-#define PND3	0x23 // INT1, if soldered
-#define PND4	0x24 // NC
-#define PND5	0x25 // NC
-#define PND6	0x26 // NC
-#define PND7	0x27 // LED1
-
+// Analog channels
 #define ADC0 0
 #define ADC1 1
 #define ADC2 2
@@ -90,15 +86,15 @@
 #define ADC6 6
 #define ADC7 7
 
-// define mask of populated ADC inputs here, 0 if not populated
-#define ADC_PA0 _BV(ADC0)
-#define ADC_PA1 _BV(ADC1)
-#define ADC_PA2 _BV(ADC2)
-#define ADC_PA3 _BV(ADC3)
-#define ADC_PA4 _BV(ADC4)
-#define ADC_PA5 _BV(ADC5)
-#define ADC_PA6 _BV(ADC6)
-#define ADC_PA7 _BV(ADC7)
+// PORTA pins, better not to be used as digital I/O, reserved for ADC inputs
+#define PNA0 0x00
+#define PNA1 0x01
+#define PNA2 0x02
+#define PNA3 0x03
+#define PNA4 0x04
+#define PNA5 0x05
+#define PNA6 0x06
+#define PNA7 0x07
 
 #ifdef __cplusplus
 extern "C" {
