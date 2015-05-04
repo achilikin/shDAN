@@ -33,6 +33,7 @@ extern volatile uint8_t  rtc_sec, rtc_min, rtc_hour;
 
 #define CLOCK_RTC    0x01
 #define CLOCK_MILLIS 0x02
+#define CLOCK_PWM    0x04 // fast 256-bit PWM timer 0 (pin PB3)
 
 void init_time_clock(uint8_t clock);
 
@@ -78,6 +79,48 @@ static inline void rtc_get_time(uint8_t *rtc)
 		rtc[1] = rtc_min;
 		rtc[2] = rtc_hour;
 	}
+}
+
+// set PWM duty cycle on PB3
+static inline void pwm_set_duty(uint8_t duty)
+{
+	uint8_t reg = TCCR0;
+	if (duty) {
+		reg &= ~_BV(COM00);
+	}
+	else { // to avoid 1-clock spikes set inverting mode
+		reg |= _BV(COM00);
+		duty = 0xFF;
+	}
+	TCCR0 = reg;
+	OCR0 = duty;
+}
+
+#define PWM_MODE_NONE   0 // disconnect PB3 pin from PWM
+#define PWM_MODE_RUN    (_BV(COM01)) // non-inverting PWM
+#define PWM_MODE_INVERT (_BV(COM01) | _BV(COM00)) // inverting PWM
+
+static inline void pwm_set_mode(uint8_t mode)
+{
+	uint8_t reg = TCCR0 & ~(_BV(COM01) | _BV(COM00));
+	TCCR0 = reg | mode;
+}
+
+#define PWM_CLOCK_STOP 0
+#define PWM_CLOCK_1    (_BV(CS00))
+#define PWM_CLOCK_8    (_BV(CS01))
+#define PWM_CLOCK_16   (_BV(CS01) | _BV(CS00))
+#define PWM_CLOCK_256  (_BV(CS02))
+#define PWM_CLOCK_1024 (_BV(CS02) | _BV(CS00))
+#define PWM_CLOCK_T0_FALLING (_BV(CS02) | _BV(CS01))
+#define PWM_CLOCK_T0_RISING  (_BV(CS02) | _BV(CS01) | _BV(CS00))
+
+static inline void pwm_set_clock(uint8_t clock)
+{
+	uint8_t reg = TCCR0;
+	reg &= ~(_BV(CS02) | _BV(CS01) | _BV(CS00));
+	reg |= clock & (_BV(CS02) | _BV(CS01) | _BV(CS00));
+	TCCR0 = reg;
 }
 
 #ifdef __cplusplus

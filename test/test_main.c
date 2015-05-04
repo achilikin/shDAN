@@ -84,6 +84,7 @@ int main(void)
 	_pin_mode(&DDRB, _BV(PB0), INPUT_UP);
 	_pin_mode(&DDRB, _BV(PB1), INPUT_UP);
 	_pin_mode(&DDRB, _BV(PB2), INPUT_UP);
+	_pin_mode(&DDRB, _BV(PB3), INPUT_UP);
 	_pin_mode(&DDRB, _BV(PB4), INPUT_UP);
 	_pin_mode(&DDRC, _BV(PC0), INPUT_UP);
 	_pin_mode(&DDRC, _BV(PC1), INPUT_UP);
@@ -91,6 +92,7 @@ int main(void)
 	_pin_mode(&DDRC, _BV(PC4), INPUT_UP);
 	_pin_mode(&DDRD, _BV(PD2), INPUT_UP);
 	_pin_mode(&DDRD, _BV(PD3), INPUT_UP);
+	_pin_mode(&DDRD, _BV(PD4), INPUT_UP);
 
 	// alternative to mmr_led_off()
 	pinMode(PND7, OUTPUT_HIGH);

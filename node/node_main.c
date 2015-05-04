@@ -454,7 +454,7 @@ void print_status(dnode_t *val)
 	char buf[16];
 
 	get_vbat(val, buf);
-	printf_P(PSTR("Sensor ID %d, txpwr %ddB, %s\n"), nid, -3*txpwr, buf);
+	printf_P(PSTR("Node ID %d, txpwr %ddB, %s\n"), nid, -3*txpwr, buf);
 	get_rtc_time(buf);
 	uart_puts_p(PSTR("RTC time "));
 	if (!(rt_flags & RT_TSYNCED))

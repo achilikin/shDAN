@@ -85,4 +85,15 @@ void init_time_clock(uint8_t clock)
 		TIMSK |= _BV(OCIE2);
 		ASSR |= _BV(AS2);
 	}
+
+	// PWM timer
+	if (clock & CLOCK_PWM) {
+		// fast PWM: WGM00 & WGM01 are set
+		// not inverted PWM: COM01 is set
+		// frequency F_CPU/(256*1): only CS00 is set
+		TCCR0 = _BV(WGM00) | _BV(WGM01) | _BV(COM01) | _BV(CS00);
+		// set PB3 (OC0) as PWM output
+		DDRB |= _BV(PB3);
+	}
 }
+
