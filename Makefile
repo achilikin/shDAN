@@ -70,10 +70,11 @@ AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
 all: build
 
 build:
-	cd test; make
 	cd base; make
 	cd node; make
 	cd radio; make
+	cd test; make
+	cd ili; make
 
 # Base station target
 base:
@@ -115,6 +116,16 @@ testsize:
 progtest:
 	cd test; make program
 
+# ili target
+ili:
+	cd ili; make
+
+ilisize:
+	cd ili; make size
+
+progili:
+	cd ili; make program
+
 # Common targets
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
@@ -126,10 +137,11 @@ reset:
 	$(AVRDUDE) $(AVRDUDE_FLAGS)
 
 clean:
-	cd test; make clean
 	cd base; make clean
 	cd node; make clean
 	cd radio; make clean
+	cd test; make clean
+	cd ili; make clean
 
 # Listing of phony targets.
 .PHONY : all build clean reset fuses \
@@ -137,3 +149,4 @@ base basesize progbase \
 node nodesize prognode \
 radio radiosize progradio \
 test testsize progtest \
+ili ilisize progili \
