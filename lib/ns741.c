@@ -402,9 +402,8 @@ uint8_t ns741_rds_isr(void)
 	if (rds_debug < rds_debug_max) {
 		data = (uint8_t *)&block[block_index];
 		if (block_index == 0)
-			printf_P(PSTR("%2d %02X%02X"), group_index, data[1], data[0]);
-		else 
-			printf_P(PSTR(" %02X%02X"), data[1], data[0]);
+			printf_P(PSTR("%2d"), group_index);
+		printf_P(PSTR(" %02X%02X"), data[1], data[0]);
 		if (block_index == 3)
 			printf("\n");
 		rds_debug++;
