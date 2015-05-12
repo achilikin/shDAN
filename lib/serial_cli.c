@@ -30,7 +30,7 @@
 
 const char *is_on(uint8_t val)
 {
-	if (val) return "ON";
+	if (val) return "ON ";
 	return "OFF";
 }
 
@@ -105,7 +105,7 @@ int8_t cli_interact(cli_processor *process, void *ptr)
 			int8_t ret = process(cmd, ptr);
 			memcpy(hist, cmd, sizeof(cmd));
 			if (ret == CLI_EARG)
-				uart_puts_p(PSTR("Invalid format\n"));
+				uart_puts_p(PSTR("Invalid argument\n"));
 			else if (ret == CLI_ENOTSUP)
 				uart_puts_p(PSTR("Unknown command\n"));
 			else if (ret == CLI_ENODEV)
