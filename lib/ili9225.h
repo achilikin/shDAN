@@ -153,10 +153,13 @@ void ili9225_set_backlight(ili9225_t *ili, uint8_t mode);
 void ili9225_set_disp(ili9225_t *ili, uint8_t mode);
 
 // set foreground color, will affect all drawing functions below
-void ili9225_set_fg_color(ili9225_t *ili, uint16_t color);
+uint16_t ili9225_set_fg_color(ili9225_t *ili, uint16_t color);
 
 // set background color, will affect ili9225_clear() and ili9225_puts()
 void ili9225_set_bk_color(ili9225_t *ili, uint16_t color);
+
+// swap foreground and background colors
+void ili9225_swap_color(ili9225_t *ili);
 
 // clear the screen
 void ili9225_clear(ili9225_t *ili); 

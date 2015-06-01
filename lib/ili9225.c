@@ -168,14 +168,23 @@ void ili9225_set_backlight(ili9225_t *ili, uint8_t mode)
 	}
 }
 
-void ili9225_set_fg_color(ili9225_t *ili, uint16_t color)
+uint16_t ili9225_set_fg_color(ili9225_t *ili, uint16_t color)
 {
+	uint16_t fcolor = ili->fcolor;
 	ili->fcolor = color;
+	return fcolor;
 }
 
 void ili9225_set_bk_color(ili9225_t *ili, uint16_t color)
 {
 	ili->bcolor = color;
+}
+
+void ili9225_swap_color(ili9225_t *ili)
+{
+	uint16_t color = ili->bcolor;
+	ili->bcolor = ili->fcolor;
+	ili->fcolor = color;
 }
 
 void ili9225_set_disp(ili9225_t *ili, uint8_t mode)
