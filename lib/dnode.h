@@ -25,8 +25,9 @@ extern "C" {
 #endif
 #endif
 
-#define MAX_DNODES  12
-#define MAX_SENSORS 6
+#define MAX_DNODE_NUM  12
+#define MAX_SENSORS    6
+#define MAX_DNODE_LOGS 5
 
 #define NID_MASK   0x0F // node index mask
 #define NODE_TSYNC 0x80 // time sync request
@@ -60,6 +61,7 @@ extern "C" {
 #define STAT_ACTIVE 0x01
 #define STAT_SLIST  0x02
 #define STAT_TSYNC  0x04
+#define STAT_LOG    0x08
 
 // command to be applied for .nid sensor id
 #define CMD_GVAL   0x10 // get value
@@ -107,7 +109,6 @@ typedef struct dnode_s
 				};
 				uint16_t v16; // for example: air pressure, hP
 			};
-
 		};
 		struct {
 			uint8_t hour;
@@ -126,14 +127,20 @@ typedef struct dnode_s
 	};
 } dnode_t;
 
-typedef int8_t sens_poll(dnode_t *dval, void *ptr);
+
+#define NODE_NAME_LEN 6
 
 typedef struct dnode_status_s {
 	uint8_t flags;
+	uint8_t nid;
 	uint8_t ts[3]; // last session time stamp
 	uint8_t vbat;
 	uint8_t ssi; // signal strength indicator 0-100%
+	uint8_t log;
+	uint8_t name[NODE_NAME_LEN];
 }dnode_status_t;
+
+typedef int8_t sens_poll(dnode_t *dval, void *ptr);
 
 typedef struct dsens_s
 {
@@ -166,6 +173,24 @@ static inline uint8_t get_sens_type(dnode_t *dval, uint8_t sid)
 
 uint8_t ts_unpack(dnode_t *tsync);
 void ts_pack(dnode_t *tsync, uint8_t nid);
+
+typedef struct dnode_log_s {
+	uint8_t ssi;
+	union {
+		struct {
+			int8_t  val; // value
+			uint8_t dec; // decimal
+		};
+		uint16_t v16; // for example: air pressure, hP
+	};
+}dnode_log_t;
+
+// logging functions
+void   log_erase(uint8_t lidx);
+uint16_t log_next_rec_index(uint16_t ridx);
+int8_t log_erase_rec(uint8_t lidx, uint16_t ridx);
+int8_t log_write_rec(uint8_t lidx, uint16_t ridx, dnode_log_t *rec);
+int8_t log_read_rec(uint8_t lidx, uint16_t ridx, dnode_log_t *rec);
 
 #ifdef __cplusplus
 }
