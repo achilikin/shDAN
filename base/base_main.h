@@ -71,13 +71,22 @@ extern uint8_t  rt_flags;
 extern uint32_t uptime;
 extern uint32_t sw_clock;
 
-void get_tx_pwr(char *buf);  // get current NS741 tx power
-void get_fm_freq(char *buf); // get current NS741 FM frequency
-void print_rd(void); // print remote sensor data
+void   get_tx_pwr(char *buf);  // get current NS741 tx power
+void   get_fm_freq(char *buf); // get current NS741 FM frequency
+void   print_rd(void); // print remote sensor data
 int8_t print_rtc_time(void);
-void print_status(uint8_t verbose);
+void   print_node(uint8_t nid);
+void   print_status(uint8_t verbose);
+
+void io_handler(void); // check if I/O request is pending
 
 int8_t cli_base(char *buf, void *rht);
+
+#define MAX_NODES_PER_SCREEN 8
+int8_t get_node_line(uint8_t nid);
+
+#define TEXT_CENTRE 0xFF
+void putlx(uint8_t line, uint8_t x, const char *str, uint8_t atr);
 
 #ifdef __cplusplus
 }

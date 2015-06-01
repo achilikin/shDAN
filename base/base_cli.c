@@ -23,14 +23,16 @@
 #include <util/delay.h>
 
 #include "rht.h"
+#include "dnode.h"
 #include "pinio.h"
 #include "sht1x.h"
 #include "ns741.h"
 #include "timer.h"
 #include "bmfont.h"
 #include "serial.h"
+#include "i2cmem.h"
+#include "ili9225.h"
 #include "pcf2127.h"
-#include "ossd_i2c.h"
 #include "serial_cli.h"
 
 #include "base_main.h"
@@ -50,6 +52,19 @@ const char cmd_list[] PROGMEM =
 	"  set time HH:MM:SS\n"
 	"  set date YY/MM/DD\n"
 	"  echo rx|dan|rht|log|rds [on|off]\n"
+
+	"  ili dir 0|1\n"
+	"  ili led on|off|0-255\n"
+	"  ili disp standby|off|on\n"
+
+	"  dan show log NID\n"
+	"  dan show status NID\n"
+	"  dan set name NID str\n"
+	"  dan set log NID on|off\n"
+	
+	"  ili led on|off|0-255\n"
+	"  ili disp standby|off|on\n"
+
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
@@ -60,10 +75,25 @@ const char cmd_list[] PROGMEM =
 	"  txpwr 0-3\n"
 	"  radio on|off\n";
 
-extern const char pstr_time[];
+extern ili9225_t ili;
+
+extern uint8_t EEMEM em_dlog[MAX_DNODE_LOGS];
+extern dnode_status_t dans[MAX_DNODE_NUM];
+extern uint8_t  EEMEM em_dan_name[MAX_DNODE_NUM][NODE_NAME_LEN];
+
+extern const char pstr_tformat[];
 static const char pstr_on[] PROGMEM = "on";
 static const char pstr_off[] PROGMEM = "off";
-static const char pstr_echo[] PROGMEM = " echo %s\n";
+static const char pstr_mem[] PROGMEM = "mem";
+static const char pstr_set[] PROGMEM = "set";
+static const char pstr_log[] PROGMEM = "log";
+static const char pstr_dan[] PROGMEM = "dan";
+static const char pstr_date[] PROGMEM = "date";
+static const char pstr_time[] PROGMEM = "time";
+static const char pstr_radio[] PROGMEM = "radio";
+static const char pstr_reset[] PROGMEM = "reset";
+static const char pstr_status[] PROGMEM = "status";
+static const char pstr_echo[] PROGMEM = "echo";
 static const char pstr_set_to[] PROGMEM = "%s set to %d\n";
 
 static void set_echo(char *name, uint8_t flag, int8_t echo)
@@ -73,7 +103,19 @@ static void set_echo(char *name, uint8_t flag, int8_t echo)
 	else if (echo == 0)
 		rt_flags &= ~flag;
 	uart_puts(name);
-	printf_P(pstr_echo, is_on(rt_flags & flag));
+	uart_putc(' ');
+	uart_puts_p(pstr_echo);
+	uart_putc(' ');
+	uart_puts(is_on(rt_flags & flag));
+	uart_puts("\n");
+}
+
+static int8_t strtonid(const char *str)
+{
+	int8_t nid = atoi(str);
+	if ((nid < 1) || (nid > MAX_DNODE_NUM))
+		return -1;
+	return nid - 1;
 }
 
 int8_t cli_base(char *buf, void *rht)
@@ -91,24 +133,59 @@ int8_t cli_base(char *buf, void *rht)
 		return 0;
 	}
 
-	if (str_is(cmd, PSTR("time")))
+	if (str_is(cmd, pstr_time))
 		return print_rtc_time();
 	
-	if (str_is(cmd, PSTR("date"))) {
+	if (str_is(cmd, pstr_date)) {
 		pcf_td_t td;
 		if (pcf2127_get_date(&td) == 0) {
 			printf_P(PSTR("20%02d/%02d/%02d "), td.year, td.month, td.day);
-			printf_P(pstr_time, td.hour, td.min, td.sec);
+			printf_P(pstr_tformat, td.hour, td.min, td.sec);
 			uart_puts("\n");
 			return 0;
 		}
 		return CLI_ENODEV;
 	}
 
+	if (str_is(cmd, pstr_reset)) {
+		uart_puts("\n");
+		uart_puts("...");
+		wdt_enable(WDTO_15MS);
+		while(1);
+	}
+
+	if (str_is(cmd, PSTR("calibrate"))) {
+		uart_puts("\n");
+		uart_puts("...");
+		if (str_is(arg, PSTR("default")))
+			serial_calibrate(osccal_def);
+		else
+			serial_calibrate(OSCCAL);
+		return 0;
+	}
+
+	if (str_is(cmd, PSTR("poll"))) {
+		uart_puts("...");
+		rht_read(rht, RT_ECHO_RHT, rds_data);
+		ns741_rds_set_radiotext(rds_data);
+		return 0;
+	}
+
+	if (str_is(cmd, pstr_mem)) {
+		printf_P(PSTR("available %d\n"), free_mem());
+		return 0;
+	}
+
+	if (str_is(cmd, pstr_status)) {
+		print_status(1);
+		return 0;
+	}
+
+	// rtc --------------------------------------------------------------------
 	if (str_is(cmd, PSTR("rtc"))) {
 		char *sval = get_arg(arg);
 		if (str_is(arg, PSTR("init"))) {
-			if (str_is(sval, PSTR("mem"))) {
+			if (str_is(sval, pstr_mem)) {
 				for(uint8_t i = 0; i < 16; i++)
 					cmd[i] = 0;
 				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++)
@@ -121,7 +198,7 @@ int8_t cli_base(char *buf, void *rht)
 		}
 
 		if (str_is(arg, PSTR("dump"))) {
-			if (str_is(sval, PSTR("mem"))) {
+			if (str_is(sval, pstr_mem)) {
 				for(uint8_t i = 0; i < PCF_RAM_SIZE/16; i++) {
 					if (pcf2127_ram_read(i*16, (uint8_t *)cmd, 16) != 0)
 						return -1;
@@ -171,7 +248,8 @@ int8_t cli_base(char *buf, void *rht)
 		return -1;
 	}
 
-	if (str_is(cmd, PSTR("set"))) {
+	// set --------------------------------------------------------------------
+	if (str_is(cmd, pstr_set)) {
 		char *sval = get_arg(arg);
 
 		if (str_is(arg, PSTR("osccal"))) {
@@ -181,7 +259,7 @@ int8_t cli_base(char *buf, void *rht)
 			return 0;
 		}
 
-		if (str_is(arg, PSTR("time"))) {
+		if (str_is(arg, pstr_time)) {
 			uint8_t ts[3];
 			ts[0] = strtoul(sval, &arg, 10);
 			if (ts[0] < 24 && *arg == ':') {
@@ -196,7 +274,7 @@ int8_t cli_base(char *buf, void *rht)
 			}
 		}
 
-		if (str_is(arg, PSTR("date"))) {
+		if (str_is(arg, pstr_date)) {
 			pcf_td_t ts;
 			ts.year = strtoul(sval, &arg, 10);
 			if (ts.year < 99 && *arg == '/') {
@@ -213,29 +291,8 @@ int8_t cli_base(char *buf, void *rht)
 		return -1;
 	}
 
-	if (str_is(cmd, PSTR("reset"))) {
-		uart_puts_p(PSTR("\nresetting..."));
-		wdt_enable(WDTO_15MS);
-		while(1);
-	}
-
-	if (str_is(cmd, PSTR("calibrate"))) {
-		uart_puts_p(PSTR("\ncalibrating..."));
-		if (str_is(arg, PSTR("default")))
-			serial_calibrate(osccal_def);
-		else
-			serial_calibrate(OSCCAL);
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("poll"))) {
-		uart_puts_p(PSTR("polling..."));
-		rht_read(rht, RT_ECHO_RHT, rds_data);
-		ns741_rds_set_radiotext(rds_data);
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("echo"))) {
+	// echo -------------------------------------------------------------------
+	if (str_is(cmd, pstr_echo)) {
 		int8_t echo = -1;
 		char *sval = get_arg(arg);
 		if (str_is(sval, pstr_on))
@@ -246,7 +303,7 @@ int8_t cli_base(char *buf, void *rht)
 			set_echo(arg, RT_ECHO_RX, echo);
 			return 0;
 		}
-		if (str_is(arg, PSTR("dan"))) {
+		if (str_is(arg, pstr_dan)) {
 			set_echo(arg, RT_ECHO_DAN, echo);
 			return 0;
 		}
@@ -254,7 +311,7 @@ int8_t cli_base(char *buf, void *rht)
 			set_echo(arg, RT_ECHO_RHT, echo);
 			return 0;
 		}
-		if (str_is(arg, PSTR("log"))) {
+		if (str_is(arg, pstr_log)) {
 			set_echo(arg, RT_ECHO_LOG, echo);
 			return 0;
 		}
@@ -266,7 +323,9 @@ int8_t cli_base(char *buf, void *rht)
 		if (str_is(arg, pstr_off)) {
 			rt_flags &= ~(RT_ECHO_RX | RT_ECHO_DAN | RT_ECHO_RHT | RT_ECHO_LOG);
 			ns741_rds_debug(0);
-			uart_puts_p(PSTR("echo OFF\n"));
+			uart_puts_p(pstr_echo);
+			uart_putc(' ');
+			uart_puts(is_on(0));
 			return 0;
 		}
 		if (*arg == 0) {
@@ -277,11 +336,6 @@ int8_t cli_base(char *buf, void *rht)
 			return 0;
 		}
 		return -1;
-	}
-
-	if (str_is(cmd, PSTR("mem"))) {
-		printf_P(PSTR("memory %d\n"), free_mem());
-		return 0;
 	}
 
 	if (str_is(cmd, PSTR("adc"))) {
@@ -310,6 +364,7 @@ int8_t cli_base(char *buf, void *rht)
 		return 0;
 	}
 
+	// radio ------------------------------------------------------------------
 	if (str_is(cmd, PSTR("rdsid"))) {
 		if (*arg != '\0') {
 			memset(rds_name, 0, 8);
@@ -319,7 +374,7 @@ int8_t cli_base(char *buf, void *rht)
 			eeprom_update_block((const void *)rds_name, (void *)em_rds_name, 8);
 		}
 		printf_P(PSTR("%s %s\n"), cmd, rds_name);
-		ossd_putlx(0, -1, rds_name, 0);
+		putlx(0, -1, rds_name, 0);
 		return 0;
 	}
 
@@ -328,11 +383,6 @@ int8_t cli_base(char *buf, void *rht)
 			puts(rds_data);
 			return 0;
 		}
-		return 0;
-	}
-
-	if (str_is(cmd, PSTR("status"))) {
-		print_status(1);
 		return 0;
 	}
 
@@ -350,7 +400,7 @@ int8_t cli_base(char *buf, void *rht)
 		}
 		printf_P(pstr_set_to, cmd, radio_freq);
 		get_fm_freq(fm_freq);
-		ossd_putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
+		putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 		return 0;
 	}
 
@@ -368,23 +418,156 @@ int8_t cli_base(char *buf, void *rht)
 
 		get_tx_pwr(status);
 		uint8_t font = bmfont_select(BMFONT_6x8);
-		ossd_putlx(7, -1, status, 0);
+		putlx(7, -1, status, 0);
 		bmfont_select(font);
 		return 0;
 	}
 
-	if (str_is(cmd, PSTR("radio"))) {
+	if (str_is(cmd, pstr_radio)) {
 		if (str_is(arg, pstr_on))
 			ns_pwr_flags |= NS741_POWER;
 		else if (str_is(arg, pstr_off))
 			ns_pwr_flags &= ~NS741_POWER;
 		ns741_radio_power(ns_pwr_flags & NS741_POWER);
-		printf_P(PSTR("radio %s\n"), is_on(ns_pwr_flags & NS741_POWER));
+		uart_puts_p(pstr_radio);
+		uart_putc(' ');
+		uart_puts(is_on(ns_pwr_flags & NS741_POWER));
 		get_tx_pwr(status);
 		uint8_t font = bmfont_select(BMFONT_6x8);
-		ossd_putlx(7, -1, status, 0);
+		putlx(7, -1, status, 0);
 		bmfont_select(font);
 		return 0;
+	}
+
+	// ili --------------------------------------------------------------------
+	if (str_is(cmd, PSTR("ili"))) {
+		char *sval = get_arg(arg);
+		if (str_is(arg, PSTR("disp"))) {
+			if (str_is(sval,pstr_on)) {
+				ili9225_set_disp(&ili, ILI9225_DISP_ON);
+				return 0;
+			}
+			if (str_is(sval, pstr_off)) {
+				ili9225_set_disp(&ili, ILI9225_DISP_OFF);
+				return 0;
+			}
+			if (str_is(sval, PSTR("standby"))) {
+				ili9225_set_disp(&ili, ILI9225_DISP_STANDBY);
+				return 0;
+			}
+			return CLI_EARG;
+		}
+		if (str_is(arg, PSTR("led"))) {
+			if (str_is(sval,pstr_on)) {
+				ili9225_set_backlight(&ili, ILI9225_BKL_ON);
+				return 0;
+			}
+			if (str_is(sval, pstr_off)) {
+				ili9225_set_backlight(&ili, ILI9225_BKL_OFF);
+				return 0;
+			}
+			uint8_t duty = atoi(sval);
+			ili9225_set_backlight(&ili, duty);
+			return CLI_EOK;
+		}
+		if (str_is(arg, PSTR("dir"))) {
+			uint8_t dir = atoi(sval);
+			ili9225_set_dir(&ili, dir);
+			return 0;
+		}
+		return CLI_EARG;
+	}
+
+	// dan --------------------------------------------------------------------
+	if (str_is(cmd, PSTR("dan"))) {
+		char *sprop = get_arg(arg);
+		char *snode = get_arg(sprop);
+		char *str = get_arg(snode);
+
+		if (str_is(arg, PSTR("show"))) {
+			int8_t nid = strtonid(snode);
+			if (nid < 0)
+				return CLI_EARG;
+			if (str_is(sprop, pstr_status)) {
+				print_node(nid);
+				return 0;
+			}
+			if (str_is(sprop, pstr_log)) {
+				if (!(dans[nid].flags & STAT_LOG))
+					return CLI_EARG;
+
+				uint8_t ts[3];
+				pcf2127_get_time((pcf_td_t *)ts, 0);
+				uint16_t ridx = ts[0]*60 + ts[1];
+
+				dnode_log_t rec;
+				for(uint16_t i = 0; i < 24*60; i++) {
+					ridx = log_next_rec_index(ridx);
+					log_read_rec(dans[nid].log, ridx, &rec);
+					uint8_t hour = ridx / 60;
+					uint8_t min = ridx % 60;
+					printf("%02u:%02u ", hour, min);
+					if (rec.ssi & 0x80)
+						printf("%3u%% T %2u.%02u", rec.ssi & 0x7F, rec.val, rec.dec);
+					else
+						uart_puts(" --- - --.--");
+					uart_puts("\n");
+				}
+				return 0;
+			}
+		}
+
+		if (str_is(arg, pstr_set)) {
+			if (str_is(sprop, PSTR("name"))) {
+				int8_t nid = strtonid(snode);
+				if (nid < 0)
+					return CLI_EARG;
+				uint8_t *name = dans[nid].name;
+				memset(name, 0, NODE_NAME_LEN);
+				for(uint8_t i = 0; i < (NODE_NAME_LEN - 1); i++) {
+					if (str[i] == 0)
+						break;
+					name[i] = str[i];
+				}
+				eeprom_update_block((const void *)name, (void *)em_dan_name[nid], NODE_NAME_LEN);
+				return 0;
+			}
+
+			if (str_is(sprop, pstr_log)) {
+				int8_t nid = strtonid(snode);
+				if (nid < 0)
+					return CLI_EARG;
+				if (str_is(str, pstr_on)) {
+					if (dans[nid].flags & STAT_LOG)
+						return 0;
+					uint8_t dlog[MAX_DNODE_LOGS];
+					eeprom_read_block((void *)dlog, (const void *)em_dlog, MAX_DNODE_LOGS);
+					for(uint8_t i = 0; i < MAX_DNODE_LOGS; i++) {
+						if (dlog[i] == 0) {
+							dlog[i] = nid + 1;
+							dans[nid].flags |= STAT_LOG;
+							dans[nid].log = i;
+							eeprom_write_byte(&em_dlog[i], dlog[i]);
+							log_erase(i);
+							return 0;
+						}
+					}
+					return CLI_EARG;
+				}
+				if (str_is(str, pstr_off)) {
+					if (!(dans[nid].flags & STAT_LOG))
+						return 0;
+					dans[nid].flags &= ~STAT_LOG;
+					uint8_t i = dans[nid].log;
+					if (i < MAX_DNODE_LOGS) {
+						eeprom_write_byte(&em_dlog[i], 0);
+						return 0;
+					}
+					return CLI_EARG;
+				}
+			}
+		}
+		return CLI_EARG;
 	}
 
 	return CLI_ENOTSUP;

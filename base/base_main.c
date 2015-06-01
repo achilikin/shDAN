@@ -1,4 +1,4 @@
-/* Base Station for data acquisition network
+/* Base Station for shDAN - Data Acquisition Network
 
    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
@@ -35,9 +35,10 @@
 #include "bmp180.h"
 #include "bmfont.h"
 #include "serial.h"
+#include "i2cmem.h"
+#include "ili9225.h"
 #include "rfm12bs.h"
 #include "pcf2127.h"
-#include "ossd_i2c.h"
 #include "serial_cli.h"
 
 #include "base_main.h"
@@ -78,6 +79,7 @@ uint8_t  rt_flags;
 uint32_t uptime;
 uint32_t sw_clock;
 
+rht_t rht;
 bmp180_t press;
 
 rfm12_t rfm868 = {
@@ -89,6 +91,14 @@ rfm12_t rfm868 = {
 	.irq = PND3
 };
 
+ili9225_t ili = {
+	.flags = ILI_LED_PIN | ILI_LED_PWM,
+	.cs  = PNC3,
+	.rs  = PND4,
+	.rst = PNC4,
+	.led = PNB3
+};
+
 // the latest message from a data node and corresponding information
 dnode_t  rd;
 uint16_t rd_bv;     // battery voltage
@@ -96,7 +106,11 @@ uint8_t  rd_ts[3];  // last session time
 uint8_t  rd_arssi;  // last session arssi
 uint8_t  rd_signal; // last session signal
 
-dnode_status_t dans[MAX_DNODES];
+dnode_status_t dans[MAX_DNODE_NUM];
+uint8_t EEMEM  em_dlog[MAX_DNODE_LOGS]; // nodes for data logging
+uint8_t EEMEM  em_dan_name[MAX_DNODE_NUM][NODE_NAME_LEN]; // Nodes' names
+
+static uint16_t last_ts[MAX_DNODE_LOGS];
 
 // adc channel ARSSI connected to (> 0)
 #define ARSSI_ADC 5
@@ -109,7 +123,7 @@ static const char *s_pwr[4] = {
 };
 
 // avr-gcc does not do string pooling for PROGMEM
-const char pstr_time[] PROGMEM = "%02d:%02d:%02d";
+const char pstr_tformat[] PROGMEM = "%02d:%02d:%02d";
 
 void get_tx_pwr(char *buf)
 {
@@ -148,19 +162,44 @@ ISR(ADC_vect)
 
 int main(void)
 {
-	rht_t rht;
 	uint8_t poll_clock = 0;
 
 	mmr_led_on(); // turn on LED while booting
 	memset(dans, 0, sizeof(dans));
+
+	for(uint8_t i = 0; i < MAX_DNODE_NUM; i++) {
+		eeprom_read_block((void *)dans[i].name, (const void *)em_dan_name[i], NODE_NAME_LEN);
+		if (dans[i].name[0] == '\0')
+			sprintf((char *)dans[i].name, "DAN%02u", i+1);
+		dans[i].name[NODE_NAME_LEN - 1] = '\0';
+	}
+
+	for(uint8_t i = 0; i < MAX_DNODE_LOGS; i++) {
+		uint8_t nid = eeprom_read_byte(&em_dlog[i]);
+		if (nid && nid <= MAX_DNODE_NUM) {
+			dans[nid-1].log = i;
+			dans[nid-1].flags |= STAT_LOG;
+		}
+	}
+
 	rht.valid = 0;
 	rht.errors = 0;
+
+	// setup our ~millisecond timer for mill*() and tenth_clock counter
+	init_time_clock(CLOCK_MILLIS | CLOCK_PWM);
+#if _DEBUG
+	{
+		uint16_t ms = mill16();
+		delay(1000);
+		ms = mill16() - ms;
+		printf_P(PSTR("delay(1000) = %u\n"), ms);
+	}
+#endif
 
 	// initialise all components
 	// read settings from EEPROM
 	ns_rt_flags = eeprom_read_byte(&em_ns_rt_flags);
 	ns_pwr_flags = eeprom_read_byte(&em_ns_pwr_flags);
-
 	rt_flags = eeprom_read_byte(&em_rt_flags);
 
 	sei();
@@ -170,7 +209,11 @@ int main(void)
 		serial_set_osccal(new_osccal);
 	}
 
-	i2c_init(); // needed for ns741*, ossd*, bmp180* and pcf2127*
+	i2c_init(); // needed for ns741*, bmp180* and pcf2127*
+	// accessing i2c memory can be quite slow, so register our
+	// io handler for any pending I/O requests
+	i2cmem_set_idle_callback(io_handler);
+
 	analogReference(VREF_AVCC); // enable ADC with Vcc reference
 	analogRead(ARSSI_ADC); // dummy read to start ADC
 	uint8_t sync = eeprom_read_byte(&em_rfm_sync);
@@ -178,14 +221,15 @@ int main(void)
 	spi_init(SPI_CLOCK_DIV4); // RFM12 supports only < 2.5MHz
 
 	rfm868.mode = RFM_SPI_MODE_HW;
-	rfm12_t *rfm = &rfm868;
-	rfm12_init(rfm, sync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
-	rfm12_set_mode(rfm, RFM_MODE_RX);
+	rfm12_init(&rfm868, sync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 
 	rht_init();
 	bmp180_init(&press);
 	hpa[0] = '\0';
-	ossd_init(OSSD_UPDOWN);
+
+	ili9225_init(&ili);
+	ili9225_set_dir(&ili, ILI9225_DISP_UPDOWN);
+	ili9225_set_backlight(&ili, 127);
 
 	// initialize NS741 chip	
 	eeprom_read_block((void *)rds_name, (const void *)em_rds_name, 8);
@@ -215,25 +259,15 @@ int main(void)
 	ns741_volume(0);
 	ns741_mute(0); // unmute to transmit RDS
 
-	// setup our ~millisecond timer for mill*() and tenth_clock counter
-	init_time_clock(CLOCK_MILLIS);
-#if _DEBUG
-	{
-		uint16_t ms = mill16();
-		delay(1000);
-		ms = mill16() - ms;
-		printf_P(PSTR("delay(1000) = %u\n"), ms);
-	}
-#endif
 	rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
 
-	bmfont_select(BMFONT_6x8);
 	get_tx_pwr(status);
-	ossd_putlx(7, -1, status, 0);
+	bmfont_select(BMFONT_6x8);
+	putlx(26, TEXT_CENTRE, status, 0);
 	bmfont_select(BMFONT_8x16);
-	ossd_putlx(0, -1, rds_name, 0);
-	ossd_putlx(2, -1, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
+	putlx(0, 4, rds_name, 0);
+	putlx(2, TEXT_CENTRE, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 
 	// turn on RDS
 	ns741_rds(1);
@@ -257,99 +291,15 @@ int main(void)
 	ADMUX  |= _BV(ADLAR); // 8 bit resolution
 	ADCSRA |= _BV(ADIE);  // enable ADC interrupts
 
+	rfm868.ridx = 0;
+	rfm12_set_mode(&rfm868, RFM_MODE_RX);
+
+	pcf2127_get_time((pcf_td_t *)rd_ts, 0);
+	for(uint8_t i = 0; i < MAX_DNODE_LOGS; i++)
+		last_ts[i] = rd_ts[0]*60 + rd_ts[1];
+
 	for(;;) {
-		// RDSPIN is low when NS741 is ready to transmit next RDS frame
-		if (mmr_rdsint_get() == LOW)
-			ns741_rds_isr();
-		uint8_t rx_flags = ARSSI_ADC;
-		if (rt_flags & RT_ECHO_RX)
-			rx_flags |= RFM_RX_DEBUG;
-
-		if (rfm12_receive_data(rfm, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
-			uint8_t dan = GET_NID(rd.nid);
-			if (!dan || dan > MAX_DNODES)
-				goto nodan;
-			dan -= 1;
-			analogStop(); // stop any pending ARSSI conversion
-			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
-			dans[dan].flags &= 0x0F;
-			dans[dan].flags |= STAT_ACTIVE;
-			dans[dan].ts[0] = rd_ts[0];
-			dans[dan].ts[1] = rd_ts[1];
-			dans[dan].ts[2] = rd_ts[2];
-
-			if (rd.nid & NODE_TSYNC) { // remote node requests time sync
-				dnode_t tsync;
-				tsync.data[0] = rd_ts[0];
-				tsync.data[1] = rd_ts[1];
-				tsync.data[2] = rd_ts[2];
-				tsync.nid = NODE_TSYNC;
-				ts_pack(&tsync, dan);
-				dans[dan].flags |= STAT_TSYNC;
-
-				rfm12_send(rfm, &tsync, sizeof(tsync));
-				rfm12_set_mode(rfm, RFM_MODE_RX);
-				if (rt_flags & RT_ECHO_DAN) {
-					printf_P(pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
-					printf_P(PSTR(" sync %02X\n"), rd.nid);
-				}
-			}
-			
-			// we should have at least 7 ARSSI reads in our areads array
-			bsort(areads, 8);
-			rd_arssi  = 0;
-			rd_signal = 0;
-			// use two reads from the middle and reset ARSSI array
-			uint16_t average = 0;
-			if (rt_flags & RT_ECHO_RX)
-				uart_puts_p(PSTR("ARSSI"));
-			for(uint8_t i = 0; i < 8; i++) {
-				if (rt_flags & RT_ECHO_RX)
-					printf_P(PSTR(" %u"), areads[i]);
-				if (i == 3 || i == 4)
-					average += areads[i];
-				areads[i] = 0;
-			}
-			if (rt_flags & RT_ECHO_RX)
-				uart_puts("\n");
-
-			rd_arssi = average / 2;
-			aidx = 0;
-			if (rd_arssi) {
-				uint8_t arssi = rd_arssi;
-				if (arssi < ARSSI_IDLE)
-					arssi = ARSSI_IDLE;
-				rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
-				if (rd_signal > 100)
-					rd_signal = 100;
-			}
-			dans[dan].ssi = rd_signal;
-
-			if ((rd.nid & SENS_MASK) == SENS_LIST) {
-				dans[dan].flags |= STAT_SLIST;
-			}
-			else {
-				rd_bv = (rd.stat & STAT_VBAT) * 10;
-				dans[dan].flags |= rd.stat & ~STAT_VBAT;
-				dans[dan].vbat = rd_bv;
-				rd_bv += 230;
-
-				// overwrite FM frequency on the screen
-				sprintf_P(fm_freq, pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
-				ossd_putlx(0, -1, fm_freq, 0);
-				sprintf_P(fm_freq, PSTR("s%02X T %d.%02d "), rd.nid, rd.val, rd.dec);
-				ossd_putlx(4, -1, fm_freq, 0);
-				// overwrite NS741 status
-				sprintf_P(status, PSTR("V %d.%d S %d%%"), rd_bv/100, rd_bv%100, rd_signal);
-				uint8_t font = bmfont_select(BMFONT_6x8);
-				ossd_putlx(7, -1, status, 0);
-				bmfont_select(font);
-
-				if (rt_flags & RT_ECHO_DAN)
-					print_rd();
-			}
-		}
-nodan:
+		io_handler();
 		// process serial port commands
 		cli_interact(cli_base, &rht);
 
@@ -360,10 +310,16 @@ nodan:
 			sw_clock++; 
 			poll_clock ++;
 
+			uint8_t ts[3];
+			if (pcf2127_get_time((pcf_td_t *)ts, 0) == 0) {
+				sprintf_P(fm_freq, pstr_tformat, ts[0], ts[1], ts[2]);
+				putlx(0, ILI9225_LCD_WIDTH-8*8-4, fm_freq, 0);
+			}
+
 			if ((bmp180_poll(&press, 0) == 0) && (press.valid & BMP180_P_VALID)) {
 				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
 				uint8_t font = bmfont_select(BMFONT_6x8);
-				ossd_putlx(6, -1, hpa, 0);
+				putlx(4, TEXT_CENTRE, hpa, 0);
 				bmfont_select(font);
 			}
 		}
@@ -371,13 +327,13 @@ nodan:
 		// poll RHT every 5 seconds
 		if (poll_clock >= 5) {
 			poll_clock = 0;
-			ossd_putlx(2, 0, "*", 0);
+			putlx(2, 0, "*", 0);
 			rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
-			ossd_putlx(2, -1, rds_data, TEXT_OVERLINE | TEXT_UNDERLINE);
+			putlx(2, TEXT_CENTRE, rds_data, TEXT_OVERLINE | TEXT_UNDERLINE);
 			if (rt_flags & RT_ECHO_LOG) {
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
-				printf_P(pstr_time, ts[0], ts[1], ts[2]);
+				printf_P(pstr_tformat, ts[0], ts[1], ts[2]);
 				printf_P(PSTR(" %d.%02d %d.%02d %d.%02d\n"),
 					rht.temperature.val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec,
@@ -392,7 +348,7 @@ void print_rd(void)
 	if (rd.nid == 0)
 		return;
 
-	printf_P(pstr_time, rd_ts[0], rd_ts[1], rd_ts[2]);
+	printf_P(pstr_tformat, rd_ts[0], rd_ts[1], rd_ts[2]);
 	uart_puts_p(PSTR(" | "));
 	for(uint8_t i = 0; i < 4; i++) {
 		uint8_t *pu8 = (uint8_t *)&rd;
@@ -405,7 +361,7 @@ void print_rd(void)
 			printf_P(PSTR("%02u "), get_sens_type(&rd, i));
 	}
 	else {
-		printf_P(PSTR("S%u L%u A%u E%u V %u T%+2d.%02d ARSSI %u %3d%%"),
+		printf_P(PSTR("S%u L%u A%u E%u V %u T%+3d.%02d ARSSI %u %3d%%"),
 			!!(rd.stat & STAT_SLEEP), !!(rd.stat & STAT_LED),
 			!!(rd.stat & STAT_ACK), !!(rd.stat & STAT_EOS),
 			rd_bv, rd.val, rd.dec,
@@ -422,11 +378,39 @@ int8_t print_rtc_time(void)
 		sw_clock = ts[2];
 		sw_clock += ts[1] * 60;
 		sw_clock += ts[0] * 3600;
-		printf_P(pstr_time, ts[0], ts[1], ts[2]);
+		printf_P(pstr_tformat, ts[0], ts[1], ts[2]);
 		uart_puts("\n");
 		return 0;
 	}
 	return CLI_ENODEV;
+}
+
+void print_node(uint8_t nid)
+{
+	uint8_t flags = dans[nid].flags;
+	if (flags & STAT_ACTIVE) {
+		uint16_t vbat = dans[nid].vbat + 230;
+		printf_P(pstr_tformat, dans[nid].ts[0], dans[nid].ts[1], dans[nid].ts[2]);
+		printf_P(PSTR(" NID %u %5s Vbat %u ARSSI %3d%%"), nid + 1, dans[nid].name, vbat, dans[nid].ssi);
+		uart_puts_p(PSTR(" Log "));
+		if (flags & STAT_LOG)
+			printf("  %u", dans[nid].log);
+		else
+			uart_puts(is_on(0));
+		uart_puts(is_on(flags & STAT_LOG));
+		uart_puts_p(PSTR(" Tsync "));
+		uart_puts(is_on(flags & STAT_TSYNC));
+		uart_puts_p(PSTR(" Slist "));
+		uart_puts(is_on(flags & STAT_SLIST));
+		uart_puts_p(PSTR(" Sleep "));
+		uart_puts(is_on(flags & STAT_SLEEP));
+		uart_puts_p(PSTR(" Led "));
+		uart_puts(is_on(flags & STAT_LED));
+	}
+	else {
+		uart_puts_p(PSTR("not active"));
+	}
+	uart_puts("\n");
 }
 
 void print_status(uint8_t verbose)
@@ -450,27 +434,16 @@ void print_status(uint8_t verbose)
 		printf_P(PSTR("%s %s\n"), rds_data, hpa);
 		uart_puts_p(PSTR("Active nodes:"));
 		uint8_t ndan = 0;
-		for(uint8_t n = 0; n < MAX_DNODES; n++) {
-			uint8_t flags = dans[n].flags;
-			if (flags) {
+		for(uint8_t n = 0; n < MAX_DNODE_NUM; n++) {
+			if (dans[n].flags & STAT_ACTIVE) {
+				if (!ndan)
+					uart_puts("\n");
+				print_node(n);
 				ndan++;
-				uint16_t vbat = dans[n].vbat + 230;
-				uart_puts("\n");
-				printf_P(pstr_time, dans[n].ts[0], dans[n].ts[1], dans[n].ts[2]);
-				printf_P(PSTR(" NID %u Vbat %u ARSSI %3d%%"), n + 1, vbat, dans[n].ssi);
-				uart_puts_p(PSTR(" Tsync "));
-				uart_puts(is_on(flags & STAT_TSYNC));
-				uart_puts_p(PSTR(" Slist "));
-				uart_puts(is_on(flags & STAT_SLIST));
-				uart_puts_p(PSTR(" Sleep "));
-				uart_puts(is_on(flags & STAT_SLEEP));
-				uart_puts_p(PSTR(" Led "));
-				uart_puts(is_on(flags & STAT_LED));
 			}
 		}
 		if (!ndan)
-			uart_puts_p(PSTR(" none"));
-		uart_puts("\n");
+			uart_puts_p(PSTR(" none\n"));
 		if (rd.nid) {
 			uart_puts_p(PSTR("Last session:\n"));
 			print_rd();
@@ -478,3 +451,193 @@ void print_status(uint8_t verbose)
 	}
 }
 
+void putlx(uint8_t line, uint8_t x, const char *str, uint8_t atr)
+{
+	line *= 8;
+	uint8_t pos = x;
+	uint8_t gh = 0;
+	uint16_t len = 0;
+//	spi_set_clock(SPI_CLOCK_DIV2);
+	if (x == TEXT_CENTRE) {
+		bmfont_t *font = bmfont_get();
+		uint8_t gw = font->gw;
+		gh = font->gh;
+		for(pos = 0; str[pos]; len+=gw, pos++);
+		if (len > ILI9225_LCD_WIDTH)
+			pos = 0;
+		else
+			pos = (ILI9225_LCD_WIDTH - len) / 2;
+		ili9225_swap_color(&ili);
+		ili9225_fill(&ili, 0, line, pos-1, line + gh);
+		ili9225_fill(&ili, pos + len, line, ILI9225_LCD_WIDTH, line + gh);
+		ili9225_swap_color(&ili);
+	}
+
+	ili9225_text(&ili, pos, line, str, atr);
+
+//	spi_set_clock(SPI_CLOCK_DIV4);
+}
+
+int8_t get_node_line(uint8_t nid)
+{
+	uint8_t idx = 0;
+	for(uint8_t n = 0; n < MAX_DNODE_NUM; n++) {
+		uint8_t flags = dans[n].flags;
+		if (flags & STAT_ACTIVE) {
+			if (dans[n].nid == nid)
+				break;
+			idx++;
+		}
+	}
+	if (idx < MAX_NODES_PER_SCREEN)
+		return idx*2;
+	return -1;
+}
+
+void io_handler(void)
+{
+	// RDSPIN is low when NS741 is ready to transmit next RDS frame
+	if (mmr_rdsint_get() == LOW)
+		ns741_rds_isr();
+	
+	// RFM sessions processing
+	// Enable ARSSI signal reading
+	uint8_t rx_flags = ARSSI_ADC;
+	if (rt_flags & RT_ECHO_RX)
+		rx_flags |= RFM_RX_DEBUG;
+
+	if (rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
+		analogStop(); // stop pending ARSSI conversion
+		uint8_t dan = GET_NID(rd.nid);
+		if (!dan || dan > MAX_DNODE_NUM)
+			goto restart_rx;
+		dan -= 1;
+		pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+		dans[dan].flags &= 0x0F;
+		dans[dan].flags |= STAT_ACTIVE;
+		dans[dan].nid   = dan;
+		dans[dan].ts[0] = rd_ts[0];
+		dans[dan].ts[1] = rd_ts[1];
+		dans[dan].ts[2] = rd_ts[2];
+
+		if (rd.nid & NODE_TSYNC) { // remote node requests time sync
+			dnode_t tsync;
+			tsync.data[0] = rd_ts[0];
+			tsync.data[1] = rd_ts[1];
+			tsync.data[2] = rd_ts[2];
+			tsync.nid = NODE_TSYNC;
+			ts_pack(&tsync, dan);
+			dans[dan].flags |= STAT_TSYNC;
+
+			rfm12_send(&rfm868, &tsync, sizeof(tsync));
+			if (rt_flags & RT_ECHO_DAN) {
+				printf_P(pstr_tformat, rd_ts[0], rd_ts[1], rd_ts[2]);
+				printf_P(PSTR(" sync %02X\n"), rd.nid);
+			}
+		}
+
+		// we should have at least 7 ARSSI reads in our areads array
+		bsort(areads, 8);
+		rd_arssi  = 0;
+		rd_signal = 0;
+		// use two reads from the middle and reset ARSSI array
+		uint16_t average = 0;
+		if (rt_flags & RT_ECHO_RX)
+			uart_puts_p(PSTR("ARSSI"));
+		for(uint8_t i = 0; i < 8; i++) {
+			if (rt_flags & RT_ECHO_RX)
+				printf_P(PSTR(" %u"), areads[i]);
+			if (i == 3 || i == 4)
+				average += areads[i];
+			areads[i] = 0;
+		}
+		if (rt_flags & RT_ECHO_RX)
+			uart_puts("\n");
+
+		rd_arssi = average / 2;
+		aidx = 0;
+		if (rd_arssi) {
+			uint8_t arssi = rd_arssi;
+			if (arssi < ARSSI_IDLE)
+				arssi = ARSSI_IDLE;
+			rd_signal = ((100*(arssi - ARSSI_IDLE))/(ARSSI_MAX - ARSSI_IDLE));
+			if (rd_signal > 100)
+				rd_signal = 100;
+		}
+		dans[dan].ssi = rd_signal;
+
+		if ((rd.nid & SENS_MASK) == SENS_LIST) {
+			dans[dan].flags |= STAT_SLIST;
+		}
+		else {
+			rd_bv = (rd.stat & STAT_VBAT) * 10;
+			dans[dan].flags |= rd.stat & ~STAT_VBAT;
+			dans[dan].vbat = rd_bv;
+			rd_bv += 230;
+
+			if (dans[dan].flags & STAT_LOG) {
+				uint16_t ridx = rd_ts[0]*60 + rd_ts[1];
+				uint16_t i = ridx;
+
+				if (ridx != last_ts[dans[dan].log])
+					i = log_next_rec_index(last_ts[dans[dan].log]);
+				for(; i != ridx; i = log_next_rec_index(i))
+					log_erase_rec(dans[dan].log, i);
+
+				dnode_log_t rec;
+				rec.ssi = rd_signal | 0x80;
+				rec.val = rd.val;
+				rec.dec = rd.dec;
+				last_ts[dans[dan].log] = ridx;
+				log_write_rec(dans[dan].log, ridx, &rec);
+			}
+
+			uint8_t attr = 0;
+			sprintf_P(fm_freq, PSTR("%-5s T% 3d.%02d "), dans[dan].name, rd.val, rd.dec);
+			int8_t line = get_node_line(dan);
+			if (line >= 0) {
+				line += 5;
+				putlx(line, 4, fm_freq, 0);
+				uint8_t font = bmfont_select(BMFONT_6x8);
+				if (rd_bv <= 280) {
+					if (rd_bv <= 260) {
+						ili9225_set_fg_color(&ili, RGB16_RED);
+						ili9225_set_bk_color(&ili, RGB16_WHITE);
+					}
+					else
+						ili9225_set_fg_color(&ili, RGB16_YELLOW);
+					attr |= TEXT_REVERSE;
+				}
+				sprintf_P(status, PSTR("V %d.%02d"), rd_bv/100, rd_bv%100);
+				putlx(line, ILI9225_LCD_WIDTH-6*6-4, status, attr);
+				attr = 0;
+				if (rd_signal < 50) {
+					if (rd_signal < 30) {
+						ili9225_set_fg_color(&ili, RGB16_RED);
+						ili9225_set_bk_color(&ili, RGB16_WHITE);
+					}
+					else {
+						ili9225_set_fg_color(&ili, RGB16_YELLOW);
+						ili9225_set_bk_color(&ili, RGB16_BLACK);
+					}
+					attr |= TEXT_REVERSE;
+				}
+				else {
+					ili9225_set_fg_color(&ili, RGB16_WHITE);
+					ili9225_set_bk_color(&ili, RGB16_BLACK);
+				}
+
+				sprintf_P(status, PSTR("S %d%% "), rd_signal);
+				putlx(line + 1, ILI9225_LCD_WIDTH-6*6-4, status, attr);
+				ili9225_set_fg_color(&ili, RGB16_WHITE);
+				ili9225_set_bk_color(&ili, RGB16_BLACK);
+				bmfont_select(font);
+			}
+
+			if (rt_flags & RT_ECHO_DAN)
+				print_rd();
+		}
+restart_rx:
+		rfm12_set_mode(&rfm868, RFM_MODE_RX);
+	}
+}
