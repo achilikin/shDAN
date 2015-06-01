@@ -223,9 +223,11 @@ extern "C" {
 #define RFM_MODE_TX    RFM12_ETXSTART
 
 // RFM12B spi interface mode
-#define RFM_SPI_MODE_SW  0
-#define RFM_SPI_MODE_HW  1
-#define RFM_SPI_SELECTED 2
+#define RFM_SPI_MODE_HW  0x10
+#define RFM_SPI_SELECTED 0x20
+#define RFM_MODE_DATA_RX 0x01
+#define RFM_MODE_DATA_TX 0x02
+#define RFM_RX_PENDING   0x04
 
 typedef struct rfm12_s
 {
@@ -235,6 +237,10 @@ typedef struct rfm12_s
 	uint8_t sdi;  // chip input pin (MOSI)
 	uint8_t sdo;  // chip output pin (MISO)
 	uint8_t irq;  // irq request pin
+	// receive buffer variables
+	uint8_t ridx; // receive buffer index
+	uint8_t rcrc; // receive buffer crc
+	uint8_t rxts; // RX session timestamp
 } rfm12_t;
 
 // flags for rfm12_receive_data()
@@ -252,26 +258,22 @@ void    rfm12_set_mode(rfm12_t *rfm, uint8_t mode); // set working mode RFM_MODE
 int16_t rfm12_set_freq(rfm12_t *rfm, uint8_t band, double freq); // set band and frequency
 int8_t  rfm12_set_txpwr(rfm12_t *rfm, uint8_t pwr); // set output power, RFM12_OPWR_* (0-7)
 int8_t  rfm12_set_fsk(rfm12_t *rfm, uint8_t fsk); // set FSK modulation, RFM12_FSK_* above
+
 // set receiver baseband bandwidth, one of RFM12_BW_* above
 int8_t  rfm12_set_rxbw(rfm12_t *rfm, uint8_t bw);
-
 // rate - one of RFM12_BPS_* above
 void rfm12_set_rate(rfm12_t *rfm, uint8_t rate);
-
 // very rough battery voltage measurement using Low Battery Detector
 int8_t rfm12_battery(rfm12_t *rfm, uint8_t mode, uint8_t level);
-
-void   rfm12_reset_fifo(rfm12_t *rfm); // reset RX FIF buffer
+// reset RX FIF buffer
+void   rfm12_reset_fifo(rfm12_t *rfm);
 // poll RX FIFO (does no use nIRQ)
 // get status register and returns data byte if available
 int16_t rfm12_poll(rfm12_t *rfm, uint16_t *status);
-
-// check if data available (nIRQ is LOW) and read data byte
-uint16_t rfm12_receive(rfm12_t *rfm, uint16_t *status);
 // receive data stream
 uint8_t rfm12_receive_data(rfm12_t *rfm, void *buf, uint8_t len, uint8_t flags);
-
-int8_t  rfm12_send(rfm12_t *rfm, void *data, uint8_t len); // transmit data stream
+// transmit data stream
+int8_t  rfm12_send(rfm12_t *rfm, void *data, uint8_t len);
 
 #ifdef __cplusplus
 }

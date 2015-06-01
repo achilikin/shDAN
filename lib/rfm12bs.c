@@ -104,7 +104,6 @@ uint16_t rfm12_cmdrw(rfm12_t *rfm, uint16_t cmd)
 	return rdata;
 }
 
-
 void rfm12_set_rate(rfm12_t *rfm, uint8_t rate)
 {
 	rfm12_cmdw(rfm, RFM12CMD_DRATE | rate);
@@ -148,6 +147,11 @@ int8_t rfm12_init(rfm12_t *rfm, uint8_t syncpat, uint8_t band, double freq, uint
 	pinMode(rfm->sdo, INPUT);
 	pinMode(rfm->irq, INPUT);
 
+	// enable sensitive reset and issue SW reset command
+	rfm12_cmdw(rfm, RFM12CMD_FIFO | RFM12_RXBIT8 | RFM12_SYNCFIFO);
+	rfm12_cmdw(rfm, RFM12CMD_RESET);
+	delay(5);
+
 	// we can use fast write here as we do not read nIRQ
 	// nIRQ works only when RFM12 is unselected
 	digitalWrite(rfm->cs, LOW);
@@ -189,6 +193,12 @@ void rfm12_set_mode(rfm12_t *rfm, uint8_t mode)
 	uint16_t cmd = RFM12CMD_PWR | RFM12_DCLOCK; // default: sleep
 	cmd |= mode;
 	rfm12_cmdw(rfm, cmd);
+
+	rfm->mode &= ~(RFM_MODE_DATA_RX | RFM_MODE_DATA_TX);
+	if (mode == RFM_MODE_RX)
+		rfm->mode |= RFM_MODE_DATA_RX;
+	else if (mode == RFM_MODE_TX)
+		rfm->mode |= RFM_MODE_DATA_TX;
 }
 
 int8_t rfm12_set_txpwr(rfm12_t *rfm, uint8_t pwr)
@@ -227,6 +237,7 @@ int8_t rfm12_battery(rfm12_t *rfm, uint8_t mode, uint8_t level)
 {
 	int8_t i;
 
+	rfm12_set_mode(rfm, RFM_MODE_IDLE); // clear LBD bit
 	// disable internal register to avoid false interrupts
 	// if enabled we will constantly get RGIT interrupt
 	rfm12_cmdw(rfm, RFM12CMD_CFG | RFM12_EFIFO | rfm_band | RFM12_120PF);
@@ -270,33 +281,6 @@ int16_t rfm12_poll(rfm12_t *rfm, uint16_t *status)
 	return -1;
 }
 
-// if no interrupt detected returns 0
-// if data is available high bit is set and data is in the lower byte
-// if interrupt detected but no data is available high bit is 0, all
-// other bits are set from status register
-uint16_t rfm12_receive(rfm12_t *rfm, uint16_t *status)
-{
-	uint16_t data = 0;
-	if (digitalRead(rfm->irq) == 0) {
-		// return IRQ status is required
-		if (status)
-			*status = rfm12_cmdrw(rfm, RFM12CMD_STATUS);
-		// read RX FIFO
-		data = rfm12_cmdrw(rfm, RFM12CMD_RX_FIFO);
-		// high bits are set if data is available
-		if (data & 0x8000)
-			return (data & 0x80FF);
-		// some other interrupt (RX FIFO overrun, for example)
-		if (status)
-			data = *status;
-		else
-			data = rfm12_cmdrw(rfm, RFM12CMD_STATUS); // clear interrupts flag
-		data &= 0x7FFF;
-	}
-
-	return data;
-}
-
 // sends one byte with timeout
 static int8_t _rfm_send(rfm12_t *rfm, uint8_t data, uint8_t timeout)
 {
@@ -322,8 +306,8 @@ int8_t rfm12_send(rfm12_t *rfm, void *buf, uint8_t len)
 {
 	uint8_t *data = buf;
 
-	rfm12_cmdrw(rfm, RFM12CMD_STATUS); // clear any interrupts
 	rfm12_set_mode(rfm, RFM_MODE_TX);
+	rfm12_cmdrw(rfm, RFM12CMD_STATUS); // clear any interrupts
 
 	// send preamble	
 	if (_rfm_send(rfm, 0xAA, rfm_timeout) != 0)
@@ -354,7 +338,7 @@ int8_t rfm12_send(rfm12_t *rfm, void *buf, uint8_t len)
 	return 0;
 }
 
-static inline void puts_hex(uint8_t data)
+static inline void puts_hex(uint8_t data, uint8_t delimiter)
 {
 	uint8_t hex = (data >> 4) + '0';
 	if (hex > '9') hex += 7;
@@ -362,7 +346,50 @@ static inline void puts_hex(uint8_t data)
 	hex = (data & 0x0F) + '0';
 	if (hex > '9') hex += 7;
 	uart_putc(hex);
-	uart_putc(' ');
+	uart_putc(delimiter);
+}
+
+static int8_t rfm12_validate_data(uint8_t *buf, uint8_t len, uint8_t rcrc, uint8_t dbg)
+{
+	uint8_t crc = rfm_crc8(rfm_sync, len);
+	if (dbg)
+		printf_P(PSTR("| len %d crc %02X\n"), len, crc);
+
+	for(uint8_t i = 0; i < len; i++) {
+		crc = rfm_crc8(crc, buf[i]);
+		if (dbg)
+			printf_P(PSTR("data %02X %3u %02X\n"), buf[i], buf[i], crc);
+	}
+
+	if (crc == rcrc)
+		return 0;
+
+	// wrong crc
+	if (dbg)
+		printf_P(PSTR("wrong crc %02X must be %02X\n"), crc, rcrc);
+	return -1;
+}
+
+// if no interrupt detected returns 0
+// if data is available high bit is set and data is in the lower byte
+// if interrupt detected but no data is available high bit is 0, all
+// other bits are set from status register
+static uint16_t rfm12_receive(rfm12_t *rfm, uint16_t *pstatus)
+{
+	if (digitalRead(rfm->irq) == 0) {
+		uint16_t data = rfm12_cmdrw(rfm, RFM12CMD_STATUS);
+		// return IRQ status is required
+		if (pstatus)
+			*pstatus = data;
+		// read RX FIFO
+		if (data & RFM12_FFIT)
+			data = rfm12_cmdrw(rfm, RFM12CMD_RX_FIFO);
+		// some other interrupt (RX FIFO overrun, for example)
+		return data;
+	}
+	if (rfm->mode & RFM_RX_PENDING)
+		return RFM12_WKUP;
+	return 0;
 }
 
 // receive data, use data len as packet start byte
@@ -370,63 +397,76 @@ static inline void puts_hex(uint8_t data)
 // (RFM12BS supplies analogue RSSI output on one of the capacitors)
 uint8_t rfm12_receive_data(rfm12_t *rfm, void *dbuf, uint8_t len, uint8_t flags)
 {
-	static uint8_t ridx = 0;
-	static uint8_t rcrc = 0;
+	if (!(rfm->mode & RFM_MODE_DATA_RX))
+		return 0;
+
+	uint16_t ch;
 	uint8_t *buf = (uint8_t *)dbuf;
 	uint8_t adc = flags & RFM_RX_ADC_MASK;
 	uint8_t dbg = flags & RFM_RX_DEBUG;
 
-	uint16_t ch;
-	while(((ch = rfm12_receive(rfm, NULL)) & 0x8000)) {
+	while((ch = rfm12_receive(rfm, NULL)) != 0) {
+		// check status for FIFO overflow and for RX timeout
+		if (!(ch & 0x8000)) {
+			if (ch & RFM12_FFOV) { // FIFO overflow, reset buffer index
+				rfm12_reset_fifo(rfm);
+				rfm->ridx = 0;
+				rfm->mode &= ~RFM_RX_PENDING;
+			}
+			// check for RX timeout, for 9600 it is ~len*5
+			if (rfm->mode & RFM_RX_PENDING) {
+				if ((mill8() - rfm->rxts) >= len*5) {
+					rfm->ridx = 0;
+					rfm->mode &= ~RFM_RX_PENDING;
+					ch = 0x7BAD;
+				}
+			}
+			// if RFM_RX_PENDGING is set then rfm12_receive() returns RFM12_WKUP
+			// just to keep this while() loop running till all data is received
+			if (dbg && (ch != RFM12_WKUP)) {
+				uart_putc('s');
+				puts_hex(ch >> 8, '-');
+				puts_hex(ch, ' ');
+			}
+			continue;
+		}
 		if (adc)
 			analogStart();
 		uint8_t data = (uint8_t)ch;
 		if (dbg)
-			puts_hex(data);
+			puts_hex(data, ' ');
 
-		if (ridx == 0) {
-			if (data == len)
-				ridx++;
+		if (rfm->ridx == 0) {
+			if (data == len) {
+				rfm->ridx++;
+				rfm->rxts = mill8();
+				rfm->mode |= RFM_RX_PENDING;
+			}
 			continue;
 		}
 
-		if (ridx == (len + 2)) { // data should contain tail (0x55) now
-			ridx = 0; // reset buffer index
+		if (rfm->ridx == (len + 2)) { // data should contain tail (0x55) now
+			rfm->ridx = 0; // reset buffer index
+			rfm->mode &= ~RFM_RX_PENDING;
 			if (data != 0x55) {
 				if (dbg)
-					uart_puts_p(PSTR("- wrong tail marker\n"));
+					uart_puts_p(PSTR("- wrong tail\n"));
 				continue;
 			}
-
-			uint8_t crc = rfm_crc8(rfm_sync, len);
-			if (dbg)
-				printf_P(PSTR("| len %d crc %02X\n"), len, crc);
-
-			for(uint8_t i = 0; i < len; i++) {
-				crc = rfm_crc8(crc, buf[i]);
-				if (dbg)
-					printf_P(PSTR("data %02X %3u %02X\n"), buf[i], buf[i], crc);
-
-			}
-			if (crc == rcrc) {
+			if (rfm12_validate_data(buf, len, rfm->rcrc, dbg) == 0) {
 				rfm12_reset_fifo(rfm);
+				rfm12_set_mode(rfm, RFM_MODE_IDLE);
 				return len;
 			}
 			// wrong crc
-			if (dbg)
-				printf_P(PSTR("wrong crc %02X must be %02X\n"), crc, rcrc);
 			continue;
 		}
-		if (ridx <= len)
-			buf[ridx - 1] = data ^ 0xA5;
-		else
-			rcrc = data;
-		ridx++;
-	}
 
-	if (ch & RFM12_FFOV) { // FIFO overflow, reset buffer index
-		rfm12_reset_fifo(rfm);
-		ridx = 0;
+		if (rfm->ridx <= len)
+			buf[rfm->ridx - 1] = data ^ 0xA5;
+		else
+			rfm->rcrc = data;
+		rfm->ridx++;
 	}
 
 	return 0;
