@@ -61,7 +61,7 @@ MCU = atmega32
 #FUSES = -U lfuse:w:0xC3:m -U hfuse:w:0xD9:m
 
 F_CPU = 8000000
-FUSES = -U lfuse:w:0xE4:m -U hfuse:w:0xD9:m
+FUSES = -U lfuse:w:0xE4:m -U hfuse:w:0xD1:m
 
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
@@ -74,7 +74,8 @@ TARGET = base_main
 SRC = $(TARGET).c base_cli.c ../lib/serial.c ../lib/serial_cli.c ../lib/timer.c\
 		../lib/rht03.c ../lib/sht1x.c ../lib/rht.c ../lib/ossd_i2c.c\
 		../lib/ns741.c ../lib/pcf2127.c ../lib/bmp180.c ../lib/rfm12bs.c\
-		../lib/dnode.c ../lib/twimaster.c ../lib/uart.c ../lib/bmfont.c ../lib/pinio.c
+		../lib/dnode.c ../lib/twimaster.c ../lib/uart.c ../lib/bmfont.c \
+		../lib/pinio.c ../lib/ili9225.c ../lib/i2cmem.c
 
 SRCPP = 
 
@@ -358,8 +359,13 @@ size:
 gccversion : 
 	@$(CC) --version
 
-# Program the device.  
-program: $(TARGET).hex $(TARGET).eep
+# Program the device without writing to EEPROM. 
+program: $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
+
+# Program the device with writing to EEPROM.
+eprogram: $(TARGET).hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
 	
