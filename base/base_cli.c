@@ -37,7 +37,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-05-02\n";
+static const char version[] PROGMEM = "2015-09-25\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -62,9 +62,6 @@ const char cmd_list[] PROGMEM =
 	"  dan set name NID str\n"
 	"  dan set log NID on|off\n"
 	
-	"  ili led on|off|0-255\n"
-	"  ili disp standby|off|on\n"
-
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
@@ -367,22 +364,19 @@ int8_t cli_base(char *buf, void *rht)
 	// radio ------------------------------------------------------------------
 	if (str_is(cmd, PSTR("rdsid"))) {
 		if (*arg != '\0') {
-			memset(rds_name, 0, 8);
+			memset(rds_name, ' ', 8);
 			for(int8_t i = 0; (i < 8) && arg[i]; i++)
 				rds_name[i] = arg[i];
 			ns741_rds_set_progname(rds_name);
 			eeprom_update_block((const void *)rds_name, (void *)em_rds_name, 8);
 		}
 		printf_P(PSTR("%s %s\n"), cmd, rds_name);
-		putlx(0, -1, rds_name, 0);
+		putlx(0, 4, rds_name, 0);
 		return 0;
 	}
 
 	if (str_is(cmd, PSTR("rdstext"))) {
-		if (*arg == '\0') {
-			puts(rds_data);
-			return 0;
-		}
+		puts(rds_data);
 		return 0;
 	}
 
@@ -415,11 +409,7 @@ int8_t cli_base(char *buf, void *rht)
 		ns741_txpwr(pwr);
 		printf_P(pstr_set_to, cmd, pwr);
 		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
-
-		get_tx_pwr(status);
-		uint8_t font = bmfont_select(BMFONT_6x8);
-		putlx(7, -1, status, 0);
-		bmfont_select(font);
+		update_radio_status();
 		return 0;
 	}
 
@@ -429,13 +419,12 @@ int8_t cli_base(char *buf, void *rht)
 		else if (str_is(arg, pstr_off))
 			ns_pwr_flags &= ~NS741_POWER;
 		ns741_radio_power(ns_pwr_flags & NS741_POWER);
+		eeprom_update_byte(&em_ns_pwr_flags, ns_pwr_flags);
 		uart_puts_p(pstr_radio);
 		uart_putc(' ');
 		uart_puts(is_on(ns_pwr_flags & NS741_POWER));
-		get_tx_pwr(status);
-		uint8_t font = bmfont_select(BMFONT_6x8);
-		putlx(7, -1, status, 0);
-		bmfont_select(font);
+		uart_puts("\n");
+		update_radio_status();
 		return 0;
 	}
 

@@ -56,7 +56,7 @@ uint16_t EEMEM em_radio_freq  = 9700; // 97.00 MHz
 uint8_t EEMEM em_osccal = 181;
 
 // NS741 flags
-uint8_t EEMEM em_ns_rt_flags = (NS741_STEREO | NS741_RDS);
+uint8_t EEMEM em_ns_rt_flags = (NS741_STEREO | NS741_RDS | NS741_GAIN);
 uint8_t EEMEM em_ns_pwr_flags = NS741_TXPWR0;
 
 // RFM12B sync pattern, better keep it to default 0xD4
@@ -125,10 +125,13 @@ static const char *s_pwr[4] = {
 // avr-gcc does not do string pooling for PROGMEM
 const char pstr_tformat[] PROGMEM = "%02d:%02d:%02d";
 
-void get_tx_pwr(char *buf)
+void update_radio_status(void)
 {
-	sprintf_P(buf, PSTR("TxPwr %smW %s"), s_pwr[ns_pwr_flags & NS741_TXPWR], 
+	sprintf_P(status, PSTR("TxPwr %smW %s"), s_pwr[ns_pwr_flags & NS741_TXPWR],
 		ns_pwr_flags & NS741_POWER ? "on" : "off");
+	uint8_t font = bmfont_select(BMFONT_6x8);
+	putlx(26, TEXT_CENTRE, status, 0);
+	bmfont_select(font);
 }
 
 void get_fm_freq(char *buf)
@@ -247,6 +250,7 @@ int main(void)
 	ns741_mute(NS741_MUTE);
 	// turn on -9db gain
 	ns741_gain(NS741_GAIN);
+	ns_pwr_flags |= NS741_GAIN;
 	// read radio frequency from EEPROM
 	radio_freq = eeprom_read_word(&em_radio_freq);
 	if (radio_freq < NS741_MIN_FREQ) radio_freq = NS741_MIN_FREQ;
@@ -261,11 +265,8 @@ int main(void)
 
 	rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
 	mmr_rdsint_mode(INPUT_HIGHZ);
-
-	get_tx_pwr(status);
-	bmfont_select(BMFONT_6x8);
-	putlx(26, TEXT_CENTRE, status, 0);
 	bmfont_select(BMFONT_8x16);
+	update_radio_status();
 	putlx(0, 4, rds_name, 0);
 	putlx(2, TEXT_CENTRE, fm_freq, TEXT_OVERLINE | TEXT_UNDERLINE);
 
@@ -329,6 +330,7 @@ int main(void)
 			poll_clock = 0;
 			putlx(2, 0, "*", 0);
 			rht_read(&rht, rt_flags & RT_ECHO_RHT, rds_data);
+			ns741_rds_set_radiotext(rds_data);
 			putlx(2, TEXT_CENTRE, rds_data, TEXT_OVERLINE | TEXT_UNDERLINE);
 			if (rt_flags & RT_ECHO_LOG) {
 				uint8_t ts[3];

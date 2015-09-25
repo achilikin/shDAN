@@ -77,6 +77,7 @@ void   print_rd(void); // print remote sensor data
 int8_t print_rtc_time(void);
 void   print_node(uint8_t nid);
 void   print_status(uint8_t verbose);
+void   update_radio_status(void);
 
 void io_handler(void); // check if I/O request is pending
 
