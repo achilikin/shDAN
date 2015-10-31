@@ -37,7 +37,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-09-25\n";
+static const char version[] PROGMEM = "2015-10-31\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -323,6 +323,7 @@ int8_t cli_base(char *buf, void *rht)
 			uart_puts_p(pstr_echo);
 			uart_putc(' ');
 			uart_puts(is_on(0));
+			uart_puts("\n");
 			return 0;
 		}
 		if (*arg == 0) {

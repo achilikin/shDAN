@@ -3,13 +3,10 @@ Base Station
 
 Base Station part of data acquisition network based on modified [Sony-Ericsson MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf) with new firmware written in pure C + avr-gcc (not Arduino).
 
-Reads temperature and humidity data from local and remote T/H sensor (RHT03 or SHT1x), pressure from local BMP180 digital pressure sensor and displays data on attached OLED SSD1306 display:
+Reads temperature and humidity data from local and remote T/H sensor (RHT03 or SHT1x), pressure from local BMP180 digital pressure sensor and displays data on attached LED ILI9225 display:
 
-![mmr70 screen](http://achilikin.com/github/mmr-mod-03.png)
+![mmr70 screen](http://achilikin.com/github/abs01.png)
 
-and broadcasts RDS signal with sensor's readings:
-
-![RDS](http://3.bp.blogspot.com/-cB2P4Qp3eOI/U4kIqX7pSPI/AAAAAAAAASs/hKfAir5Qco4/s1600/screenshot.png)
 
 To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
  
@@ -22,6 +19,7 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 * _reset_ - reset ATmega32
 * _status_ - get some basic status info
 * _calibrate_ - in case if serial communication is not stable, try to run calibration and check if OSCCAL value is too close to upper or lower boundary.
+* _set osccal X_ - set OSCCAL to specified value
 
 **Time/date realted:**
 * _time_ - show current RTC time 
@@ -29,8 +27,17 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 * _set time HH:MM:SS_ - set RTC time, 24H format
 * _set date YY/MM/DD_ - set RTC date
 
+**Real Time Clock realted:**
+* _rtc dump [mem]|init [mem]_ - dump/init NXP PCF2127 memory 
+* _rtc dst on|off_ - turn daylight saving on/off
+
+**Display related:**
+* _ili dir 0|1_ - set ILI9225 display orientation
+* _ili led on|off|0-255_ - set display back-light 
+* _ili disp standby|off|on_ - set display mode
+
 **Digital/analogue inputs:**
-* _poll_ - read T/H sensor connected to MMR-70
+* _poll_ - read T/H sensor connected to base station
 * _get pin_ - read digital pin, for example `get d3`
 * _adc chan_ - read ADC channel, for example `adc 7`
 
@@ -45,6 +52,13 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 * _freq nnnn_ - set FM frequency, for example `freq 9700` for 97.00 MHz
 * _txpwr 0-3_ - set NS741 transmitting power, store in EEPROM
 * _rdstext_ - print RDS text being transmitted
+
+**Data Acquisition Nodes related:**
+* _dan show log NID_ - show log for specific node id
+* _dan show status NID_ - show node status
+* _dan set name NID str_ - set node name
+* _dan set log NID on|off_ - turn log for a node on/off
+
 
 Code Customization
 ------------------
@@ -81,11 +95,11 @@ Using different clock speed for ATmega32:
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 **Current code size**
-Version 2015-09-25
+Version 2015-10-31
 ```
 > Creating Symbol Table: base_main.sym
 > avr-nm -n base_main.elf > base_main.sym
-> Program:   28284 bytes (86.3% Full)
+> Program:   28318 bytes (86.4% Full)
 > Data:       1077 bytes (52.6% Full)
 > EEPROM:       94 bytes (9.2% Full)
 ```

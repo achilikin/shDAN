@@ -304,7 +304,7 @@ static uint8_t rfm_crc8(uint8_t crc, uint8_t data)
 // for test purposes: if data is NULL string 'AB....' of len bytes will be sent
 int8_t rfm12_send(rfm12_t *rfm, void *buf, uint8_t len)
 {
-	uint8_t *data = buf;
+	uint8_t *data = (uint8_t *)buf;
 
 	rfm12_set_mode(rfm, RFM_MODE_TX);
 	rfm12_cmdrw(rfm, RFM12CMD_STATUS); // clear any interrupts
