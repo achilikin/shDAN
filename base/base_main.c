@@ -511,16 +511,19 @@ void io_handler(void)
 	if (rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
 		analogStop(); // stop pending ARSSI conversion
 		uint8_t dan = GET_NID(rd.nid);
-		if (!dan || dan > MAX_DNODE_NUM)
+		if (!dan || dan > NODE_LBS)
 			goto restart_rx;
-		dan -= 1;
-		pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
-		dans[dan].flags &= 0x0F;
-		dans[dan].flags |= STAT_ACTIVE;
-		dans[dan].nid   = dan;
-		dans[dan].ts[0] = rd_ts[0];
-		dans[dan].ts[1] = rd_ts[1];
-		dans[dan].ts[2] = rd_ts[2];
+
+		if (dan != NODE_LBS) {
+			dan -= 1;
+			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
+			dans[dan].flags &= 0x0F;
+			dans[dan].flags |= STAT_ACTIVE;
+			dans[dan].nid   = dan;
+			dans[dan].ts[0] = rd_ts[0];
+			dans[dan].ts[1] = rd_ts[1];
+			dans[dan].ts[2] = rd_ts[2];
+		}
 
 		if (rd.nid & NODE_TSYNC) { // remote node requests time sync
 			dnode_t tsync;
@@ -529,7 +532,8 @@ void io_handler(void)
 			tsync.data[2] = rd_ts[2];
 			tsync.nid = NODE_TSYNC;
 			ts_pack(&tsync, dan);
-			dans[dan].flags |= STAT_TSYNC;
+			if (dan != NODE_LBS)
+				dans[dan].flags |= STAT_TSYNC;
 
 			rfm12_send(&rfm868, &tsync, sizeof(tsync));
 			if (rt_flags & RT_ECHO_DAN) {
@@ -566,6 +570,9 @@ void io_handler(void)
 			if (rd_signal > 100)
 				rd_signal = 100;
 		}
+		if (dan == NODE_LBS)
+			goto restart_rx;
+
 		dans[dan].ssi = rd_signal;
 
 		if ((rd.nid & SENS_MASK) == SENS_LIST) {

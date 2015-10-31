@@ -25,9 +25,11 @@ extern "C" {
 #endif
 #endif
 
-#define MAX_DNODE_NUM  12
 #define MAX_SENSORS    6
 #define MAX_DNODE_LOGS 5
+#define MAX_DNODE_NUM  12
+
+#define NODE_LBS       13
 
 #define NID_MASK   0x0F // node index mask
 #define NODE_TSYNC 0x80 // time sync request
