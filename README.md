@@ -1,7 +1,17 @@
-MMR-70 modding
+hDAN: small house Data Acquisition Network
+-------------------------------------------
+[BASE](https://github.com/achilikin/mmr70mod/blob/master/base) - Base Station firmware for [Data Acquisition Network](https://github.com/achilikin/mmr70mod/blob/master/hDAN.md)
+
+[NODE](https://github.com/achilikin/mmr70mod/blob/master/node) - Data Node for [Data Acquisition Network](https://github.com/achilikin/mmr70mod/blob/master/hDAN.md)
+
+![hDAN topology](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_topology.svg)
+
+**At the moment all projects under major re-factoring/code clean-up**
+
+Atmega 32L - MMR-70 modding
 ==============
 
-Modified firmware for [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
+Base station and nodes are built using modified firmware for Atmega 32L based [MMR-70 FM Music Transmitter](http://www.mikrocontroller.net/attachment/140251/MMR70.pdf).
 
 Includes different projects:
 
@@ -12,16 +22,6 @@ Includes different projects:
 **FM Radio with RDS support firmware**
 
 [RADIO](https://github.com/achilikin/mmr70mod/blob/master/radio) - Similar to [FMBerry](https://github.com/Manawyrm/FMBerry), but running on MMR-70's ATmega32 itself instead of Raspberry Pi.
-
-hDAN: small house Data Acquisition Network
--------------------------------------------
-[BASE](https://github.com/achilikin/mmr70mod/blob/master/base) - Base Station firmware for [Data Acquisition Network](https://github.com/achilikin/mmr70mod/blob/master/hDAN.md)
-
-[NODE](https://github.com/achilikin/mmr70mod/blob/master/node) - Data Node for [Data Acquisition Network](https://github.com/achilikin/mmr70mod/blob/master/hDAN.md)
-
-![hDAN topology](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_topology.svg)
-
-**At the moment all projects under major re-factoring/code clean-up**
 
 Avrdude on Raspberry Pi
 -----------------------
