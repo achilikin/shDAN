@@ -514,9 +514,9 @@ void io_handler(void)
 		if (!dan || dan > NODE_LBS)
 			goto restart_rx;
 
+		pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 		if (dan != NODE_LBS) {
 			dan -= 1;
-			pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 			dans[dan].flags &= 0x0F;
 			dans[dan].flags |= STAT_ACTIVE;
 			dans[dan].nid   = dan;
