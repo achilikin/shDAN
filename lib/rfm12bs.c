@@ -448,13 +448,14 @@ uint8_t rfm12_receive_data(rfm12_t *rfm, void *dbuf, uint8_t len, uint8_t flags)
 		if (rfm->ridx == (len + 2)) { // data should contain tail (0x55) now
 			rfm->ridx = 0; // reset buffer index
 			rfm->mode &= ~RFM_RX_PENDING;
+			rfm12_cmdw(rfm, RFM12CMD_STATUS);
+			rfm12_reset_fifo(rfm);
 			if (data != 0x55) {
 				if (dbg)
 					uart_puts_p(PSTR("- wrong tail\n"));
 				continue;
 			}
 			if (rfm12_validate_data(buf, len, rfm->rcrc, dbg) == 0) {
-				rfm12_reset_fifo(rfm);
 				rfm12_set_mode(rfm, RFM_MODE_IDLE);
 				return len;
 			}
