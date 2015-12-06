@@ -21,16 +21,16 @@ static volatile uint8_t *ports[4] = { &PORTA, &PORTB, &PORTC, &PORTD };
 
 void pinDir(uint8_t pin, uint8_t dir)
 {
-	volatile uint8_t *port = ports[pin >> 4];
-	uint8_t mask = 1 << (pin & 0x07);
-	
-	_pin_dir(port - 2, mask, dir);
+	volatile uint8_t *port = ports[pin >> 4] - 1;
+	const uint8_t mask = 1 << (pin & 0x07);
+
+	_pin_dir(port, mask, dir);
 }
 
 void pinMode(uint8_t pin, uint8_t mode)
 {
 	volatile uint8_t *port = ports[pin >> 4];
-	uint8_t mask = 1 << (pin & 0x07);
+	const uint8_t mask = 1 << (pin & 0x07);
 	if (mode & 0x01)
 		*(port - 1) |= mask;
 	else
@@ -50,7 +50,7 @@ uint8_t digitalRead(uint8_t pin)
 void digitalWrite(uint8_t pin, uint8_t val)
 {
 	volatile uint8_t *port = ports[pin >> 4];
-	uint8_t mask = 1 << (pin & 0x07);
+	const uint8_t mask = 1 << (pin & 0x07);
 	if (val)
 		*port |= mask;
 	else

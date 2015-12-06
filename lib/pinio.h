@@ -49,6 +49,17 @@
 #define EXINT1  PD3 // an extra pin soldered to INT1 (PD3)
 #define LED1	PD7 // LED1
 
+// PORTA pins
+#define PNA0	0x00
+#define PNA1	0x01
+#define PNA2	0x02
+#define PNA3	0x03
+#define PNA4	0x04
+#define PNA5	0x05
+#define PNA6	0x06
+#define PNA7	0x07
+
+// PORTB pins
 #define PNB0	0x10  // TP4, T0
 #define PNB1	0x11  // TP5, T1
 #define PNB2	0x12  // NC
@@ -58,6 +69,7 @@
 #define PNB6	0x16  // TP3, MISO
 #define PNB7	0x17  // TP10, SCK
 
+// PORTC pins
 #define PNC0	0x20 //
 #define PNC1	0x21 //
 #define PNC2	0x22 //
@@ -67,6 +79,7 @@
 #define PNC6	0x26 //
 #define PNC7	0x27 //
 
+// PORTD pins
 #define PND0	0x30 // RXD
 #define PND1	0x31 // TXD
 #define PND2	0x32 // RDSINT
@@ -86,15 +99,6 @@
 #define ADC6 6
 #define ADC7 7
 
-// PORTA pins, better not to be used as digital I/O, reserved for ADC inputs
-#define PNA0 0x00
-#define PNA1 0x01
-#define PNA2 0x02
-#define PNA3 0x03
-#define PNA4 0x04
-#define PNA5 0x05
-#define PNA6 0x06
-#define PNA7 0x07
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,7 +109,7 @@ extern "C" {
 
 // General Port access functions
 
-// manipulates DDRx only
+// manipulates DDRx register
 static inline void _pin_dir(volatile uint8_t *port, uint8_t mask, uint8_t dir)
 {
 	if (dir)
@@ -151,8 +155,8 @@ static inline uint8_t _pin_get(volatile uint8_t *port, uint8_t mask)
 #define clear_pinc(pin) (PORTC &= ~_BV(pin))
 #define clear_pind(pin) (PORTD &= ~_BV(pin))
 
-void pinDir(uint8_t pin, uint8_t dir);
-void pinMode(uint8_t pin, uint8_t mode);
+void pinDir(uint8_t pin, uint8_t dir);   // INPUT-OUTPUT
+void pinMode(uint8_t pin, uint8_t mode); // INPUT, INPUT_UP, OUTPUT_LOW, OUTPUT_HIGH
 
 uint8_t digitalRead(uint8_t pin);
 void digitalWrite(uint8_t pin, uint8_t val);
