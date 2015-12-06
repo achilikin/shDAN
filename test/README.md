@@ -49,7 +49,7 @@ Supported commands
 For more information see [Readme](https://github.com/achilikin/mmr70mod/) in the project root directory.
 
 **Current code size**
-Version 2015-05-09
+Version 2015-12-06
 ```
 > Creating Symbol Table: test_main.sym
 > avr-nm -n test_main.elf > test_main.sym
