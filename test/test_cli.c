@@ -25,12 +25,15 @@
 
 #include "pinio.h"
 #include "timer.h"
+#include "i2cmem.h"
+#include "bmp180.h"
+#include "ds18x.h"
 #include "serial.h"
 #include "serial_cli.h"
 
 #include "test_main.h"
 
-static const char version[] PROGMEM = "2015-05-02\n";
+static const char version[] PROGMEM = "2015-12-06\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -44,7 +47,27 @@ const char cmd_list[] PROGMEM =
 	"  set time hh:mm:ss\n"
 	"  adc chan\n"
 	"  get pin (d3,b4,c2...)\n"
-	"  set pin (d3,b4,c2...)\n";
+	"  set pin (d3,b4,c2...)\n"
+	"  bmp init|poll\n"
+	"  ds init|get|start|read|data|write\n"
+	"  i2cmem init [hex]\n"
+	"  i2cmem write addr val\n"
+	"  i2cmem dump [addr [len]]\n";
+
+static bmp180_t bmp;
+static uint8_t ds_pin = PNB1;
+
+uint8_t strnum(const char *str, uint8_t base)
+{
+	if (str[0] == 'x' || (str[0] == '0' && str[1] == 'x')) {
+		str++;
+		if (*str == 'x')
+			str++;
+		base = 16;
+	}
+	uint8_t num = (uint8_t)strtoul(str, NULL, base);
+	return num;
+}
 
 int8_t cli_test(char *buf, void *ptr)
 {
@@ -101,6 +124,54 @@ int8_t cli_test(char *buf, void *ptr)
 		else
 			serial_calibrate(OSCCAL);
 		return 0;
+	}
+
+	if (str_is(cmd, PSTR("i2cmem"))) {
+		char *sval0 = get_arg(arg);
+		char *sval1 = get_arg(sval0);
+		uint16_t val0 = atoi(sval0);
+
+		if (str_is(arg, PSTR("dump"))) {
+			uint16_t val1 = atoi(sval1);
+			if (val1 == 0)
+				val1 = 256;
+			for(uint16_t i = 0; i < val1; i++) {
+				uint8_t data;
+				if (i2cmem_read_data(val0 + i, &data, 1) != 0)
+					return CLI_ENODEV;
+				if (!(i % 16) && i)
+					uart_puts("\n");
+				printf(" %02X", data);
+			}
+			uart_puts("\n");
+			return 0;
+		}
+
+		if (str_is(arg, PSTR("write"))) {
+			uint8_t data = strnum(sval1, 10);
+			if (i2cmem_write_byte(val0, data) == 0)
+				return 0;
+			return CLI_ENODEV;
+		}
+
+		if (str_is(arg, PSTR("init"))) {
+			int8_t ret;
+			uint8_t line[I2C_MEM_PAGE_SIZE];
+			uint8_t fill = strnum(sval0, 16);
+			memset(line, fill, sizeof(line));
+			uint32_t ms = millis();
+			for(uint16_t page = 0; page < I2C_MEM_MAX_PAGE; page++) {
+				ret = i2cmem_write_page(page, 0, line, I2C_MEM_PAGE_SIZE);
+				if (ret < 0) {
+					printf("error writing page %u\n", page);
+					ret = CLI_ENODEV;
+					break;
+				}
+			}
+			ms = millis() - ms;
+			printf("filled in %lums, %lums per page\n", ms, ms/512);
+			return ret;
+		}
 	}
 
 	if (str_is(cmd, PSTR("set"))) {
@@ -187,5 +258,77 @@ int8_t cli_test(char *buf, void *ptr)
 		return 0;
 	}
 
-	return -2;
+	if (str_is(cmd, PSTR("bmp"))) {
+		if (str_is(arg, PSTR("init"))) {
+			int8_t error = bmp180_init(&bmp);
+			if (error)
+				printf_P(PSTR("bmp180 init error %d\n"), error);
+			return 0;
+		}
+		if (str_is(arg, PSTR("poll"))) {
+			int8_t error = bmp180_poll(&bmp, BMP180_T_MODE);
+			if (bmp.valid & BMP180_T_VALID)
+				printf("t %d.%02u\n", bmp.t, bmp.tdec);
+			else
+				printf_P(PSTR("bmp180 init error %d\n"), error);
+			return 0;
+		}
+		return -1;
+	}
+
+	if (str_is(cmd, PSTR("ds"))) {
+		if (str_is(arg, PSTR("init"))) {
+			int8_t error = ds18x_init(ds_pin, DSx18_TYPE_B);
+			if (error)
+				printf_P(PSTR("ds1820 init error %d\n"), error);
+			return 0;
+		}
+		if (str_is(arg, PSTR("get"))) {
+			ds_temp_t t;
+			uint8_t buf[DS18x_PAD_LEN];
+			int8_t error = ds18x_get_temp(ds_pin, &t, buf);
+			for (uint8_t i = 0; i < DS18x_PAD_LEN; i++)
+				printf("%02X ", buf[i]);
+			printf("%d.%u\n", t.val, t.dec);
+			if (error)
+				printf_P(PSTR("ds1820 get error %d\n"), error);
+			return 0;
+		}
+		if (str_is(arg, PSTR("read"))) {
+			ds_temp_t t;
+			uint8_t buf[DS18x_PAD_LEN];
+			int8_t error = ds18x_read_temp(ds_pin, &t, buf);
+			for (uint8_t i = 0; i < DS18x_PAD_LEN; i++)
+				printf("%02X ", buf[i]);
+			printf("%d.%u\n", t.val, t.dec);
+			if (error)
+				printf_P(PSTR("ds1820 read error %d\n"), error);
+			return 0;
+		}
+		if (str_is(arg, PSTR("start"))) {
+			int8_t error = ds18x_cmd(ds_pin, DS18x_CMD_COVERT);
+			if (error)
+				printf_P(PSTR("ds1820 start error %d\n"), error);
+			return 0;
+		}
+		if (str_is(arg, PSTR("data"))) {
+			uint16_t data;
+			int8_t error = ds18x_read_data(ds_pin, &data);
+			printf_P(PSTR("ds1820 data %u\n"), data);
+			if (error)
+				printf_P(PSTR("ds1820 data error %d\n"), error);
+			return 0;
+		}
+		if (str_is(arg, PSTR("write"))) {
+			uint16_t data = uptime;
+			int8_t error = ds18x_wite_data(ds_pin, data);
+			printf_P(PSTR("ds1820 data %u\n"), data);
+			if (error)
+				printf_P(PSTR("ds1820 write error %d\n"), error);
+			return 0;
+		}
+		return CLI_EARG;
+	}
+
+	return CLI_ENOTSUP;
 }

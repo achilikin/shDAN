@@ -61,7 +61,7 @@ MCU = atmega32
 #FUSES = -U lfuse:w:0xC3:m -U hfuse:w:0xD9:m
 
 F_CPU = 8000000
-FUSES = -U lfuse:w:0xE4:m -U hfuse:w:0xD9:m
+FUSES = -U lfuse:w:0xE4:m -U hfuse:w:0xD1:m
 
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
@@ -73,8 +73,9 @@ TARGET = test_main
 # List C source files here. (C dependencies are automatically generated.)
 ###############################################################################
 
-SRC = $(TARGET).c test_cli.c ../lib/pinio.c ../lib/serial.c  \
-	../lib/serial_cli.c ../lib/timer.c ../lib/uart.c
+SRC = $(TARGET).c test_cli.c ../lib/pinio.c ../lib/serial.c ../lib/twimaster.c \
+	../lib/serial_cli.c ../lib/timer.c ../lib/uart.c ../lib/i2cmem.c \
+	../lib/ds18x.c ../lib/bmp180.c
 SRCPP = 
 
 # List Assembler source files here.
@@ -358,17 +359,22 @@ sizeafter:
 	$(AVRMEM) 2>/dev/null; echo; fi
 
 size:
-	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | grep 'Full'
 
 # Display compiler version information.
 gccversion : 
 	@$(CC) --version
 
-# Program the device.  
-program: $(TARGET).hex $(TARGET).eep
+# Program the device without writing to EEPROM. 
+program: $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | grep 'Full'
+
+# Program the device with writing to EEPROM.
+eprogram: $(TARGET).hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
-	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
-	
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | grep 'Full'
+
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
 
@@ -515,5 +521,5 @@ clean_list :
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion \
 build elf hex eep lss sym coff extcoff \
-clean clean_list program debug gdb-config reset size
+clean clean_list program eprogram debug gdb-config reset size
 

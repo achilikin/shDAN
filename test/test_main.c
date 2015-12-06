@@ -24,6 +24,7 @@
 #include <avr/pgmspace.h>
 
 #include "pinio.h"
+#include "mmrio.h"
 #include "timer.h"
 #include "serial.h"
 #include "serial_cli.h"
