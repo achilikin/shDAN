@@ -30,7 +30,7 @@
 
 #include "spi.h"
 #include "dnode.h"
-#include "pinio.h"
+#include "mmrio.h"
 #include "timer.h"
 #include "bmp180.h"
 #include "serial.h"
@@ -47,7 +47,7 @@
 
 // default configuration
 #ifndef NODE_ID
-#define NODE_ID	1   // node id
+#define NODE_ID	12  // node id
 #endif
 
 #ifndef RF_TXPWR

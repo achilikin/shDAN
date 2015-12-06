@@ -1,4 +1,4 @@
-/*  Simple wrappers for accesing ATmega32 registers populated on MMR-70
+/*  Simple wrappers for accesing ATmega32 registers
 
     Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
     
@@ -60,34 +60,34 @@
 #define PNA7	0x07
 
 // PORTB pins
-#define PNB0	0x10  // TP4, T0
-#define PNB1	0x11  // TP5, T1
-#define PNB2	0x12  // NC
-#define PNB3	0x13  // NC
-#define PNB4	0x14  // SPI SS, if soldered 
-#define PNB5	0x15  // TP7, MOSI
-#define PNB6	0x16  // TP3, MISO
-#define PNB7	0x17  // TP10, SCK
+#define PNB0	0x10
+#define PNB1	0x11
+#define PNB2	0x12
+#define PNB3	0x13
+#define PNB4	0x14
+#define PNB5	0x15
+#define PNB6	0x16
+#define PNB7	0x17
 
 // PORTC pins
-#define PNC0	0x20 //
-#define PNC1	0x21 //
-#define PNC2	0x22 //
-#define PNC3	0x23 //
-#define PNC4	0x24 //
-#define PNC5	0x25 //
-#define PNC6	0x26 //
-#define PNC7	0x27 //
+#define PNC0	0x20
+#define PNC1	0x21
+#define PNC2	0x22
+#define PNC3	0x23
+#define PNC4	0x24
+#define PNC5	0x25
+#define PNC6	0x26
+#define PNC7	0x27
 
 // PORTD pins
-#define PND0	0x30 // RXD
-#define PND1	0x31 // TXD
-#define PND2	0x32 // RDSINT
-#define PND3	0x33 // INT1, if soldered
-#define PND4	0x34 // NC
-#define PND5	0x35 // NC
-#define PND6	0x36 // NC
-#define PND7	0x37 // LED1
+#define PND0	0x30
+#define PND1	0x31
+#define PND2	0x32
+#define PND3	0x33
+#define PND4	0x34
+#define PND5	0x35
+#define PND6	0x36
+#define PND7	0x37
 
 // Analog channels
 #define ADC0 0
@@ -98,7 +98,6 @@
 #define ADC5 5
 #define ADC6 6
 #define ADC7 7
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,42 +159,6 @@ void pinMode(uint8_t pin, uint8_t mode); // INPUT, INPUT_UP, OUTPUT_LOW, OUTPUT_
 
 uint8_t digitalRead(uint8_t pin);
 void digitalWrite(uint8_t pin, uint8_t val);
-
-// Port access
-// *mode(INPUT_HIGHZ) or *mode(OUTPUT_LOW)
-// *dir(INPUT) or *dir(OUTPUT)
-// *set(LOW|HIGH)
-static inline void mmr_tp3_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP3), mode); }
-static inline void mmr_tp3_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP3), dir);   }
-static inline void mmr_tp3_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP3), val);  }
-static inline uint8_t mmr_tp3_get(void)       { return _pin_get(&PINB, _BV(TP3)); }
-
-static inline void mmr_tp4_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP4), mode); }
-static inline void mmr_tp4_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP4), dir);   }
-static inline void mmr_tp4_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP4), val);  }
-static inline uint8_t mmr_tp4_get(void)       { return _pin_get(&PINB, _BV(TP4)); }
-
-static inline void mmr_tp5_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP5), mode); }
-static inline void mmr_tp5_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP5), dir);   }
-static inline void mmr_tp5_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP5), val);  }
-static inline uint8_t mmr_tp5_get(void)       { return _pin_get(&PINB, _BV(TP5)); }
-
-static inline void mmr_tp7_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP7), mode); }
-static inline void mmr_tp7_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP7), dir);   }
-static inline void mmr_tp7_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP7), val);  }
-static inline uint8_t mmr_tp7_get(void)       { return _pin_get(&PINB, _BV(TP7)); }
-
-static inline void mmr_tp10_mode(uint8_t mode) { _pin_mode(&DDRB, _BV(TP10), mode); }
-static inline void mmr_tp10_dir(uint8_t dir)   { _pin_dir(&DDRB, _BV(TP10), dir);   }
-static inline void mmr_tp10_set(uint8_t val)   { _pin_set(&PORTB, _BV(TP10), val);  }
-static inline uint8_t mmr_tp10_get(void)       { return _pin_get(&PINB, _BV(TP10)); }
-
-static inline void mmr_led_on(void)  { _pin_dir(&DDRD, _BV(LED1), OUTPUT); }
-static inline void mmr_led_off(void) { _pin_dir(&DDRD, _BV(LED1), INPUT);  }
-
-static inline void mmr_rdsint_mode(uint8_t mode) {  _pin_mode(&DDRD, _BV(RDSINT), mode); }
-static inline void mmr_rdsint_set(uint8_t val)   {  _pin_set(&PORTD, _BV(RDSINT), val);  }
-static inline uint8_t mmr_rdsint_get(void)       { return _pin_get(&PIND, _BV(RDSINT));  }
 
 // Arduino-type delay
 static inline void delay(uint16_t msec)

@@ -28,7 +28,7 @@
 
 #include "rht.h"
 #include "dnode.h"
-#include "pinio.h"
+#include "mmrio.h"
 #include "ns741.h"
 #include "timer.h"
 #include "serial.h"

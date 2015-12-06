@@ -27,7 +27,7 @@
 
 #include "rht.h"
 #include "sht1x.h"
-#include "pinio.h"
+#include "mmrio.h"
 #include "timer.h"
 
 // ack timeout

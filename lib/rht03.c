@@ -27,7 +27,7 @@
 
 #include "rht.h"
 #include "rht03.h"
-#include "pinio.h"
+#include "mmrio.h"
 #include "timer.h"
 
 #define RHTDATA     46 // start bit, 40 bits raw data, 5 decoded data
