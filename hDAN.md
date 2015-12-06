@@ -24,15 +24,15 @@ See SVG pictures below for details.
 
 shDAN topology
 -------------
-![hDAN topology](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_topology.svg)
+![hDAN topology](https://rawgithub.com/achilikin/shDan/master/hDAN_topology.svg)
 
 shDAN protocol
 -------------
-![hDAN diagram](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_protocol.svg)
+![hDAN diagram](https://rawgithub.com/achilikin/shDan/master/hDAN_protocol.svg)
 For some reason I'm getting a lot of noise on my base station receivers. So packet detection algorithm uses length of a packet as a start byte (4 bytes for now) then receives 5 bytes (4 bytes payload + 1 byte CRC) and checks for 0x55 as packet's stop byte. If 0x55 is found then CRC is calculated and checked as well. If 0x55 not found then algorithm resets its state and waits for start byte 0x04. 
 
 shDAN messages examples
 ----------------------
-![hDAN diagram](https://rawgithub.com/achilikin/mmr70mod/master/hDAN_messages.svg)
+![hDAN diagram](https://rawgithub.com/achilikin/shDan/master/hDAN_messages.svg)
 
  

@@ -1,7 +1,7 @@
 Test for modded MMR-70
 ======================
 
-Depending on a project ([radio](https://github.com/achilikin/mmr70mod/blob/master/radio), [base](https://github.com/achilikin/mmr70mod/blob/master/base), [node](https://github.com/achilikin/mmr70mod/blob/master/node)) different I/O pins of MMR-70's ATmega32L can be populated. This firmware can be uploaded to ATmega32L for testing that everything is OK after soldering extra pins under a microscope :)
+Depending on a project ([radio](https://github.com/achilikin/shDan/blob/master/radio), [base](https://github.com/achilikin/shDan/blob/master/base), [node](https://github.com/achilikin/shDan/blob/master/node)) different I/O pins of MMR-70's ATmega32L can be populated. This firmware can be uploaded to ATmega32L for testing that everything is OK after soldering extra pins under a microscope :)
 
 Also can be used to init/program Atmel I2C EEPROM 24Cxx series (up to 24C512) memory, read BMP180 sensor in I2C bus or DS18B20 on PB1 pin. 
 
