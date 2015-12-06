@@ -353,7 +353,7 @@ sizeafter:
 	$(AVRMEM) 2>/dev/null; echo; fi
 
 size:
-	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | grep 'Full'
 
 # Display compiler version information.
 gccversion : 
@@ -362,12 +362,12 @@ gccversion :
 # Program the device without writing to EEPROM. 
 program: $(TARGET).hex
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
-	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | grep 'Full'
 
 # Program the device with writing to EEPROM.
 eprogram: $(TARGET).hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
-	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | egrep 'Program|Data|EEPROM'
+	@$(SIZE) --mcu=$(MCU) -C $(TARGET).elf | grep 'Full'
 	
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
