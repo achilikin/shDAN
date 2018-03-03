@@ -78,18 +78,18 @@ uint8_t serial_set_osccal(uint8_t osccal)
 {
 	uint8_t ret = OSCCAL;
 	OSCCAL = osccal;
-	printf_P(PSTR("Loaded new OSCCAL %d instead of %d\n"), osccal, osccal_def);
+	printf_P(PSTR("OSCCAL %u new %u\n"), osccal_def, osccal);
 	return ret;
 }
 
 void serial_init(long baud_rate)
 {
-	// all necessary initializations
-	uart_init(UART_BAUD_SELECT(baud_rate,F_CPU));
-	// enable printf, puts...
-	stdout = &uart_stdout;
 	// save current OSCCAL just in case
 	osccal_def = OSCCAL;
+	// all necessary initializations
+	uart_init(UART_BAUD_SELECT(baud_rate, F_CPU));
+	// enable printf, puts...
+	stdout = &uart_stdout;
 }
 
 uint16_t serial_getc(void)

@@ -24,7 +24,7 @@
 #include <avr/pgmspace.h>
 
 #include "spi.h"
-#include "pinio.h"
+#include "mmrio.h"
 #include "timer.h"
 #include "serial.h"
 #include "bmfont.h"

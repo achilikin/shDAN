@@ -76,8 +76,9 @@ rfm12_t rfm12 = {
 	.sck = SPI_SCK,
 	.sdi = SPI_SDI,
 	.sdo = SPI_SDO,
-	.irq = PND3
+	.irq = PNB2
 };
+
 // I/O pins
 #define PIN_INTERACTIVE PB0 // on port B
 #define REPLY_TIMEOUT 60 // time sync reply timeout, must be less than 127 msec
@@ -258,9 +259,7 @@ int main(void)
 
 	// create "List of Sensors" message
 	dval.nid = NODE_TSYNC | SENS_LIST | nid;
-	dval.data[0] = 0;
-	dval.data[1] = 0;
-	dval.data[2] = 0;
+	dval.data.v16 = 0;
 
 	for(uint8_t n = 0; n < sizeof(sens)/sizeof(sens[0]); n++) {
 		set_sens_type(&dval, sens[n].tos_sid & 0x0F, sens[n].tos_sid >> 4);
@@ -438,7 +437,7 @@ void print_dval(dnode_t *dval)
 	get_rtc_time(buf);
 
 	uint32_t msec = millis();
-	printf_P(PSTR("%s %lu %d.%02d\n"), buf, msec, dval->val, dval->dec);
+	printf_P(PSTR("%s %lu %d.%02d\n"), buf, msec, dval->data.val, dval->data.dec);
 }
 
 void show_time(char *buf)
@@ -469,8 +468,8 @@ int8_t poll_bmp180(dnode_t *dval, void *ptr)
 	bmp180_poll(bmp, BMP180_T_MODE);
 
 	if (bmp->valid & BMP180_T_VALID) {
-		dval->val = bmp->t;
-		dval->dec = bmp->tdec;
+		dval->data.val = bmp->t;
+		dval->data.dec = bmp->tdec;
 		return 0;
 	}
 	return -1;

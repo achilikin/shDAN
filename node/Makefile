@@ -122,7 +122,7 @@ CDEFS += -D_DEBUG=1
 CDEFS += -DCMD_LEN=0x1F
 
 # Default values
-NID = 1
+NID = 12
 TXPWR = 0
 OSCCAL = 176
 

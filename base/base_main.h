@@ -84,7 +84,6 @@ void io_handler(void); // check if I/O request is pending
 int8_t cli_base(char *buf, void *rht);
 
 #define MAX_NODES_PER_SCREEN 8
-int8_t get_node_line(uint8_t nid);
 
 #define TEXT_CENTRE 0xFF
 void putlx(uint8_t line, uint8_t x, const char *str, uint8_t atr);

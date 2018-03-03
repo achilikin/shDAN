@@ -21,32 +21,32 @@
 
 uint8_t ts_unpack(dnode_t *tsync)
 {
-	uint8_t nid = tsync->data[0] >> 4;
+	uint8_t nid = tsync->raw[0] >> 4;
 	// unpack hour
-	uint8_t ts = tsync->data[1] >> 4;
-	ts |= (tsync->data[0] & 0x01) << 4;
-	tsync->data[0] = ts;
+	uint8_t ts = tsync->raw[1] >> 4;
+	ts |= (tsync->raw[0] & 0x01) << 4;
+	tsync->raw[0] = ts;
 	// unpack minute
-	ts = (tsync->data[1] & 0x0F) << 2;
-	ts |= (tsync->data[2] >> 6);
-	tsync->data[1] = ts;
+	ts = (tsync->raw[1] & 0x0F) << 2;
+	ts |= (tsync->raw[2] >> 6);
+	tsync->raw[1] = ts;
 	// unpack seconds
-	tsync->data[2] &= 0x3F;
+	tsync->raw[2] &= 0x3F;
 	return nid;
 }
 
 void ts_pack(dnode_t *tsync, uint8_t nid)
 {
 	// pack minutes
-	uint8_t ts = tsync->data[1];
-	tsync->data[2] |= ts << 6;
-	tsync->data[1] >>= 2;
+	uint8_t ts = tsync->raw[1];
+	tsync->raw[2] |= ts << 6;
+	tsync->raw[1] >>= 2;
 	// pack hour
-	ts = tsync->data[0];
-	tsync->data[1] |= ts << 4;
-	tsync->data[0] = ts >> 4;
+	ts = tsync->raw[0];
+	tsync->raw[1] |= ts << 4;
+	tsync->raw[0] = ts >> 4;
 	// add node id as destination
-	tsync->data[0] |= nid << 4;
+	tsync->raw[0] |= nid << 4;
 }
 
 static const uint16_t LOG_RECNUM = 24 * 60;
@@ -91,6 +91,6 @@ int8_t log_erase_rec(uint8_t lidx, uint16_t ridx)
 {
 	dnode_log_t rec;
 	rec.ssi = 0;
-	rec.v16 = 0u;
+	rec.data.v16 = 0u;
 	return log_write_rec(lidx, ridx, &rec);
 }

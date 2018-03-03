@@ -37,7 +37,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2015-10-31\n";
+static const char version[] PROGMEM = "2018-03-03\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -498,7 +498,7 @@ int8_t cli_base(char *buf, void *rht)
 					uint8_t min = ridx % 60;
 					printf("%02u:%02u ", hour, min);
 					if (rec.ssi & 0x80)
-						printf("%3u%% T %2u.%02u", rec.ssi & 0x7F, rec.val, rec.dec);
+						printf("ARSSI %3u%% T %2u.%02u", rec.ssi & 0x7F, rec.data.val, rec.data.dec);
 					else
 						uart_puts(" --- - --.--");
 					uart_puts("\n");

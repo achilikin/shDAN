@@ -66,11 +66,11 @@ $make OSCCAL=176
 ```
 
 **Current code size**
-Version 2015-05-02
+Version 2018-03-03
 ```
 > Creating Symbol Table: node_main.sym
 > avr-nm -n node_main.elf > node_main.sym
-> Program:   16656 bytes (50.8% Full)
-> Data:        474 bytes (23.1% Full)
+> Program:   16850 bytes (51.4% Full)
+> Data:        476 bytes (23.2% Full)
 > EEPROM:        6 bytes (0.6% Full)
 ```

@@ -98,19 +98,22 @@ extern "C" {
  d: destination node id
  c: command
 */
+
+typedef union dsens_data_u {
+	struct {
+		int8_t  val; // value
+		uint8_t dec; // decimal
+	};
+	uint16_t v16; // for example: air pressure, hP
+} dsens_data_t;
+
 typedef struct dnode_s
 {
 	uint8_t nid;
 	union {
 		struct {
 			int8_t  stat; // Vbat = ((stat & STAT_VBAT)*10 + 230)/100.0
-			union {
-				struct {
-					int8_t  val; // value
-					uint8_t dec; // decimal
-				};
-				uint16_t v16; // for example: air pressure, hP
-			};
+			dsens_data_t data;
 		};
 		struct {
 			uint8_t hour;
@@ -125,7 +128,7 @@ typedef struct dnode_s
 			};
 
 		};
-		uint8_t data[3];
+		uint8_t raw[3];
 	};
 } dnode_t;
 
@@ -136,11 +139,14 @@ typedef struct dnode_status_s {
 	uint8_t flags;
 	uint8_t nid;
 	uint8_t ts[3]; // last session time stamp
+	uint8_t tout;  // timeout counter
 	uint8_t vbat;
 	uint8_t ssi; // signal strength indicator 0-100%
 	uint8_t log;
+	uint8_t stype[6]; // sensor types
+	dsens_data_t sdata[6]; // sensor data
 	uint8_t name[NODE_NAME_LEN];
-}dnode_status_t;
+} dnode_status_t;
 
 typedef int8_t sens_poll(dnode_t *dval, void *ptr);
 
@@ -158,7 +164,7 @@ static inline int8_t set_sens_type(dnode_t *dval, uint8_t sid, uint8_t type)
 	int8_t idx = (sid - 1) / 2;
 	if (!(sid & 0x01))
 		type <<= 4;
-	dval->data[idx] |= type;
+	dval->raw[idx] |= type;
 	return 0;
 }
 
@@ -167,7 +173,7 @@ static inline uint8_t get_sens_type(dnode_t *dval, uint8_t sid)
 	if (!sid || sid > 6)
 		return -1;
 	int8_t idx = (sid - 1) / 2;
-	uint8_t type = dval->data[idx];
+	uint8_t type = dval->raw[idx];
 	if (!(sid & 0x01))
 		type >>= 4;
 	return type;
@@ -177,15 +183,9 @@ uint8_t ts_unpack(dnode_t *tsync);
 void ts_pack(dnode_t *tsync, uint8_t nid);
 
 typedef struct dnode_log_s {
-	uint8_t ssi;
-	union {
-		struct {
-			int8_t  val; // value
-			uint8_t dec; // decimal
-		};
-		uint16_t v16; // for example: air pressure, hP
-	};
-}dnode_log_t;
+	uint8_t      ssi;
+	dsens_data_t data;
+} dnode_log_t;
 
 // logging functions
 void   log_erase(uint8_t lidx);
