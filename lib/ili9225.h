@@ -1,6 +1,6 @@
 /* ILI9225 based display support for ATmega32L
 
-   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -153,10 +153,14 @@ void ili9225_set_backlight(ili9225_t *ili, uint8_t mode);
 void ili9225_set_disp(ili9225_t *ili, uint8_t mode);
 
 // set foreground color, will affect all drawing functions below
-uint16_t ili9225_set_fg_color(ili9225_t *ili, uint16_t color);
+static inline void ili9225_set_fg_color(ili9225_t *ili, uint16_t color) {
+	ili->fcolor = color;
+}
 
 // set background color, will affect ili9225_clear() and ili9225_puts()
-void ili9225_set_bk_color(ili9225_t *ili, uint16_t color);
+static inline void ili9225_set_bk_color(ili9225_t *ili, uint16_t color) {
+	ili->bcolor = color;
+}
 
 // swap foreground and background colors
 void ili9225_swap_color(ili9225_t *ili);
