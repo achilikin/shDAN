@@ -1,6 +1,6 @@
 /* Command line parser for base station
 
-   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2018-03-03\n";
+static const char version[] PROGMEM = "2018-03-04\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -65,7 +65,7 @@ const char cmd_list[] PROGMEM =
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
-	"  get pin (d3, b4,c2...)\n"
+	"  get pin (d3,b4,c2...)\n"
 	"  rdsid id\n"
 	"  rdstext\n"
 	"  freq nnnn\n"
