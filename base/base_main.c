@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <avr/io.h>
+#include <avr/wdt.h>
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 
@@ -109,6 +110,9 @@ uint8_t  rd_signal; // last session signal
 dnode_status_t dans[MAX_DNODE_NUM];
 uint8_t EEMEM  em_dlog[MAX_DNODE_LOGS]; // nodes for data logging
 uint8_t EEMEM  em_dan_name[MAX_DNODE_NUM][NODE_NAME_LEN]; // Nodes' names
+// track number of resets
+uint16_t nreset;
+uint16_t EEMEM em_nreset = 0;
 
 static uint16_t last_ts[MAX_DNODE_LOGS];
 
@@ -169,6 +173,9 @@ ISR(ADC_vect)
 int main(void)
 {
 	uint8_t poll_clock = 0;
+	nreset = eeprom_read_word(&em_nreset);
+	nreset += 1;
+	eeprom_write_word(&em_nreset, nreset);
 
 	mmr_led_on(); // turn on LED while booting
 	memset(dans, 0, sizeof(dans));
@@ -435,7 +442,7 @@ void print_status(uint8_t verbose)
 		uart_puts_p(PSTR("RTC time: "));
 		print_rtc_time();
 		if (uptime) {
-			printf_P(PSTR("Uptime %lu sec or "), uptime);
+			printf_P(PSTR("Resets %u, Uptime %lu sec or "), nreset, uptime);
 			if (uptime > 86400)
 				printf_P(PSTR("%lu days "), uptime / 86400l);
 			uint32_t utime = uptime % 86400l;
@@ -508,6 +515,8 @@ void io_handler(void)
 	if (rt_flags & RT_ECHO_RX)
 		rx_flags |= RFM_RX_DEBUG;
 
+	// init 2sec watchdog timer
+	wdt_enable(WDTO_2S);
 	if (rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
 		analogStop(); // stop pending ARSSI conversion
 		uint8_t dan = GET_NID(rd.nid);
@@ -610,6 +619,7 @@ void io_handler(void)
 restart_rx:
 		rfm12_set_mode(&rfm868, RFM_MODE_RX);
 	}
+	wdt_disable();
 }
 
 void update_line(uint8_t line, uint8_t idx)

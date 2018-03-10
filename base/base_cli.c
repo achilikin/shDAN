@@ -147,6 +147,7 @@ int8_t cli_base(char *buf, void *rht)
 	if (str_is(cmd, pstr_reset)) {
 		uart_puts("\n");
 		uart_puts("...");
+		eeprom_write_word(&em_nreset, 0);
 		wdt_enable(WDTO_15MS);
 		while(1);
 	}

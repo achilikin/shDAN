@@ -61,6 +61,7 @@ extern uint16_t EEMEM em_radio_freq;
 extern uint8_t  EEMEM em_ns_rt_flags;
 extern uint8_t  EEMEM em_ns_pwr_flags;
 extern uint8_t  EEMEM em_osccal;
+extern uint16_t EEMEM em_nreset;
 
 extern uint16_t radio_freq;
 extern uint8_t  ns_rt_flags;
