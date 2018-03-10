@@ -1,4 +1,4 @@
-/*  Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+/*  Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -101,11 +101,17 @@ extern "C" {
 
 typedef union dsens_data_u {
 	struct {
-		int8_t  val; // value
+		uint8_t val; // value, high bit: negative value
 		uint8_t dec; // decimal
 	};
 	uint16_t v16; // for example: air pressure, hP
 } dsens_data_t;
+
+static inline int8_t get_dval(uint8_t val) {
+	if (val & 0x80)
+		return -(val & 0x7F);
+	return val;
+}
 
 typedef struct dnode_s
 {

@@ -1,7 +1,7 @@
 /*  Polling relative humidity/temperature sensors RHT03/SHT1x
 
     This copy is optimized for AVR Atmega32 on MMR-70
-    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
     
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,9 +41,16 @@ extern "C" {
 
 typedef struct u8val_s
 {
-	int8_t  val;
+	uint8_t val; // high bit: negative
 	uint8_t dec;
 } u8val_t;
+
+static inline int8_t get_u8val(uint8_t val)
+{
+	if (val & 0x80)
+		return -(val & 0x7F);
+	return val;
+}
 
 typedef struct rht_s
 {

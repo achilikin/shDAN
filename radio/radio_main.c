@@ -1,6 +1,6 @@
 /* Firmware for MMR-70 FM radio
 
-   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -199,9 +199,10 @@ int main(void)
 			rht_read(&rht, rt_flags & RHT_ECHO, rds_data);
 			ossd_putlx(4, -1, rds_data, 0);
 			if (rt_flags & RHT_LOG) {
+				int8_t val = get_u8val(rht.temperature.val);
 				printf_P(PSTR("%02d:%02d:%02d %d.%d %d.%d\n"),
 					sw_clock / 3600, (sw_clock / 60) % 60, sw_clock % 60,
-					rht.temperature.val, rht.temperature.dec,
+					val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec);
 			}
 		}

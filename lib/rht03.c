@@ -3,7 +3,7 @@
     Note: should work with DHT-22 as well
 
     This copy is optimized for AVR Atmega32 on MMR-70
-    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -125,8 +125,8 @@ int8_t rht03_get_temperature(rht_t *prht)
     temperature |= rht03.data[3];
 	prht->temperature.dec = (temperature % 10)*10;
     temperature /= 10;
-    if (rht03.data[2] & 0x80)
-        temperature *= -1;
+	// set negative sign
+    temperature |= rht03.data[2] & 0x80;
 	prht->temperature.val = temperature;
 	prht->valid |= RHT_TVALID;
 

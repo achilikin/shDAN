@@ -497,8 +497,12 @@ int8_t cli_base(char *buf, void *rht)
 					uint8_t hour = ridx / 60;
 					uint8_t min = ridx % 60;
 					printf("%02u:%02u ", hour, min);
-					if (rec.ssi & 0x80)
-						printf("ARSSI %3u%% T %2u.%02u", rec.ssi & 0x7F, rec.data.val, rec.data.dec);
+					if (rec.ssi & 0x80) {
+						int8_t val = rec.data.val;
+						if (val & 0x80)
+							val = -(val & 0x7F);
+						printf("ARSSI %3u%% T %+3d.%02u", rec.ssi & 0x7F, val, rec.data.dec);
+					}
 					else
 						uart_puts(" --- - --.--");
 					uart_puts("\n");

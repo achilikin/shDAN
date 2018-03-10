@@ -2,7 +2,7 @@
     http://www.sensirion.com/nc/en/products/humidity-temperature/download-center/
 
     This copy is optimized for AVR Atmega32 on MMR-70
-    Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+    Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -214,8 +214,13 @@ static int8_t sht1x_parse_temperature(sht1x_t *psh)
 
 	double ft = -39.66 + 0.01*psh->draw; // for 3.3V
 	sht.ft = ft;
+	uint8_t sign = 0;
 	int16_t tv = (int16_t)(ft*100.0);
-	sht.t.val = tv/100;
+	if (tv < 0) {
+		tv = -tv;
+		sign = 0x80;
+	}
+	sht.t.val = tv/100 | sign;
 	sht.t.dec = (tv%100);
 	sht.valid |= RHT_TVALID;
 	sht.dtype = 'T';
@@ -273,9 +278,10 @@ void sht1x_print(const char *data)
 	printf_P(PSTR("%u %lu "), sht.errors, millis());
 	if (!data)
 		data = "error";
+	int8_t val = get_u8val(pval->val);
 	printf_P(PSTR("%c: %02X %02X %02X | %04d %d.%02d | %s\n"), sht.dtype,
 		sht.data[0], sht.data[1], sht.data[2],
-		sht.draw, pval->val, pval->dec, data);
+		sht.draw, val, pval->dec, data);
 }
 
 int8_t sht1x_poll(rht_t *psht)

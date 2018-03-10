@@ -30,8 +30,9 @@ int8_t rht_read(rht_t *rht, int8_t echo, char *dst)
 	if (ret == 0) {
 		rht_get_temperature(rht);
 		rht_get_humidity(rht);
+		int8_t val = get_u8val(rht->temperature.val);
 		sprintf_P(dst, PSTR("T %d.%02d H %d.%02d"),
-			rht->temperature.val, rht->temperature.dec,
+			val, rht->temperature.dec,
 			rht->humidity.val, rht->humidity.dec);
 	}
 	if (echo)

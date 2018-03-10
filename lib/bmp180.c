@@ -1,5 +1,5 @@
 /* BMP180 digital pressure sensor
-   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -121,9 +121,14 @@ int8_t bmp180_poll(bmp180_t *pcc, uint8_t tmode)
 		int32_t x2 = (((int32_t)pcc->mc) << 11)/(x1 + pcc->md);
 		int32_t b5 = x1 + x2;
 		pcc->b6 = b5 - 4000;
+		uint8_t sign = 0;
 		int16_t t = (int16_t)((b5 + 8) >> 4);
-		pcc->t = t / 10;
-		pcc->tdec = (t % 10)*10; // convert to 1/100
+		if (t < 0) {
+			t = -t;
+			sign = 0x80;
+		}
+		pcc->t = (t / 10) | sign;
+		pcc->tdec = (t % 10)*10; // convert to 1/100; 
 		pcc->valid |= BMP180_T_VALID;
 		pcc->cmd = (tmode) ? BMP180_GET_T : BMP180_GET_P;
 	}

@@ -1,5 +1,5 @@
 /* BMP180 digital pressure sensor
-   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ typedef struct bmp180_s
 	uint8_t  valid; // BMP180_*_valid
 
 	uint16_t rawt;  // raw temperature
-	int8_t   t;     // temperature in C
+	uint8_t  t;     // temperature in C, high bit: negative
 	uint8_t  tdec;  // temperature decimal 
 	int32_t  b6;    // intermediate value for p calculation
 

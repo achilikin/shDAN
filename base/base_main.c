@@ -348,8 +348,9 @@ int main(void)
 				uint8_t ts[3];
 				pcf2127_get_time((pcf_td_t *)ts, sw_clock);
 				printf_P(pstr_tformat, ts[0], ts[1], ts[2]);
+				int8_t val = get_u8val(rht.temperature.val);
 				printf_P(PSTR(" %d.%02d %d.%02d %d.%02d\n"),
-					rht.temperature.val, rht.temperature.dec,
+					val, rht.temperature.dec,
 					rht.humidity.val, rht.humidity.dec,
 					press.p, press.pdec);
 			}
@@ -375,10 +376,11 @@ void print_rd(void)
 			printf_P(PSTR("%02u "), get_sens_type(&rd, i));
 	}
 	else {
+		int8_t val = get_dval(rd.data.val);
 		printf_P(PSTR("S%u L%u A%u E%u V %u T%+3d.%02d ARSSI %u %3d%%"),
 			!!(rd.stat & STAT_SLEEP), !!(rd.stat & STAT_LED),
 			!!(rd.stat & STAT_ACK), !!(rd.stat & STAT_EOS),
-			rd_bv, rd.data.val, rd.data.dec,
+			rd_bv, val, rd.data.dec,
 			rd_arssi, rd_signal);
 	}
 	uart_puts("\n");
@@ -622,7 +624,8 @@ void update_line(uint8_t line, uint8_t idx)
 			ili9225_set_bk_color(&ili, RGB16_YELLOW);
 		}
 	}
-	sprintf_P(fm_freq, PSTR("%-5s T% 3d.%02d "), dan->name, dan->sdata[0].val, dan->sdata[0].dec);
+	int8_t val = get_dval(dan->sdata[0].val);
+	sprintf_P(fm_freq, PSTR("%-5s T% 3d.%02d "), dan->name, val, dan->sdata[0].dec);
 	putlx(line, 4, fm_freq, 0);
 	ili9225_set_fg_color(&ili, RGB16_WHITE);
 	ili9225_set_bk_color(&ili, RGB16_BLACK);

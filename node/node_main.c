@@ -437,14 +437,18 @@ void print_dval(dnode_t *dval)
 	get_rtc_time(buf);
 
 	uint32_t msec = millis();
-	printf_P(PSTR("%s %lu %d.%02d\n"), buf, msec, dval->data.val, dval->data.dec);
+	int8_t val = get_dval(dval->data.val);
+	printf_P(PSTR("%s %lu %d.%02d\n"), buf, msec, val, dval->data.dec);
 }
 
 void show_time(char *buf)
 {
 	get_rtc_time(buf);
 	ossd_putlx(2, -1, buf, TEXT_OVERLINE | TEXT_UNDERLINE);
-	sprintf_P(buf, PSTR("T %d.%02d"), bmp.t, bmp.tdec);
+	int8_t t = bmp.t;
+	if (t & 0x80)
+		t = -(t & 0x7F);
+	sprintf_P(buf, PSTR("T %d.%02d"), t, bmp.tdec);
 	ossd_putlx(4, -1, buf, TEXT_UNDERLINE);
 }
 

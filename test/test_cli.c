@@ -1,6 +1,6 @@
 /* Command line parser for I/O tester
 
-   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -267,8 +267,10 @@ int8_t cli_test(char *buf, void *ptr)
 		}
 		if (str_is(arg, PSTR("poll"))) {
 			int8_t error = bmp180_poll(&bmp, BMP180_T_MODE);
-			if (bmp.valid & BMP180_T_VALID)
-				printf("t %d.%02u\n", bmp.t, bmp.tdec);
+			if (bmp.valid & BMP180_T_VALID) {
+				int8_t t = get_u8val(bmp.t);
+				printf("t %d.%02u\n", t, bmp.tdec);
+			}
 			else
 				printf_P(PSTR("bmp180 init error %d\n"), error);
 			return 0;
