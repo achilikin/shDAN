@@ -1,4 +1,4 @@
-hDAN: small house Data Acquisition Network
+shDAN: small house Data Acquisition Network
 ==========================================
 [BASE](https://github.com/achilikin/shDAN/blob/master/base) - Base Station firmware for [Data Acquisition Network](https://github.com/achilikin/shDAN/blob/master/hDAN.md)
 
