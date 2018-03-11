@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <avr/io.h>
+#include <avr/wdt.h>
 #include <avr/interrupt.h>
 
 #include "pinio.h"
@@ -33,17 +34,25 @@ volatile uint8_t  tenth_clock;
 volatile uint32_t millis_clock;
 volatile uint32_t rtc_clock;
 volatile uint8_t  rtc_sec, rtc_min, rtc_hour;
+volatile uint8_t rtc_wdt, rtc_wdtclock;
 
 // compare interrupt handler
 ISR(TIMER1_COMPA_vect)
 {
-   millis_clock++;
-   // separate counter for tenth of a second
-   ms_clock++;
-   if (ms_clock == 100) {
+	millis_clock++;
+	// separate counter for tenth of a second
+	ms_clock++;
+	if (ms_clock == 100) {
 		tenth_clock++;
 		ms_clock = 0;
-   }
+		// handle our long watchdog timer
+		if (rtc_wdt) {
+			if (++rtc_wdtclock > rtc_wdt) {
+				wdt_enable(WDTO_15MS);
+				while (1);
+			}
+		}
+	}
 }
 
 ISR(TIMER2_COMP_vect)

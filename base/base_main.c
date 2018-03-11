@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <avr/io.h>
-#include <avr/wdt.h>
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 
@@ -442,7 +441,7 @@ void print_status(uint8_t verbose)
 		uart_puts_p(PSTR("RTC time: "));
 		print_rtc_time();
 		if (uptime) {
-			printf_P(PSTR("Resets %u, Uptime %lu sec or "), nreset, uptime);
+			printf_P(PSTR("Resets %u, Uptime %lu sec or "), nreset - 1, uptime);
 			if (uptime > 86400)
 				printf_P(PSTR("%lu days "), uptime / 86400l);
 			uint32_t utime = uptime % 86400l;
@@ -515,8 +514,8 @@ void io_handler(void)
 	if (rt_flags & RT_ECHO_RX)
 		rx_flags |= RFM_RX_DEBUG;
 
-	// init 2sec watchdog timer
-	wdt_enable(WDTO_2S);
+	// init our 5 sec watchdog timer
+	rtc_set_wdt(5);
 	if (rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
 		analogStop(); // stop pending ARSSI conversion
 		uint8_t dan = GET_NID(rd.nid);
@@ -544,14 +543,12 @@ void io_handler(void)
 			ts_pack(&tsync, dan);
 			if (dan != NODE_LBS)
 				dans[dan].flags |= STAT_TSYNC;
-
 			rfm12_send(&rfm868, &tsync, sizeof(tsync));
 			if (rt_flags & RT_ECHO_DAN) {
 				printf_P(pstr_tformat, rd_ts[0], rd_ts[1], rd_ts[2]);
 				printf_P(PSTR(" sync %02X\n"), rd.nid);
 			}
 		}
-
 		// we should have at least 7 ARSSI reads in our areads array
 		bsort(areads, 8);
 		rd_arssi  = 0;
@@ -619,7 +616,8 @@ void io_handler(void)
 restart_rx:
 		rfm12_set_mode(&rfm868, RFM_MODE_RX);
 	}
-	wdt_disable();
+	// disable watchdog timer
+	rtc_set_wdt(0);
 }
 
 void update_line(uint8_t line, uint8_t idx)

@@ -30,6 +30,7 @@ extern volatile uint8_t  tenth_clock;  // increments every 1/10 of a second
 extern volatile uint32_t millis_clock; // global millis counter
 extern volatile uint32_t rtc_clock;    // rtc driven seconds counter
 extern volatile uint8_t  rtc_sec, rtc_min, rtc_hour;
+extern volatile uint8_t rtc_wdt, rtc_wdtclock;
 
 #define CLOCK_RTC    0x01
 #define CLOCK_MILLIS 0x02
@@ -41,7 +42,7 @@ static inline uint32_t millis(void)
 {
 	uint32_t mil;
 	ATOMIC_BLOCK(ATOMIC_FORCEON) {
-	mil = millis_clock;
+		mil = millis_clock;
 	}
 	return mil;
 }
@@ -50,9 +51,21 @@ static inline uint16_t mill16(void)
 {
 	uint16_t mil;
 	ATOMIC_BLOCK(ATOMIC_FORCEON) {
-	mil = (uint16_t)millis_clock;
+		mil = (uint16_t)millis_clock;
 	}
 	return mil;
+}
+
+// As Atmega32 supports only up to 2 sec wdt
+// use our millisecond timer for up to 20 sec watchdog
+static inline void rtc_set_wdt(uint8_t wdt_sec)
+{
+	if (wdt_sec > 20)
+		wdt_sec = 20;
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+		rtc_wdtclock = 0;
+		rtc_wdt = wdt_sec * 10;
+	}
 }
 
 static inline uint8_t mill8(void)
@@ -67,7 +80,7 @@ static inline uint32_t rtc_get_clock(void)
 {
 	uint32_t rtc;
 	ATOMIC_BLOCK(ATOMIC_FORCEON) {
-	rtc = rtc_clock;
+		rtc = rtc_clock;
 	}
 	return rtc;
 }
