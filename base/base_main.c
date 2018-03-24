@@ -108,6 +108,7 @@ uint8_t  rd_signal; // last session signal
 
 dnode_status_t dans[MAX_DNODE_NUM];
 uint8_t EEMEM  em_dlog[MAX_DNODE_LOGS]; // nodes for data logging
+uint8_t EEMEM  em_dvalid[MAX_DNODE_NUM]; // valid nodes in the network
 uint8_t EEMEM  em_dan_name[MAX_DNODE_NUM][NODE_NAME_LEN]; // Nodes' names
 // track number of resets
 uint16_t nreset;
@@ -171,7 +172,7 @@ ISR(ADC_vect)
 
 int main(void)
 {
-	uint8_t poll_clock = 0;
+	uint8_t poll_clock = 3;
 	nreset = eeprom_read_word(&em_nreset);
 	nreset += 1;
 	eeprom_write_word(&em_nreset, nreset);
@@ -184,13 +185,14 @@ int main(void)
 		if (dans[i].name[0] == '\0')
 			sprintf((char *)dans[i].name, "DAN%02u", i+1);
 		dans[i].name[NODE_NAME_LEN - 1] = '\0';
+		dans[i].flags = eeprom_read_byte(&em_dvalid[i]);
 	}
 
 	for(uint8_t i = 0; i < MAX_DNODE_LOGS; i++) {
 		uint8_t nid = eeprom_read_byte(&em_dlog[i]);
 		if (nid && nid <= MAX_DNODE_NUM) {
 			dans[nid-1].log = i;
-			dans[nid-1].flags |= STAT_LOG;
+			dans[nid-1].flags |= DANF_LOG;
 		}
 	}
 
@@ -304,19 +306,31 @@ int main(void)
 	print_status(1);
 	cli_init();
 
-	pcf2127_get_time((pcf_td_t *)rd_ts, 0);
-	/* if backup battery is low, time can be garbage, reset */
-	if ((rd_ts[0] > 23) || (rd_ts[1] > 59) || (rd_ts[2] > 59)) {
-		rd_ts[0] = 0;
-		rd_ts[1] = 0;
-		rd_ts[2] = 0;
-		pcf2127_set_time((pcf_td_t *)rd_ts);
-	}
-	for(uint8_t i = 0; i < MAX_DNODE_LOGS; i++)
-		last_ts[i] = rd_ts[0]*60 + rd_ts[1];
+	for (uint8_t i = 0; i < MAX_DNODE_LOGS; i++)
+		last_ts[i] = rd_ts[0] * 60 + rd_ts[1];
 
+	if (pcf2127_get_time((pcf_td_t *)rd_ts, 0) == 0) {
+		// RTC attached, check if time is valid
+		// if backup battery is low, time can be garbage, reset
+		if ((rd_ts[0] > 23) || (rd_ts[1] > 59) || (rd_ts[2] > 59)) {
+			rd_ts[0] = 0;
+			rd_ts[1] = 0;
+			rd_ts[2] = 0;
+			pcf2127_set_time((pcf_td_t *)rd_ts);
+		}
+		// synchronize main loop to the start of a second
+		uint8_t sec = rd_ts[2];
+		while(pcf2127_get_time((pcf_td_t *)rd_ts, 0) == 0) {
+			if (sec != rd_ts[2])
+				break;
+		}
+	}
+
+	// main loop
 	for(;;) {
-		io_handler();
+		if (io_handler())    // keep local sensors read shifted 500 msec
+			tenth_clock = 5; // to avoid collisions with the radio
+
 		// process serial port commands
 		cli_interact(cli_base, &rht);
 
@@ -415,15 +429,15 @@ void print_node(uint8_t nid)
 		printf_P(pstr_tformat, dans[nid].ts[0], dans[nid].ts[1], dans[nid].ts[2]);
 		printf_P(PSTR(" NID %u %5s Vbat %u ARSSI %3d%%"), nid + 1, dans[nid].name, vbat, dans[nid].ssi);
 		uart_puts_p(PSTR(" Log "));
-		if (flags & STAT_LOG)
+		if (flags & DANF_LOG)
 			printf("  %u", dans[nid].log);
 		else
 			uart_puts(is_on(0));
 //		uart_puts(is_on(flags & STAT_LOG));
 		uart_puts_p(PSTR(" Tsync "));
-		uart_puts(is_on(flags & STAT_TSYNC));
+		uart_puts(is_on(flags & DANF_TSYNC));
 		uart_puts_p(PSTR(" Slist "));
-		uart_puts(is_on(flags & STAT_SLIST));
+		uart_puts(is_on(flags & DANF_SLIST));
 		uart_puts_p(PSTR(" Sleep "));
 		uart_puts(is_on(flags & STAT_SLEEP));
 		uart_puts_p(PSTR(" Led "));
@@ -441,7 +455,8 @@ void print_status(uint8_t verbose)
 		uart_puts_p(PSTR("RTC time: "));
 		print_rtc_time();
 		if (uptime) {
-			printf_P(PSTR("Resets %u, Uptime %lu sec or "), nreset - 1, uptime);
+			printf_P(PSTR("Resets %u, Timeouts %u, Uptime %lu sec or "),
+				nreset - 1, rfm868.nto, uptime);
 			if (uptime > 86400)
 				printf_P(PSTR("%lu days "), uptime / 86400l);
 			uint32_t utime = uptime % 86400l;
@@ -498,12 +513,14 @@ void putlx(uint8_t line, uint8_t x, const char *str, uint8_t atr)
 	}
 
 	ili9225_text(&ili, pos, line, str, atr);
-
 //	spi_set_clock(SPI_CLOCK_DIV4);
 }
 
-void io_handler(void)
+uint8_t io_handler(void)
 {
+	uint8_t ret;
+	// set watchdog timer to 20 sec just in case if radio fails
+	rtc_set_wdt(20);
 	// RDSPIN is low when NS741 is ready to transmit next RDS frame
 	if (mmr_rdsint_get() == LOW)
 		ns741_rds_isr();
@@ -514,10 +531,9 @@ void io_handler(void)
 	if (rt_flags & RT_ECHO_RX)
 		rx_flags |= RFM_RX_DEBUG;
 
-	// init our 5 sec watchdog timer
-	rtc_set_wdt(5);
-	if (rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags) == sizeof(rd)) {
-		analogStop(); // stop pending ARSSI conversion
+	ret = rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags);
+
+	if (ret == sizeof(rd)) {
 		uint8_t dan = GET_NID(rd.nid);
 		if (!dan || dan > NODE_LBS)
 			goto restart_rx;
@@ -525,13 +541,16 @@ void io_handler(void)
 		pcf2127_get_time((pcf_td_t *)rd_ts, sw_clock);
 		if (dan != NODE_LBS) {
 			dan -= 1;
-			dans[dan].flags &= 0x0F;
-			dans[dan].flags |= STAT_ACTIVE;
+			dans[dan].flags &= DANF_MASK;
+			dans[dan].flags |= DANF_ACTIVE;
 			dans[dan].nid   = dan;
 			dans[dan].ts[0] = rd_ts[0];
 			dans[dan].ts[1] = rd_ts[1];
 			dans[dan].ts[2] = rd_ts[2];
 			dans[dan].tout = 5; // reset timeout to 5 minutes
+
+			if (!(dans[dan].flags & DANF_VALID))
+				goto restart_rx;
 		}
 
 		if (rd.nid & NODE_TSYNC) { // remote node requests time sync
@@ -542,11 +561,11 @@ void io_handler(void)
 			tsync.nid = NODE_TSYNC;
 			ts_pack(&tsync, dan);
 			if (dan != NODE_LBS)
-				dans[dan].flags |= STAT_TSYNC;
+				dans[dan].flags |= DANF_TSYNC;
 			rfm12_send(&rfm868, &tsync, sizeof(tsync));
 			if (rt_flags & RT_ECHO_DAN) {
 				printf_P(pstr_tformat, rd_ts[0], rd_ts[1], rd_ts[2]);
-				printf_P(PSTR(" sync %02X\n"), rd.nid);
+				printf_P(PSTR(" sync %02X\n"), GET_NID(rd.nid));
 			}
 		}
 		// we should have at least 7 ARSSI reads in our areads array
@@ -583,17 +602,17 @@ void io_handler(void)
 		dans[dan].ssi = rd_signal;
 
 		if ((rd.nid & SENS_MASK) == SENS_LIST) {
-			dans[dan].flags |= STAT_SLIST;
+			dans[dan].flags |= DANF_SLIST;
 		}
 		else {
 			dans[dan].sdata[0].v16 = rd.data.v16;
 
 			rd_bv = (rd.stat & STAT_VBAT) * 10;
-			dans[dan].flags |= rd.stat & ~STAT_VBAT;
+			dans[dan].flags |= rd.stat & ~DANF_MASK;
 			dans[dan].vbat = rd_bv;
 			rd_bv += 230;
 
-			if (dans[dan].flags & STAT_LOG) {
+			if (dans[dan].flags & DANF_LOG) {
 				uint16_t ridx = rd_ts[0]*60 + rd_ts[1];
 				uint16_t i = ridx;
 
@@ -618,6 +637,7 @@ restart_rx:
 	}
 	// disable watchdog timer
 	rtc_set_wdt(0);
+	return ret;
 }
 
 void update_line(uint8_t line, uint8_t idx)
@@ -664,7 +684,7 @@ void update_line(uint8_t line, uint8_t idx)
 		}
 	}
 
-	sprintf_P(status, PSTR("S %d%% "), rssi);
+	sprintf_P(status, PSTR("S %2d%% "), rssi);
 	putlx(line + 1, ILI9225_LCD_WIDTH - 6 * 6 - 4, status, 0);
 	ili9225_set_fg_color(&ili, RGB16_WHITE);
 	ili9225_set_bk_color(&ili, RGB16_BLACK);
@@ -695,11 +715,11 @@ void update_screen(void)
 		if (!minute) {
 			if (dans[i].tout) {
 				dans[i].tout -= 1;
-				dans[i].flags |= STAT_ACTIVE;
+				dans[i].flags |= DANF_ACTIVE;
 			}
 		}
-		if (dans[i].flags & STAT_ACTIVE) {
-			dans[i].flags &= ~STAT_ACTIVE;
+		if ((dans[i].flags & (DANF_VALID | DANF_ACTIVE)) == (DANF_VALID | DANF_ACTIVE)) {
+			dans[i].flags &= ~DANF_ACTIVE;
 			int8_t line = get_node_line(i);
 			if (line >= 0)
 				update_line(line + 5, i);

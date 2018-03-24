@@ -32,6 +32,7 @@
 #
 # make program = Download the hex file to the device, using avrdude.
 #                Please customize the avrdude settings below first!
+# make eprogram = same as 'program' but initialize EEPROM
 #
 # make debug = Start either simulavr or avarice as specified for debugging, 
 #              with avr-gdb or avr-insight as the front end for debugging.

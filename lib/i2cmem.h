@@ -39,7 +39,7 @@ extern "C" {
 #define I2C_MEM_MAX_PAGE 512 // by default 24C256 - 512 pages
 #endif
 
-typedef void i2cmem_idle_callback(void);
+typedef uint8_t i2cmem_idle_callback(void);
 
 void i2cmem_set_idle_callback(i2cmem_idle_callback *pcall);
 

@@ -67,7 +67,7 @@ extern "C" {
 #define RFM12CMD_FREQ  0xA000
 
 //** Data rate command
-#define RFM12CMD_DRATE 0xC600
+#define RFM12CMD_DRATE  0xC600
 #define RFM12_BPS_2400  0x0091
 #define RFM12_BPS_4800  0x0047
 #define RFM12_BPS_9600  0x0023
@@ -216,6 +216,10 @@ extern "C" {
 #define RFM12_OFFS     0x0010 // MSB of the measured frequency offset (sign of the offset value)
 #define RFM12_OFFSET   0x000F // Offset value to be added to the value of the frequency control parameter (Four LSB bits)
 
+// pseudo statuses
+#define RFM12_TOUT     0x7BAD // pseudo status for timeout
+#define RFM12_KAE	   0x5000 // keep alive event
+
 //** Power mode - sleep, idle, receiver, transmitter
 #define RFM_MODE_SLEEP 0
 #define RFM_MODE_IDLE  RFM12_ECRYSRAL
@@ -240,7 +244,7 @@ typedef struct rfm12_s
 	// receive buffer variables
 	uint8_t ridx; // receive buffer index
 	uint8_t rcrc; // receive buffer crc
-	uint8_t rxts; // RX session timestamp
+	uint16_t nto; // number of timeouts for stats
 } rfm12_t;
 
 // flags for rfm12_receive_data()

@@ -41,6 +41,9 @@ extern "C" {
 #define RT_OLED_ECHO   0x40 // output data to oled
 #define RT_RX_ECHO     0x80
 
+// transmit data twice in the noisy environment
+#define RT_TX_REPEAT    0x80
+
 // active components
 #define NODE_ACTIVE  0x80 // activated by local switch
 #define FORCE_ACTIVE 0x40 // forced to be active by remote command
