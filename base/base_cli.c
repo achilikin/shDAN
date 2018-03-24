@@ -37,7 +37,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2018-03-04\n";
+static const char version[] PROGMEM = "2018-03-24\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
@@ -61,7 +61,8 @@ const char cmd_list[] PROGMEM =
 	"  dan show status NID\n"
 	"  dan set name NID str\n"
 	"  dan set log NID on|off\n"
-	
+	"  dan set valid NID on|off\n"
+
 	"  rtc dump [mem]|init [mem]\n"
 	"  rtc dst on|off\n"
 	"  adc chan\n"
@@ -75,6 +76,7 @@ const char cmd_list[] PROGMEM =
 extern ili9225_t ili;
 
 extern uint8_t EEMEM em_dlog[MAX_DNODE_LOGS];
+extern uint8_t EEMEM em_dvalid[MAX_DNODE_NUM];
 extern dnode_status_t dans[MAX_DNODE_NUM];
 extern uint8_t  EEMEM em_dan_name[MAX_DNODE_NUM][NODE_NAME_LEN];
 
@@ -87,6 +89,7 @@ static const char pstr_log[] PROGMEM = "log";
 static const char pstr_dan[] PROGMEM = "dan";
 static const char pstr_date[] PROGMEM = "date";
 static const char pstr_time[] PROGMEM = "time";
+static const char pstr_valid[] PROGMEM = "valid";
 static const char pstr_radio[] PROGMEM = "radio";
 static const char pstr_reset[] PROGMEM = "reset";
 static const char pstr_status[] PROGMEM = "status";
@@ -299,6 +302,7 @@ int8_t cli_base(char *buf, void *rht)
 			echo = 0;
 		if (str_is(arg, PSTR("rx"))) {
 			set_echo(arg, RT_ECHO_RX, echo);
+			eeprom_update_byte(&em_rt_flags, rt_flags & (RT_LOAD_OSCCAL | RT_ECHO_RX));
 			return 0;
 		}
 		if (str_is(arg, pstr_dan)) {
@@ -320,6 +324,7 @@ int8_t cli_base(char *buf, void *rht)
 		}
 		if (str_is(arg, pstr_off)) {
 			rt_flags &= ~(RT_ECHO_RX | RT_ECHO_DAN | RT_ECHO_RHT | RT_ECHO_LOG);
+			eeprom_update_byte(&em_rt_flags, rt_flags & (RT_LOAD_OSCCAL | RT_ECHO_RX));
 			ns741_rds_debug(0);
 			uart_puts_p(pstr_echo);
 			uart_putc(' ');
@@ -484,7 +489,7 @@ int8_t cli_base(char *buf, void *rht)
 				return 0;
 			}
 			if (str_is(sprop, pstr_log)) {
-				if (!(dans[nid].flags & STAT_LOG))
+				if (!(dans[nid].flags & DANF_LOG))
 					return CLI_EARG;
 
 				uint8_t ts[3];
@@ -528,19 +533,33 @@ int8_t cli_base(char *buf, void *rht)
 				return 0;
 			}
 
+			if (str_is(sprop, pstr_valid)) {
+				int8_t nid = strtonid(snode);
+				if (nid < 0)
+					return CLI_EARG;
+				if (str_is(str, pstr_on))
+					dans[nid].flags |= DANF_VALID;
+				else if (str_is(str, pstr_off))
+					dans[nid].flags &= ~DANF_VALID;
+				else
+					return CLI_EARG;
+				eeprom_update_byte(&em_dvalid[nid], dans[nid].flags & DANF_VALID);
+				return 0;
+			}
+
 			if (str_is(sprop, pstr_log)) {
 				int8_t nid = strtonid(snode);
 				if (nid < 0)
 					return CLI_EARG;
 				if (str_is(str, pstr_on)) {
-					if (dans[nid].flags & STAT_LOG)
+					if (dans[nid].flags & DANF_LOG)
 						return 0;
 					uint8_t dlog[MAX_DNODE_LOGS];
 					eeprom_read_block((void *)dlog, (const void *)em_dlog, MAX_DNODE_LOGS);
 					for(uint8_t i = 0; i < MAX_DNODE_LOGS; i++) {
 						if (dlog[i] == 0) {
 							dlog[i] = nid + 1;
-							dans[nid].flags |= STAT_LOG;
+							dans[nid].flags |= DANF_LOG;
 							dans[nid].log = i;
 							eeprom_write_byte(&em_dlog[i], dlog[i]);
 							log_erase(i);
@@ -550,9 +569,9 @@ int8_t cli_base(char *buf, void *rht)
 					return CLI_EARG;
 				}
 				if (str_is(str, pstr_off)) {
-					if (!(dans[nid].flags & STAT_LOG))
+					if (!(dans[nid].flags & DANF_LOG))
 						return 0;
-					dans[nid].flags &= ~STAT_LOG;
+					dans[nid].flags &= ~DANF_LOG;
 					uint8_t i = dans[nid].log;
 					if (i < MAX_DNODE_LOGS) {
 						eeprom_write_byte(&em_dlog[i], 0);
