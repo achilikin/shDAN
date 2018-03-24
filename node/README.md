@@ -37,7 +37,6 @@ Command line
 * _set tsync N_ - set time sync interval to every N data sessions
 * _set led on|off_ - enable/disable on-board LED to for data poll indication  
 * _set txpwr pwr_ - set RFN12BS transmit power, 0 to 7 range (0 - max, 7 - min)
-* _set repeat on|off_ - set TX repeat for a noisy environment, NID must be in 1 to 6 range
 * _set time HH:MM:SS_ - set RTC time, 24H format
 * _set osccal X_ - set OSCCAL value for ATmega32 serial port 
 
@@ -48,9 +47,7 @@ Command line
 
 **Debugging:**
 * _mem_ - show available memory
-* _echo rx|lsd_ - toggle data output to serial port
-* _echo off_ - disable data output to serial port
-* _echo_ - show current echo configuration
+* _echo rx|lsd|off_ - enable/disable data output to serial port
 
 For more information see Readme in the project root directory.
 
@@ -69,11 +66,11 @@ $make OSCCAL=176
 ```
 
 **Current code size**
-Version 2018-03-24
+Version 2018-03-03
 ```
 > Creating Symbol Table: node_main.sym
 > avr-nm -n node_main.elf > node_main.sym
-> Program:   17480 bytes (53.3% Full)
-> Data:        308 bytes (15.0% Full)
+> Program:   16850 bytes (51.4% Full)
+> Data:        476 bytes (23.2% Full)
 > EEPROM:        6 bytes (0.6% Full)
 ```

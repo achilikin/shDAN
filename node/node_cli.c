@@ -32,7 +32,7 @@
 
 #include "node_main.h"
 
-static const char version[] PROGMEM = "2018-03-18\n";
+static const char version[] PROGMEM = "2015-03-03\n";
 static const char *pstr_eol = version + 10;
 
 // some PROGMEM strings pooling
@@ -41,16 +41,15 @@ static const char pstr_off[] PROGMEM = "off";
 static const char pstr_echo[] PROGMEM = "%s echo %s\n";
 
 // list of supported commands 
-const char cmd_list[] PROGMEM =
+const char cmd_list[] PROGMEM = 
 	"  time\n"
 	"  reset\n"
 	"  status\n"
 	"  calibrate\n"
 	"  set nid N\n"
-	"  set tsync N (every N sessions)\n"
+	"  set tsync N\n"
 	"  set osccal X\n"
-	"  set txpwr PWR (0:max to 7:min)\n"
-	"  set repeat on|off\n"
+	"  set txpwr pwr\n"
 	"  set led on|off\n"
 	"  set rtc hh:mm:ss\n"
 	"  poll\n"
@@ -93,27 +92,11 @@ int8_t cli_node(char *buf, void *ptr)
 		if (str_is(arg, PSTR("txpwr"))) {
 			uint8_t pwr = atoi(sval);
 			if (rfm12_set_txpwr(&rfm12, pwr) == 0) {
-				txpwr &= 0xF0;
-				txpwr |= pwr;
+				txpwr = pwr;
 				eeprom_update_byte(&em_txpwr, txpwr);
 				return 0;
 			}
-			return CLI_EARG;
-		}
-
-		if (str_is(arg, PSTR("repeat"))) {
-			if (nid > 6)
-				return CLI_EARG;
-			if (str_is(sval, pstr_on))
-				txpwr |= RT_TX_REPEAT;
-			if (str_is(sval, pstr_off))
-				txpwr &= ~RT_TX_REPEAT;
-			eeprom_update_byte(&em_txpwr, txpwr);
-			uart_puts(arg);
-			uart_puts_p(PSTR(" is "));
-			uart_puts(is_on(txpwr & RT_TX_REPEAT));
-			uart_puts_p(pstr_eol);
-			return 0;
+			return -1;
 		}
 
 		if (str_is(arg, PSTR("led"))) {
@@ -137,11 +120,9 @@ int8_t cli_node(char *buf, void *ptr)
 		
 		if (str_is(arg, PSTR("nid"))) {
 			uint8_t val = atoi(sval);
-			if (!val || val > MAX_DNODE_NUM) // sensor id cannot be 0 or > 12
-				return CLI_EARG;
+			if (!val || val > 0x0F) // sensor id cannot be 0 or > 15
+				return -1;
 			nid = val;
-			if (nid > 6)
-				txpwr &= ~RT_TX_REPEAT;
 			eeprom_update_byte(&em_nid, val);
 			return 0;
 		}
@@ -149,13 +130,13 @@ int8_t cli_node(char *buf, void *ptr)
 		if (str_is(arg, PSTR("tsync"))) {
 			uint8_t val = atoi(sval);
 			if (!val) // sync interval cannot be  0 
-				return CLI_EARG;
+				return -1;
 			tsync = val;
 			eeprom_update_byte(&em_tsync, val);
 			return 0;
 		}
 
-		if (str_is(arg, PSTR("rtc"))) {
+		if (str_is(arg, PSTR("time"))) {
 			uint8_t hour, min, sec;
 			hour = strtoul(sval, &arg, 10);
 			if (hour < 24 && *arg == ':') {
@@ -174,7 +155,7 @@ int8_t cli_node(char *buf, void *ptr)
 			}
 		}
 
-		return CLI_EARG;
+		return -1;
 	}
 
 	if (str_is(cmd, PSTR("calibrate"))) {
@@ -193,11 +174,6 @@ int8_t cli_node(char *buf, void *ptr)
 	}
 
 	if (str_is(cmd, PSTR("echo"))) {
-		if (arg[0] == '\0') {
-			printf_P(pstr_echo, "rx", is_on(rt_flags & RT_RX_ECHO));
-			printf_P(pstr_echo, "lsd", is_on(rt_flags & RT_LSD_ECHO));
-			return 0;
-		}
 		if (str_is(arg, PSTR("rx"))) {
 			rt_flags ^= RT_RX_ECHO;
 			printf_P(pstr_echo, arg, is_on(rt_flags & RT_RX_ECHO));
@@ -213,7 +189,7 @@ int8_t cli_node(char *buf, void *ptr)
 			uart_puts_p(PSTR("echo OFF\n"));
 			return 0;
 		}
-		return CLI_EARG;
+		return -1;
 	}
 
 	if (str_is(cmd, PSTR("mem"))) {
@@ -230,7 +206,7 @@ int8_t cli_node(char *buf, void *ptr)
 			printf_P(PSTR("ADC %d %4d\n"), ai, val);
 			return 0;
 		}
-		return CLI_EARG;
+		return -1;
 	}
 
 	if (str_is(cmd, PSTR("get"))) {

@@ -2,7 +2,7 @@
    http://www.silabs.com/products/wireless/EZRadio/Pages/Si442021.aspx
    http://www.hoperf.com/rf/fsk_module/RFM12B.htm
 
-   Copyright (c) 2018 Andrey Chilikin (https://github.com/achilikin)
+   Copyright (c) 2015 Andrey Chilikin (https://github.com/achilikin)
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -85,7 +85,8 @@ uint16_t rfm12_cmdrw(rfm12_t *rfm, uint16_t cmd)
 		rdata = spi_read_byte(cmd >> 8);
 		rdata <<= 8;
 		rdata |= spi_read_byte(cmd >> 8);
-	} else {
+	}
+	else {
 		uint8_t *pr = (uint8_t *)&rdata;
 		digitalWrite(rfm->sck, LOW);
 		for(uint16_t i = 0x8000; i; i >>= 1) {
@@ -296,8 +297,6 @@ static uint8_t rfm_crc8(uint8_t crc, uint8_t data)
 	return _crc_ibutton_update(crc, data);
 }
 
-#define RFM_SEND_PRELEN 4
-
 // transmit data stream in the following format:
 // data len - 1 byte
 // data     - "len" bytes
@@ -306,40 +305,32 @@ static uint8_t rfm_crc8(uint8_t crc, uint8_t data)
 int8_t rfm12_send(rfm12_t *rfm, void *buf, uint8_t len)
 {
 	uint8_t *data = (uint8_t *)buf;
-	// calculate crc
-	uint8_t crc = rfm_crc8(rfm_sync, len);
-	for (uint8_t i = 0; i < len; i++) {
-		uint8_t byte = data ? data[i] : 'A' + i;
-		crc = rfm_crc8(crc, byte);
-	}
 
 	rfm12_set_mode(rfm, RFM_MODE_TX);
-	// clear any interrupts
-	rfm12_cmdrw(rfm, RFM12CMD_STATUS);
-	// send preamble
-	for(uint8_t i = 0; i < RFM_SEND_PRELEN; i++) {
-		if (_rfm_send(rfm, 0xAA, rfm_timeout) != 0)
-			return -1;
-	}
+	rfm12_cmdrw(rfm, RFM12CMD_STATUS); // clear any interrupts
+
+	// send preamble	
+	if (_rfm_send(rfm, 0xAA, rfm_timeout) != 0)
+		return -1;
+
+	_rfm_send(rfm, 0xAA, rfm_timeout);
+	_rfm_send(rfm, 0xAA, rfm_timeout);
 	_rfm_send(rfm, 0x2D, rfm_timeout); // two sync bytes
 	_rfm_send(rfm, 0xD4, rfm_timeout);
-	_rfm_send(rfm, len, rfm_timeout); // length of the packet
 
-	// data ^ xA5 to minimize long run of '0' or '1'
-	if (data) {
-		for (uint8_t i = 0; i < len; i++)
-			_rfm_send(rfm, data[i] ^ 0xA5, rfm_timeout);
-	} else {
-		for (uint8_t i = 0; i < len; i++) {
-			const uint8_t byte = ('A' + i) ^ 0xA5;
-			_rfm_send(rfm, byte, rfm_timeout);
-		}
+	uint8_t crc = rfm_crc8(rfm_sync, len);
+	_rfm_send(rfm, len, rfm_timeout);
+
+	for(uint8_t i = 0; i < len; i++) {
+		uint8_t byte = data ? data[i] : 'A' + i;
+		_rfm_send(rfm, byte ^ 0xA5, rfm_timeout); // ^ xA5 to minimize long run of '0' or '1'
+		crc = rfm_crc8(crc, byte);
 	}
 	_rfm_send(rfm, crc, rfm_timeout);
 
 	// dummy tail
-	for(uint8_t i = 0; i < (RFM_SEND_PRELEN / 2); i++)
-		_rfm_send(rfm, 0x55, rfm_timeout);
+	_rfm_send(rfm, 0x55, rfm_timeout);
+	_rfm_send(rfm, 0x55, rfm_timeout);
 
 	rfm_wait_irq(rfm, rfm_timeout);
 	rfm12_set_mode(rfm, RFM_MODE_IDLE);
@@ -361,15 +352,13 @@ static inline void puts_hex(uint8_t data, uint8_t delimiter)
 static int8_t rfm12_validate_data(uint8_t *buf, uint8_t len, uint8_t rcrc, uint8_t dbg)
 {
 	uint8_t crc = rfm_crc8(rfm_sync, len);
-	if (dbg) {
-		printf_P(PSTR(" len %d crc %02X\n"), len, rcrc);
-		printf_P(PSTR(" # hex dec crc\n"));
-	}
+	if (dbg)
+		printf_P(PSTR("| len %d crc %02X\n"), len, crc);
 
 	for(uint8_t i = 0; i < len; i++) {
 		crc = rfm_crc8(crc, buf[i]);
 		if (dbg)
-			printf_P(PSTR("%2u  %02X %3u  %02X\n"), i, buf[i], buf[i], crc);
+			printf_P(PSTR("data %02X %3u %02X\n"), buf[i], buf[i], crc);
 	}
 
 	if (crc == rcrc)
@@ -377,7 +366,7 @@ static int8_t rfm12_validate_data(uint8_t *buf, uint8_t len, uint8_t rcrc, uint8
 
 	// wrong crc
 	if (dbg)
-		printf_P(PSTR("wrong crc\n"));
+		printf_P(PSTR("wrong crc %02X must be %02X\n"), crc, rcrc);
 	return -1;
 }
 
@@ -399,17 +388,13 @@ static uint16_t rfm12_receive(rfm12_t *rfm, uint16_t *pstatus)
 		return data;
 	}
 	if (rfm->mode & RFM_RX_PENDING)
-		return RFM12_KAE;
+		return RFM12_WKUP;
 	return 0;
 }
 
 // receive data, use data len as packet start byte
 // if adc is no null then start ADC conversion to read ARSSI
 // (RFM12BS supplies analogue RSSI output on one of the capacitors)
-// returns:
-//       0 if no data available
-//     len if valid message received
-// len - 1 if timeout detected
 uint8_t rfm12_receive_data(rfm12_t *rfm, void *dbuf, uint8_t len, uint8_t flags)
 {
 	if (!(rfm->mode & RFM_MODE_DATA_RX))
@@ -419,27 +404,8 @@ uint8_t rfm12_receive_data(rfm12_t *rfm, void *dbuf, uint8_t len, uint8_t flags)
 	uint8_t *buf = (uint8_t *)dbuf;
 	uint8_t adc = flags & RFM_RX_ADC_MASK;
 	uint8_t dbg = flags & RFM_RX_DEBUG;
-	uint8_t nrx = 0; // number of received bytes in the loop, noise fiter
-	// stamp start of the loop
-	uint8_t rxts = mill8();
 
 	while((ch = rfm12_receive(rfm, NULL)) != 0) {
-		// data holds time from the start of the loop or the last received data
-		uint8_t data = mill8() - rxts;
-		// check for RX timeout, we should not get
-		// more than 4msec between reads even for 2400
-		if (data > 4) {
-			if (dbg) {
-				uart_putc('T');
-				puts_hex(ch >> 8, '_');
-				puts_hex(ch, ' ');
-			}
-			rfm->nto++;
-			ch = RFM12_TOUT;
-			if (dbg)
-				uart_puts("tout\n");
-			goto reset_fifo;
-		}
 		// check status for FIFO overflow and for RX timeout
 		if (!(ch & 0x8000)) {
 			if (ch & RFM12_FFOV) { // FIFO overflow, reset buffer index
@@ -447,9 +413,17 @@ uint8_t rfm12_receive_data(rfm12_t *rfm, void *dbuf, uint8_t len, uint8_t flags)
 				rfm->ridx = 0;
 				rfm->mode &= ~RFM_RX_PENDING;
 			}
-			// if RFM_RX_PENDGING is set then rfm12_receive() returns RFM12_KAE
+			// check for RX timeout, for 9600 it is ~len*5
+			if (rfm->mode & RFM_RX_PENDING) {
+				if ((mill8() - rfm->rxts) >= len*5) {
+					rfm->ridx = 0;
+					rfm->mode &= ~RFM_RX_PENDING;
+					ch = 0x7BAD;
+				}
+			}
+			// if RFM_RX_PENDGING is set then rfm12_receive() returns RFM12_WKUP
 			// just to keep this while() loop running till all data is received
-			if (dbg && (ch != RFM12_KAE)) {
+			if (dbg && (ch != RFM12_WKUP)) {
 				uart_putc('s');
 				puts_hex(ch >> 8, '-');
 				puts_hex(ch, ' ');
@@ -458,48 +432,29 @@ uint8_t rfm12_receive_data(rfm12_t *rfm, void *dbuf, uint8_t len, uint8_t flags)
 		}
 		if (adc)
 			analogStart();
-		// stamp data arrival
-		rxts = mill8();
-		data = (uint8_t)ch;
+		uint8_t data = (uint8_t)ch;
 		if (dbg)
 			puts_hex(data, ' ');
 
-		/* check for the first byte - packet length */
 		if (rfm->ridx == 0) {
 			if (data == len) {
-				nrx = 0;
 				rfm->ridx++;
+				rfm->rxts = mill8();
 				rfm->mode |= RFM_RX_PENDING;
-			} else
-			// already received twice of expected data length
-			// but start of a packet not detected - probably noise, reset
-			if (++nrx > len * 2) {
-				ch = RFM12_TOUT;
-				if (dbg)
-					uart_puts("noise\n");
-				goto reset_fifo;
 			}
 			continue;
 		}
 
 		if (rfm->ridx == (len + 2)) { // data should contain tail (0x55) now
-reset_fifo:
-			analogStop(); // stop pending ARSSI conversion
 			rfm->ridx = 0; // reset buffer index
 			rfm->mode &= ~RFM_RX_PENDING;
 			rfm12_cmdw(rfm, RFM12CMD_STATUS);
 			rfm12_reset_fifo(rfm);
-			
-			if (ch == RFM12_TOUT)
-				return len - 1; // invalid len indicates timeout
-
-			// wrong tail warning
-			if (dbg) {
-				uart_putc('|');
-				if (data != 0x55)
-					uart_puts_p(PSTR(" (wrong tail)"));
+			if (data != 0x55) {
+				if (dbg)
+					uart_puts_p(PSTR("- wrong tail\n"));
+				continue;
 			}
-
 			if (rfm12_validate_data(buf, len, rfm->rcrc, dbg) == 0) {
 				rfm12_set_mode(rfm, RFM_MODE_IDLE);
 				return len;

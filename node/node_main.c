@@ -60,7 +60,7 @@
 
 // configuration variables stored in EEPROM
 uint8_t EEMEM em_nid = NODE_ID;
-uint8_t EEMEM em_txpwr = RF_TXPWR | RT_TX_REPEAT;
+uint8_t EEMEM em_txpwr = RF_TXPWR;
 uint8_t EEMEM em_osccal = DEF_OSCCAL;
 uint8_t EEMEM em_tsync = 20; // time sync interval every 20 sessions
 
@@ -92,11 +92,10 @@ uint8_t  tsync;
 bmp180_t bmp;
 
 uint8_t  nid;   // node id
-uint8_t  txpwr; // RFM12 TX power in the lower nibble
+uint8_t  txpwr; // RFM12 TX power
 
 // List all attached sensors here
 int8_t poll_bmp180(dnode_t *dval, void *ptr);
-// #if (NODE_ID == 1) // so far all nodes have bmp180 only
 dsens_t sens[] = { {SET_SENS(1,SENS_TEMPER), poll_bmp180, &bmp} };
 
 // power save functions
@@ -224,10 +223,6 @@ int main(void)
 	txpwr = eeprom_read_byte(&em_txpwr);
 	rt_flags = eeprom_read_byte(&em_rt_flags);
 
-	// repeat supported only for small networks where NIDs in 1-6 range
-	if (nid > 6)
-		txpwr &= ~RT_TX_REPEAT;
-
 	// RFM12 nIRQ pin
 	pinMode(rfm12.irq, INPUT_HIGHZ);
 	// interactive mode pin, if grounded then MCU will not enter sleep state
@@ -259,7 +254,7 @@ int main(void)
 	isync = eeprom_read_byte(&em_rfm_sync);
 	rfm12_init(rfm, isync, RFM12_BAND_868, 868.0, RFM12_BPS_9600);
 	isync = tsync-1; // re-sync time at the first data poll
-	rfm12_set_txpwr(rfm, txpwr & RFM12_OPWR_21);
+	rfm12_set_txpwr(rfm, txpwr);
 	mmr_led_off();
 
 	// create "List of Sensors" message
@@ -333,13 +328,8 @@ int main(void)
 			uptime++;
 		}
 
-		uint8_t ttp = TIME_TO_POLL(nid);
-		// check for the second interval if repeat is configured
-		if ((txpwr & RT_TX_REPEAT) && !ttp)
-			ttp = TIME_TO_POLL(nid + 6);
-
 		// poll attached sensors once a minute depending on Node ID
-		if ((rt_flags & (RT_DATA_POLL | RT_DATA_INIT)) || (ttp && !(rt_flags & RT_DATA_SENT))) {
+		if ((rt_flags & (RT_DATA_POLL | RT_DATA_INIT)) || (TIME_TO_POLL(nid) && !(rt_flags & RT_DATA_SENT))) {
 			awake();
 			dval.stat &= ~(STAT_LED | STAT_SLEEP);
 			if (active & DLED_ACTIVE)
@@ -414,7 +404,7 @@ int main(void)
 			rt_flags &= ~RT_OLED_ECHO;
 		}
 
-		if (!ttp)
+		if (!TIME_TO_POLL(nid))
 			rt_flags &= ~RT_DATA_SENT;
 
 		if (!is_interactive() && !(active & FORCE_ACTIVE)) {
@@ -467,8 +457,7 @@ void print_status(dnode_t *val)
 	char buf[16];
 
 	get_vbat(val, buf);
-	printf_P(PSTR("Node ID %d, txpwr %ddB, TX repeat %s, %s, Tsync %u\n"),
-		nid, -3*(txpwr & RFM12_OPWR_21), is_on(txpwr & RT_TX_REPEAT), buf, tsync);
+	printf_P(PSTR("Node ID %d, txpwr %ddB, %s\n"), nid, -3*txpwr, buf);
 	get_rtc_time(buf);
 	uart_puts_p(PSTR("RTC time "));
 	if (!(rt_flags & RT_TSYNCED))

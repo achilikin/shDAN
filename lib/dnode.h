@@ -29,7 +29,7 @@ extern "C" {
 #define MAX_DNODE_LOGS 5
 #define MAX_DNODE_NUM  12
 
-#define NODE_LBS       13 // listening base station
+#define NODE_LBS       13
 
 #define NID_MASK   0x0F // node index mask
 #define NODE_TSYNC 0x80 // time sync request
@@ -60,13 +60,10 @@ extern "C" {
 #define STAT_VBAT  0x0F // Vbat mask
 
 // extra flags for dnode_status
-// we can use 6 lower bits as only STAT_SLEEP and STAT_LED are relevant
-#define DANF_MASK   (STAT_ACK | STAT_EOS | STAT_VBAT)
-#define DANF_VALID  0x10
-#define DANF_ACTIVE 0x01
-#define DANF_SLIST  0x02
-#define DANF_TSYNC  0x04
-#define DANF_LOG    0x08
+#define STAT_ACTIVE 0x01
+#define STAT_SLIST  0x02
+#define STAT_TSYNC  0x04
+#define STAT_LOG    0x08
 
 // command to be applied for .nid sensor id
 #define CMD_GVAL   0x10 // get value

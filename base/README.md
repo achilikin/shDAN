@@ -58,7 +58,7 @@ To talk to remote data nodes RFM12BS (Si4420 based) transceiver is used.
 * _dan show status NID_ - show node status
 * _dan set name NID str_ - set node name
 * _dan set log NID on|off_ - turn log for a node on/off
-* _dan set valid NID on|off_ - mark NIC as valid/invalid for the base
+
 
 Code Customization
 ------------------
@@ -95,11 +95,11 @@ Using different clock speed for ATmega32:
 3. Make sure to select [proper speed](http://www.wormfood.net/avrbaudcalc.php) for serial communication
 
 **Current code size**
-Version 2018-03-24
+Version 2018-03-04
 ```
 > Creating Symbol Table: base_main.sym
 > avr-nm -n base_main.elf > base_main.sym
-> Program:   29224 bytes (89.2% Full)
-> Data:       1329 bytes (64.9% Full)
-> EEPROM:      108 bytes (10.5% Full)
+> Program:   28758 bytes (87.8% Full)
+> Data:       1317 bytes (64.3% Full)
+> EEPROM:       96 bytes (9.4% Full)
 ```
