@@ -245,6 +245,7 @@ typedef struct rfm12_s
 	uint8_t ridx; // receive buffer index
 	uint8_t rcrc; // receive buffer crc
 	uint16_t nto; // number of timeouts for stats
+	uint32_t nses; // number of sessions for stats
 } rfm12_t;
 
 // flags for rfm12_receive_data()
