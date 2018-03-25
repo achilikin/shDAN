@@ -69,7 +69,7 @@ char rds_name[9];  // RDS PS name
 char fm_freq[17];  // FM frequency
 char rds_data[61]; // RDS RT string
 char hpa[17];	   // pressure in hPa
-char status[17];   // TxPwr status
+char status[33];   // TxPwr status
 
 uint16_t radio_freq;
 uint8_t  ns_rt_flags;
@@ -348,13 +348,14 @@ int main(void)
 				sprintf_P(fm_freq, pstr_tformat, ts[0], ts[1], ts[2]);
 				putlx(0, ILI9225_LCD_WIDTH-8*8-4, fm_freq, 0);
 			}
-
+			uint8_t font = bmfont_select(BMFONT_6x8);
+			sprintf(status, "RST %u SES %lu TOUT %u", nreset - 1, rfm868.nses, rfm868.nto);
+			putlx(25, TEXT_CENTRE, status, 0);
 			if ((bmp180_poll(&press, 0) == 0) && (press.valid & BMP180_P_VALID)) {
 				sprintf_P(hpa, PSTR("P %u.%02u hPa"), press.p, press.pdec);
-				uint8_t font = bmfont_select(BMFONT_6x8);
 				putlx(4, TEXT_CENTRE, hpa, 0);
-				bmfont_select(font);
 			}
+			bmfont_select(font);
 		}
 
 		// poll RHT every 5 seconds
@@ -455,8 +456,8 @@ void print_status(uint8_t verbose)
 		uart_puts_p(PSTR("RTC time: "));
 		print_rtc_time();
 		if (uptime) {
-			printf_P(PSTR("Resets %u, Timeouts %u, Uptime %lu sec or "),
-				nreset - 1, rfm868.nto, uptime);
+			printf_P(PSTR("Resets %u, Timeouts %u, Sessions %lu, Uptime %lu sec or "),
+				nreset - 1, rfm868.nto, rfm868.nses, uptime);
 			if (uptime > 86400)
 				printf_P(PSTR("%lu days "), uptime / 86400l);
 			uint32_t utime = uptime % 86400l;
@@ -534,6 +535,7 @@ uint8_t io_handler(void)
 	ret = rfm12_receive_data(&rfm868, &rd, sizeof(rd), rx_flags);
 
 	if (ret == sizeof(rd)) {
+		rfm868.nses++;
 		uint8_t dan = GET_NID(rd.nid);
 		if (!dan || dan > NODE_LBS)
 			goto restart_rx;

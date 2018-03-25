@@ -32,7 +32,7 @@ extern char rds_name[9];  // RDS PS name
 extern char rds_data[61]; // RDS RT string
 extern char fm_freq[17];  // FM frequency
 extern char hpa[17];      // pressure in hPa
-extern char status[17];   // TxPwr status
+extern char status[33];   // TxPwr status
 
 // ns741 power flags
 #define NS741_TXPWR0 0x00

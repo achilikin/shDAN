@@ -37,7 +37,7 @@
 
 #include "base_main.h"
 
-static const char version[] PROGMEM = "2018-03-24\n";
+static const char version[] PROGMEM = "2018-03-25\n";
 
 // list of supported commands 
 const char cmd_list[] PROGMEM = 
